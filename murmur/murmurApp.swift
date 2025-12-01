@@ -8,6 +8,7 @@
 import SwiftUI
 import AVFoundation
 import ApplicationServices
+import Combine
 
 @main
 struct murmurApp: App {
@@ -23,20 +24,63 @@ struct murmurApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     var audioRecorder = AudioRecorder()
     var hotkeyManager = HotkeyManager()
-    var transcriptionService = TranscriptionService(apiKey: Config.openAIAPIKey)
+    
+    // Initialize transcription service immediately on launch
+    var transcriptionService = LocalTranscriptionService()
     
     // State management
     private var isRecording = false
     private var isTranscribing = false
+    private var recordingStartTime: Date?
+    private var cancellables = Set<AnyCancellable>()
+    
+    // Common Whisper hallucinations when there's silence
+    private let hallucinations = [
+        "thank you",
+        "thanks for watching",
+        "bye",
+        "goodbye",
+        "you",
+        ".",
+        "",
+        "[blank_audio]",  // Whisper outputs this for silent audio
+        "blank_audio",
+        "[music]",
+        "[silence]",
+        "music",
+        "silence"
+    ]
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("🚀 App launched")
+        print("🚀 App launched - Using local Whisper transcription")
         
         // Hide the app from the Dock
         NSApp.setActivationPolicy(.accessory)
         
         // Check and request permissions
         checkPermissions()
+        
+        // Observe download progress
+        transcriptionService.$downloadProgress
+            .sink { progress in
+                FloatingWindowManager.shared.showDownloadProgress(progress: progress)
+            }
+            .store(in: &cancellables)
+        
+        // Observe download completion
+        transcriptionService.$isDownloadingModel
+            .sink { isDownloading in
+                if !isDownloading {
+                    // Download complete, show idle state
+                    FloatingWindowManager.shared.hideFloatingIndicator()
+                }
+            }
+            .store(in: &cancellables)
+        
+        // Initialize WhisperKit model in background
+        Task {
+            await transcriptionService.ensureModelReady()
+        }
         
         // Set up hotkey monitoring
         hotkeyManager.startMonitoring(
@@ -114,7 +158,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    private func showModelDownloadingAlert() {
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = "Model Downloading..."
+            alert.informativeText = "Murmur is downloading the AI model for the first time. This will take 1-2 minutes. The app will be ready to use shortly.\n\nYou can see the progress in the floating indicator at the bottom-right of your screen."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
+    
     private func startRecording() {
+        // Check if model is still downloading
+        if transcriptionService.isDownloadingModel {
+            print("⚠️ Model still downloading - showing alert")
+            showModelDownloadingAlert()
+            return
+        }
+        
         // Prevent starting if busy
         guard !isRecording && !isTranscribing else {
             print("⚠️ Busy - isRecording: \(isRecording), isTranscribing: \(isTranscribing)")
@@ -123,6 +185,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         print("✅ Starting recording...")
         isRecording = true
+        recordingStartTime = Date()
         
         // Show indicator FIRST
         DispatchQueue.main.async {
@@ -136,10 +199,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func stopRecording() {
+        // Check if model is still downloading
+        if transcriptionService.isDownloadingModel {
+            print("⚠️ Model still downloading - ignoring")
+            return
+        }
+        
         // Only proceed if we're actually recording
         guard isRecording else {
             print("⚠️ Not recording, ignoring stop")
             return
+        }
+        
+        // Check minimum recording duration (0.3 seconds)
+        if let startTime = recordingStartTime {
+            let duration = Date().timeIntervalSince(startTime)
+            if duration < 0.3 {
+                print("⚠️ Recording too short (\(String(format: "%.2f", duration))s), skipping transcription")
+                isRecording = false
+                audioRecorder.stopRecording()
+                
+                // Delete the short recording
+                if let audioURL = audioRecorder.recordingURL {
+                    try? FileManager.default.removeItem(at: audioURL)
+                }
+                
+                resetState()
+                return
+            }
         }
         
         print("✅ Stopping recording...")
@@ -165,7 +252,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let appContext = AppContextDetector.getCurrentAppContext()
         print("📱 Current app: \(appContext.appName)")
         
-        // Transcribe
+        // Transcribe locally
         Task { [weak self] in
             guard let self = self else { return }
             
@@ -179,13 +266,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             } else {
                 let text = self.transcriptionService.transcription
+                    .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                    .lowercased()
+                
                 print("✅ Transcription: \(text)")
                 
-                // Only insert text if we got something
-                if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    TextInserter.insertText(text)
-                } else {
+                // Check if it's a hallucination or too short
+                if self.isLikelyHallucination(text) {
+                    print("⚠️ Detected likely hallucination, not inserting")
+                } else if text.isEmpty {
                     print("⚠️ Empty transcription")
+                } else {
+                    // Insert the original text (not lowercased)
+                    let originalText = self.transcriptionService.transcription
+                        .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                    TextInserter.insertText(originalText)
                 }
                 
                 // Hide indicator after a delay
@@ -199,9 +294,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    private func isLikelyHallucination(_ text: String) -> Bool {
+        let cleaned = text.lowercased()
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            .replacingOccurrences(of: " ", with: "")  // Remove spaces
+        
+        // Check if it's in our hallucination list
+        if hallucinations.contains(cleaned) {
+            return true
+        }
+        
+        // Check if it contains [BLANK_AUDIO] or similar patterns
+        if cleaned.contains("blankaudio") || cleaned.contains("blankmusic") {
+            return true
+        }
+        
+        // Check if it's very short (likely not real speech)
+        if cleaned.count <= 2 {
+            return true
+        }
+        
+        return false
+    }
+    
     private func resetState() {
         isRecording = false
         isTranscribing = false
+        recordingStartTime = nil
         DispatchQueue.main.async {
             FloatingWindowManager.shared.hideFloatingIndicator()
         }

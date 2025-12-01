@@ -1,1 +1,14 @@
-murmur/Config.swift
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Build artifacts
+build/
+DerivedData/
+
+# Config files (not needed anymore with local Whisper)
+# Config.swift
+
+# macOS
+.DS_Store

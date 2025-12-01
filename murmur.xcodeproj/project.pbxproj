@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CC26B82A2EDE2D8A00B10FA0 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = CC26B8292EDE2D8A00B10FA0 /* WhisperKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		CC26B7F92EDCD31800B10FA0 /* murmur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = murmur.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC26B82A2EDE2D8A00B10FA0 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = murmur;
 			packageProductDependencies = (
+				CC26B8292EDE2D8A00B10FA0 /* WhisperKit */,
 			);
 			productName = murmur;
 			productReference = CC26B7F92EDCD31800B10FA0 /* murmur.app */;
@@ -107,6 +113,9 @@
 			);
 			mainGroup = CC26B7F02EDCD31800B10FA0;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CC26B7FA2EDCD31800B10FA0 /* Products */;
 			projectDirPath = "";
@@ -360,6 +369,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CC26B8292EDE2D8A00B10FA0 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CC26B7F12EDCD31800B10FA0 /* Project object */;
 }

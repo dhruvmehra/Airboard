@@ -12,126 +12,237 @@ class FloatingWindowManager {
     static let shared = FloatingWindowManager()
     private var floatingWindow: NSWindow?
     
+    init() {
+        // Create window on main thread
+        DispatchQueue.main.async {
+            self.createFloatingWindow()
+            self.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: false, downloadProgress: 0.0)
+        }
+    }
+    
     func showFloatingIndicator(isRecording: Bool, isTranscribing: Bool) {
         DispatchQueue.main.async {
-            if self.floatingWindow == nil {
-                self.createFloatingWindow()
-            }
-            
-            if let window = self.floatingWindow {
-                window.contentView = NSHostingView(
-                    rootView: FloatingIndicatorView(
-                        isRecording: isRecording,
-                        isTranscribing: isTranscribing
-                    )
-                )
-                window.orderFrontRegardless()
-                window.animator().alphaValue = 1.0
-                print("👁️ Indicator shown")
-            }
+            self.updateIndicatorState(isRecording: isRecording, isTranscribing: isTranscribing, isDownloading: false, downloadProgress: 0.0)
+        }
+    }
+    
+    func showDownloadProgress(progress: Double) {
+        DispatchQueue.main.async {
+            self.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: true, downloadProgress: progress)
         }
     }
     
     func hideFloatingIndicator() {
+        // Don't actually hide - just return to idle state
         DispatchQueue.main.async {
-            self.floatingWindow?.animator().alphaValue = 0.0
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                self.floatingWindow?.orderOut(nil)
-                print("👁️ Indicator hidden")
-            }
+            self.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: false, downloadProgress: 0.0)
         }
     }
     
+    private func updateIndicatorState(isRecording: Bool, isTranscribing: Bool, isDownloading: Bool, downloadProgress: Double) {
+        guard let window = self.floatingWindow else {
+            createFloatingWindow()
+            return
+        }
+        
+        // Update content with new state
+        window.contentView = NSHostingView(
+            rootView: FloatingIndicatorView(
+                isRecording: isRecording,
+                isTranscribing: isTranscribing,
+                isDownloading: isDownloading,
+                downloadProgress: downloadProgress
+            )
+        )
+        
+        // Make sure it's visible
+        window.alphaValue = 1.0
+        window.orderFrontRegardless()
+        
+        let stateEmoji = isDownloading ? "📥" : (isRecording ? "🔴" : (isTranscribing ? "🟠" : "⚪️"))
+        print("\(stateEmoji) Indicator state - Recording: \(isRecording), Transcribing: \(isTranscribing), Downloading: \(isDownloading) (\(Int(downloadProgress * 100))%)")
+    }
+    
     private func createFloatingWindow() {
+        let windowSize: CGFloat = 44
+        
         let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 36, height: 36),
+            contentRect: NSRect(x: 0, y: 0, width: windowSize, height: windowSize),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
         
+        // Native macOS floating window settings
         window.level = .floating
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = false
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
-        window.alphaValue = 0.0
+        window.ignoresMouseEvents = true
+        window.hidesOnDeactivate = false
         
+        // Position in bottom-right corner
         if let screen = NSScreen.main {
             let screenFrame = screen.visibleFrame
-            let x = screenFrame.maxX - 52
-            let y = screenFrame.minY + 52
+            let margin: CGFloat = 20
+            let x = screenFrame.maxX - windowSize - margin
+            let y = screenFrame.minY + margin
             window.setFrameOrigin(NSPoint(x: x, y: y))
         }
         
         floatingWindow = window
-        print("✅ Floating window created")
+        
+        // Show immediately
+        window.alphaValue = 1.0
+        window.orderFrontRegardless()
+        
+        print("✅ Always-visible floating indicator created")
     }
 }
 
 struct FloatingIndicatorView: View {
     let isRecording: Bool
     let isTranscribing: Bool
-    
-    @State private var breathe = false
+    let isDownloading: Bool
+    let downloadProgress: Double
     
     var body: some View {
         ZStack {
-            // Single clean circle with vibrancy
+            // Subtle outer glow when active - CIRCULAR
+            if isRecording || isTranscribing {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [
+                                statusColor.opacity(0.15),
+                                statusColor.opacity(0)
+                            ],
+                            center: .center,
+                            startRadius: 12,
+                            endRadius: 22
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                    .blur(radius: 2)
+                    .clipShape(Circle())
+                    .compositingGroup()
+            }
+            
+            // Main orb - clean glass effect
             Circle()
-                .fill(.ultraThinMaterial)
+                .fill(.regularMaterial)
                 .frame(width: 36, height: 36)
                 .overlay(
                     Circle()
-                        .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
+                        .stroke(strokeColor, lineWidth: 1)
                 )
-                .shadow(
-                    color: statusColor.opacity(isRecording ? 0.4 : 0.2),
-                    radius: isRecording ? 12 : 8,
-                    x: 0,
-                    y: 2
+                .overlay(
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.1),
+                                    Color.clear
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
                 )
+                .shadow(color: shadowColor, radius: shadowRadius, x: 0, y: 1)
             
-            // Icon - clean and simple
-            Image(systemName: iconName)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(statusColor)
-                .opacity(isTranscribing ? 0.6 : 1.0)
-        }
-        .scaleEffect(breathe ? 1.08 : 1.0)
-        .animation(
-            isRecording ?
-                .easeInOut(duration: 1.6).repeatForever(autoreverses: true) :
-                .spring(response: 0.3, dampingFraction: 0.6),
-            value: breathe
-        )
-        .onAppear {
-            if isRecording {
-                breathe = true
+            // Download progress ring (when downloading)
+            if isDownloading {
+                Circle()
+                    .trim(from: 0, to: downloadProgress)
+                    .stroke(
+                        Color.blue,
+                        style: StrokeStyle(lineWidth: 2, lineCap: .round)
+                    )
+                    .frame(width: 38, height: 38)
+                    .rotationEffect(.degrees(-90))
+            }
+            
+            // Icon - changes based on state
+            if isDownloading {
+                VStack(spacing: 2) {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.blue)
+                    Text("\(Int(downloadProgress * 100))%")
+                        .font(.system(size: 7, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.blue)
+                }
+            } else {
+                Image(systemName: iconName)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(iconColor)
             }
         }
-        .onChange(of: isRecording) { oldValue, newValue in
-            breathe = newValue
+        .animation(nil, value: isRecording) // Disable all animations
+        .animation(nil, value: isTranscribing) // Disable all animations
+    }
+    
+    // Icon changes based on state
+    private var iconName: String {
+        if isDownloading {
+            return "arrow.down.circle.fill"
+        } else if isRecording {
+            return "waveform.circle.fill"
+        } else if isTranscribing {
+            return "waveform.circle"
+        } else {
+            return "waveform"
+        }
+    }
+    
+    // Colors
+    private var iconColor: Color {
+        if isDownloading {
+            return Color.blue
+        } else if isRecording {
+            return Color(red: 1.0, green: 0.27, blue: 0.23)
+        } else if isTranscribing {
+            return Color(red: 1.0, green: 0.58, blue: 0.0)
+        } else {
+            return Color.gray.opacity(0.6)
+        }
+    }
+    
+    private var strokeColor: Color {
+        if isDownloading {
+            return Color.blue.opacity(0.2)
+        } else if isRecording {
+            return Color(red: 1.0, green: 0.27, blue: 0.23).opacity(0.2)
+        } else if isTranscribing {
+            return Color(red: 1.0, green: 0.58, blue: 0.0).opacity(0.2)
+        } else {
+            return Color.white.opacity(0.1)
         }
     }
     
     private var statusColor: Color {
         if isRecording {
             return Color(red: 1.0, green: 0.27, blue: 0.23)
-        } else if isTranscribing {
-            return Color(red: 1.0, green: 0.62, blue: 0.04)
         } else {
-            return Color(red: 0.56, green: 0.56, blue: 0.58)
+            return Color(red: 1.0, green: 0.58, blue: 0.0)
         }
     }
     
-    private var iconName: String {
-        if isRecording {
-            return "mic.fill"
+    private var shadowColor: Color {
+        if isDownloading {
+            return Color.blue.opacity(0.2)
+        } else if isRecording {
+            return Color(red: 1.0, green: 0.27, blue: 0.23).opacity(0.25)
         } else if isTranscribing {
-            return "waveform"
+            return Color(red: 1.0, green: 0.58, blue: 0.0).opacity(0.2)
         } else {
-            return "mic"
+            return Color.black.opacity(0.08)
         }
+    }
+    
+    private var shadowRadius: CGFloat {
+        isRecording ? 10 : (isTranscribing ? 6 : 3)
     }
 }

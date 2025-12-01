@@ -100,30 +100,31 @@ class AppContextDetector {
     }
     
     private static func generatePrompt(for appType: AppType, appName: String) -> String {
+        // NOTE: Whisper's "prompt" parameter is for vocabulary/context hints, 
+        // NOT formatting instructions. It helps Whisper understand domain-specific terms.
+        // Keep prompts short and relevant - they provide context about what might be said.
+        
         switch appType {
         case .email:
-            return "Format this as a professional email. Use proper email structure with greetings and sign-offs if appropriate. Be concise and clear."
+            return "Email message with professional vocabulary."
             
         case .messaging:
-            return "Format this as a casual message for \(appName). Keep it conversational and natural. Use appropriate punctuation but keep it brief."
+            return "Casual conversation message."
             
         case .code:
-            return "If this is code-related, format appropriately with proper syntax. If it's a comment, format as a code comment. Otherwise, keep it as plain text."
+            return "Code, programming terms, variable names, function names, technical vocabulary."
             
-        case .document:
-            return "Format this as professional document text. Use proper grammar, punctuation, and paragraph structure."
-            
-        case .notes:
-            return "Format this as a note. Keep it clear and well-structured with proper punctuation."
+        case .document, .notes:
+            return "Professional document with proper grammar and punctuation."
             
         case .browser:
-            return "The user is in a web browser. This could be a search query, form input, or social media post. Format accordingly - if it seems like a search query, keep it concise; if it's longer content, use proper formatting."
+            return "Web search or form input."
             
         case .social:
-            return "Format this as a social media post. Keep it engaging and appropriately formatted for social media."
+            return "Social media post."
             
         case .general:
-            return "Transcribe this accurately with proper punctuation and formatting."
+            return "" // No specific context
         }
     }
 }
