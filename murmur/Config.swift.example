@@ -1,0 +1,13 @@
+//
+//  Config.swift.example
+//  murmur
+//
+//  Configuration template
+//
+
+import Foundation
+
+struct Config {
+    // Get your API key from: https://platform.openai.com/api-keys
+    static let openAIAPIKey = "sk-proj-YOUR_API_KEY_HERE"
+}
