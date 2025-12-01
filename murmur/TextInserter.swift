@@ -12,37 +12,134 @@ import AppKit
 
 class TextInserter {
     
-    static func insertText(_ text: String) {
+    static func insertText(_ text: String, context: AppContext? = nil) {
         // Check if we have accessibility permission
         guard AXIsProcessTrusted() else {
             print("❌ Accessibility permission not granted")
             return
         }
         
-        print("✅ Inserting text: \(text)")
+        print("🔤 Original text: '\(text)'")
+        
+        // Use intelligent formatting with pattern detection
+        var formattedText = text
+        if let context = context {
+            formattedText = IntelligentFormatter.format(text, context: context)
+            print("📝 After formatting: '\(formattedText)'")
+        }
+        
+        // Check if we need to add a space before inserting
+        let needsLeadingSpace = shouldAddLeadingSpace()
+        print("🔍 Needs leading space: \(needsLeadingSpace)")
+        
+        if needsLeadingSpace {
+            formattedText = " " + formattedText
+            print("➕ Adding leading space")
+        }
+        
+        print("✅ Final text to insert: '\(formattedText)'")
         
         // Small delay to ensure the app is ready
         usleep(100000) // 0.1 seconds
         
         // Type each character
-        for character in text {
+        for character in formattedText {
             typeCharacter(character)
         }
+        
+        print("✅ Finished inserting text")
+    }
+    
+    private static func shouldAddLeadingSpace() -> Bool {
+        // SIMPLIFIED: Use a more reliable method to check for text before cursor
+        
+        // Get the frontmost app
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
+            print("  ⚠️ No frontmost app")
+            return false
+        }
+        
+        let pid = frontmostApp.processIdentifier
+        let app = AXUIElementCreateApplication(pid)
+        
+        // Get focused UI element
+        var focusedElement: CFTypeRef?
+        let result = AXUIElementCopyAttributeValue(app, kAXFocusedUIElementAttribute as CFString, &focusedElement)
+        
+        guard result == .success, let element = focusedElement else {
+            print("  ⚠️ No focused element (result: \(result.rawValue))")
+            return false
+        }
+        
+        // Method 1: Try to get selected text
+        var selectedText: CFTypeRef?
+        let selectedResult = AXUIElementCopyAttributeValue(element as! AXUIElement, kAXSelectedTextAttribute as CFString, &selectedText)
+        
+        if selectedResult == .success, let text = selectedText as? String, !text.isEmpty {
+            print("  📍 Selected text: '\(text)'")
+            if let lastChar = text.last, !lastChar.isWhitespace && lastChar != "\n" {
+                print("  ✅ Last char is non-whitespace: '\(lastChar)'")
+                return true
+            }
+        }
+        
+        // Method 2: Try to get value (full text content)
+        var value: CFTypeRef?
+        let valueResult = AXUIElementCopyAttributeValue(element as! AXUIElement, kAXValueAttribute as CFString, &value)
+        
+        if valueResult == .success, let text = value as? String, !text.isEmpty {
+            print("  📍 Field value length: \(text.count) chars")
+            
+            // Try to get selection range to find cursor position
+            var selectedRangeValue: CFTypeRef?
+            let rangeResult = AXUIElementCopyAttributeValue(element as! AXUIElement, kAXSelectedTextRangeAttribute as CFString, &selectedRangeValue)
+            
+            if rangeResult == .success, let rangeValue = selectedRangeValue as! AXValue? {
+                var range = CFRange()
+                if AXValueGetValue(rangeValue, .cfRange, &range) {
+                    let cursorPosition = range.location
+                    print("  📍 Cursor position: \(cursorPosition) / \(text.count)")
+                    
+                    // Check character before cursor
+                    if cursorPosition > 0 && cursorPosition <= text.count {
+                        let index = text.index(text.startIndex, offsetBy: cursorPosition - 1)
+                        let charBeforeCursor = text[index]
+                        print("  📍 Char before cursor: '\(charBeforeCursor)'")
+                        
+                        if !charBeforeCursor.isWhitespace && charBeforeCursor != "\n" {
+                            print("  ✅ Should add space!")
+                            return true
+                        } else {
+                            print("  ❌ Already has space/newline")
+                            return false
+                        }
+                    }
+                }
+            }
+            
+            // Fallback: If we have text but couldn't get cursor position,
+            // check if the last character is non-whitespace
+            if let lastChar = text.last, !lastChar.isWhitespace && lastChar != "\n" {
+                print("  ✅ Fallback: Last char is non-whitespace: '\(lastChar)'")
+                return true
+            }
+        }
+        
+        print("  ❌ No text found before cursor")
+        return false
     }
     
     private static func typeCharacter(_ character: Character) {
-        _ = String(character)
-        
         // Handle special characters
         if character == "\n" {
             // Press Return key
-            pressKey(keyCode: 36) // Return key
+            pressKey(keyCode: 36)
             return
         }
         
         // For regular characters, simulate typing
         guard let keyCode = keyCodeForCharacter(character) else {
-            print("⚠️ Could not find key code for character: \(character)")
+            print("⚠️ Could not find key code for character: '\(character)'")
             return
         }
         

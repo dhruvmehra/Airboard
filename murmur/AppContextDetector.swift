@@ -21,11 +21,138 @@ class AppContextDetector {
         
         print("📱 Active app: \(appName) (\(bundleIdentifier))")
         
-        // Determine app type and context
-        let appType = detectAppType(bundleIdentifier: bundleIdentifier, appName: appName)
+        // Check if it's a browser and get URL
+        let isBrowser = detectIfBrowser(bundleIdentifier: bundleIdentifier, appName: appName)
+        
+        var appType: AppType = .general
+        
+        if isBrowser {
+            // Get browser URL and determine context from it
+            if let browserURL = getBrowserURL(bundleIdentifier: bundleIdentifier) {
+                print("🌐 Browser URL: \(browserURL)")
+                appType = detectAppTypeFromURL(url: browserURL)
+            } else {
+                appType = .browser
+            }
+        } else {
+            // Non-browser app detection
+            appType = detectAppType(bundleIdentifier: bundleIdentifier, appName: appName)
+        }
+        
         let prompt = generatePrompt(for: appType, appName: appName)
         
         return AppContext(appName: appName, appType: appType, prompt: prompt)
+    }
+    
+    private static func detectIfBrowser(bundleIdentifier: String, appName: String) -> Bool {
+        let lowerBundle = bundleIdentifier.lowercased()
+        
+        return lowerBundle.contains("safari") ||
+               lowerBundle.contains("chrome") ||
+               lowerBundle.contains("firefox") ||
+               lowerBundle.contains("arc") ||
+               lowerBundle.contains("brave") ||
+               lowerBundle.contains("edge")
+    }
+    
+    private static func getBrowserURL(bundleIdentifier: String) -> String? {
+        let lowerBundle = bundleIdentifier.lowercased()
+        
+        // Try to get URL using AppleScript based on browser
+        var script = ""
+        
+        if lowerBundle.contains("chrome") || lowerBundle.contains("brave") || lowerBundle.contains("edge") {
+            script = """
+            tell application "Google Chrome"
+                if (count of windows) > 0 then
+                    get URL of active tab of front window
+                end if
+            end tell
+            """
+        } else if lowerBundle.contains("safari") {
+            script = """
+            tell application "Safari"
+                if (count of windows) > 0 then
+                    get URL of current tab of front window
+                end if
+            end tell
+            """
+        } else if lowerBundle.contains("firefox") {
+            // Firefox doesn't support AppleScript well, return nil
+            return nil
+        } else if lowerBundle.contains("arc") {
+            script = """
+            tell application "Arc"
+                if (count of windows) > 0 then
+                    get URL of active tab of front window
+                end if
+            end tell
+            """
+        }
+        
+        guard !script.isEmpty else { return nil }
+        
+        var error: NSDictionary?
+        if let scriptObject = NSAppleScript(source: script) {
+            let output = scriptObject.executeAndReturnError(&error)
+            if error == nil, let urlString = output.stringValue {
+                return urlString
+            }
+        }
+        
+        return nil
+    }
+    
+    private static func detectAppTypeFromURL(url: String) -> AppType {
+        let lowerURL = url.lowercased()
+        
+        // Email services
+        if lowerURL.contains("mail.google.com") ||
+           lowerURL.contains("gmail.com") ||
+           lowerURL.contains("outlook.live.com") ||
+           lowerURL.contains("outlook.office.com") ||
+           lowerURL.contains("mail.yahoo.com") ||
+           lowerURL.contains("protonmail.com") {
+            return .email
+        }
+        
+        // Document editors
+        if lowerURL.contains("docs.google.com") ||
+           lowerURL.contains("notion.so") ||
+           lowerURL.contains("coda.io") ||
+           lowerURL.contains("dropbox.com/paper") {
+            return .document
+        }
+        
+        // Code editors / dev tools
+        if lowerURL.contains("github.com") ||
+           lowerURL.contains("gitlab.com") ||
+           lowerURL.contains("replit.com") ||
+           lowerURL.contains("codesandbox.io") ||
+           lowerURL.contains("stackblitz.com") {
+            return .code
+        }
+        
+        // Messaging / chat
+        if lowerURL.contains("web.whatsapp.com") ||
+           lowerURL.contains("web.telegram.org") ||
+           lowerURL.contains("app.slack.com") ||
+           lowerURL.contains("discord.com/channels") ||
+           lowerURL.contains("teams.microsoft.com") {
+            return .messaging
+        }
+        
+        // Social media
+        if lowerURL.contains("twitter.com") ||
+           lowerURL.contains("x.com") ||
+           lowerURL.contains("linkedin.com") ||
+           lowerURL.contains("facebook.com") ||
+           lowerURL.contains("instagram.com") {
+            return .social
+        }
+        
+        // Default to browser
+        return .browser
     }
     
     private static func detectAppType(bundleIdentifier: String, appName: String) -> AppType {
@@ -35,7 +162,6 @@ class AppContextDetector {
         // Email clients
         if lowerBundle.contains("mail") || 
            lowerName.contains("mail") ||
-           lowerBundle.contains("gmail") ||
            lowerBundle.contains("outlook") ||
            lowerBundle.contains("spark") ||
            lowerBundle.contains("airmail") {
@@ -66,7 +192,6 @@ class AppContextDetector {
         // Document editors
         if lowerBundle.contains("word") ||
            lowerBundle.contains("pages") ||
-           lowerBundle.contains("docs") ||
            lowerBundle.contains("notion") ||
            lowerBundle.contains("bear") ||
            lowerBundle.contains("obsidian") {
@@ -80,15 +205,6 @@ class AppContextDetector {
             return .notes
         }
         
-        // Browsers (could be anything)
-        if lowerBundle.contains("safari") ||
-           lowerBundle.contains("chrome") ||
-           lowerBundle.contains("firefox") ||
-           lowerBundle.contains("arc") ||
-           lowerBundle.contains("brave") {
-            return .browser
-        }
-        
         // Social media
         if lowerBundle.contains("twitter") ||
            lowerBundle.contains("linkedin") ||
@@ -100,10 +216,7 @@ class AppContextDetector {
     }
     
     private static func generatePrompt(for appType: AppType, appName: String) -> String {
-        // NOTE: Whisper's "prompt" parameter is for vocabulary/context hints, 
-        // NOT formatting instructions. It helps Whisper understand domain-specific terms.
-        // Keep prompts short and relevant - they provide context about what might be said.
-        
+        // Whisper's "prompt" parameter is for vocabulary/context hints
         switch appType {
         case .email:
             return "Email message with professional vocabulary."
@@ -124,7 +237,7 @@ class AppContextDetector {
             return "Social media post."
             
         case .general:
-            return "" // No specific context
+            return ""
         }
     }
 }

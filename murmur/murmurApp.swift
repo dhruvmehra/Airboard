@@ -33,6 +33,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var isTranscribing = false
     private var recordingStartTime: Date?
     private var cancellables = Set<AnyCancellable>()
+    private var currentContext: AppContext?
     
     // Common Whisper hallucinations when there's silence
     private let hallucinations = [
@@ -43,7 +44,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         "you",
         ".",
         "",
-        "[blank_audio]",  // Whisper outputs this for silent audio
+        "[blank_audio]",
         "blank_audio",
         "[music]",
         "[silence]",
@@ -71,7 +72,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         transcriptionService.$isDownloadingModel
             .sink { isDownloading in
                 if !isDownloading {
-                    // Download complete, show idle state
                     FloatingWindowManager.shared.hideFloatingIndicator()
                 }
             }
@@ -94,7 +94,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func checkPermissions() {
-        // Check Microphone Permission
         let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         print("🎤 Microphone permission status: \(micStatus.rawValue)")
         
@@ -104,18 +103,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 print("🎤 Microphone permission granted: \(granted)")
             }
         } else if micStatus == .denied || micStatus == .restricted {
-            print("❌ Microphone permission denied - please enable in System Settings")
+            print("❌ Microphone permission denied")
             showPermissionAlert(for: "Microphone")
         } else {
             print("✅ Microphone permission granted")
         }
         
-        // Check Accessibility Permission
         let accessibilityEnabled = AXIsProcessTrusted()
         print("🔐 Accessibility permission: \(accessibilityEnabled)")
         
         if !accessibilityEnabled {
-            print("⚠️ Accessibility permission not granted - opening System Settings...")
+            print("⚠️ Accessibility permission not granted")
             showAccessibilityAlert()
         } else {
             print("✅ Accessibility permission granted")
@@ -126,7 +124,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "\(permission) Permission Required"
-            alert.informativeText = "Murmur needs \(permission.lowercased()) access to work properly. Please enable it in System Settings > Privacy & Security > \(permission)."
+            alert.informativeText = "Murmur needs \(permission.lowercased()) access to work properly."
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Open System Settings")
             alert.addButton(withTitle: "Cancel")
@@ -144,14 +142,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "Accessibility Permission Required"
-            alert.informativeText = "Murmur needs Accessibility access to insert text into other apps. Please enable it in System Settings > Privacy & Security > Accessibility."
+            alert.informativeText = "Murmur needs Accessibility access to insert text."
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Open System Settings")
             alert.addButton(withTitle: "Cancel")
             
             let response = alert.runModal()
             if response == .alertFirstButtonReturn {
-                // Open Accessibility settings
                 let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: true]
                 AXIsProcessTrustedWithOptions(options)
             }
@@ -162,7 +159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "Model Downloading..."
-            alert.informativeText = "Murmur is downloading the AI model for the first time. This will take 1-2 minutes. The app will be ready to use shortly.\n\nYou can see the progress in the floating indicator at the bottom-right of your screen."
+            alert.informativeText = "Murmur is downloading the AI model. This will take 1-2 minutes.\n\nProgress shown in bottom-right corner."
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
             alert.runModal()
@@ -170,16 +167,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func startRecording() {
-        // Check if model is still downloading
         if transcriptionService.isDownloadingModel {
-            print("⚠️ Model still downloading - showing alert")
+            print("⚠️ Model downloading")
             showModelDownloadingAlert()
             return
         }
         
-        // Prevent starting if busy
         guard !isRecording && !isTranscribing else {
-            print("⚠️ Busy - isRecording: \(isRecording), isTranscribing: \(isTranscribing)")
+            print("⚠️ Busy")
             return
         }
         
@@ -187,39 +182,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         isRecording = true
         recordingStartTime = Date()
         
-        // Show indicator FIRST
         DispatchQueue.main.async {
             FloatingWindowManager.shared.showFloatingIndicator(isRecording: true, isTranscribing: false)
         }
         
-        // Then start recording with small delay
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             self?.audioRecorder.startRecording()
         }
     }
     
     private func stopRecording() {
-        // Check if model is still downloading
         if transcriptionService.isDownloadingModel {
-            print("⚠️ Model still downloading - ignoring")
+            print("⚠️ Model downloading")
             return
         }
         
-        // Only proceed if we're actually recording
         guard isRecording else {
-            print("⚠️ Not recording, ignoring stop")
+            print("⚠️ Not recording")
             return
         }
         
-        // Check minimum recording duration (0.3 seconds)
         if let startTime = recordingStartTime {
             let duration = Date().timeIntervalSince(startTime)
             if duration < 0.3 {
-                print("⚠️ Recording too short (\(String(format: "%.2f", duration))s), skipping transcription")
+                print("⚠️ Recording too short")
                 isRecording = false
                 audioRecorder.stopRecording()
                 
-                // Delete the short recording
                 if let audioURL = audioRecorder.recordingURL {
                     try? FileManager.default.removeItem(at: audioURL)
                 }
@@ -236,31 +225,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         audioRecorder.stopRecording()
         
         guard let audioURL = audioRecorder.recordingURL else {
-            print("❌ Failed to get audio URL")
-            self.resetState()
+            print("❌ No audio URL")
+            resetState()
             return
         }
         
-        print("📁 Audio saved to: \(audioURL.path)")
-        
-        // Show transcribing state
         DispatchQueue.main.async {
             FloatingWindowManager.shared.showFloatingIndicator(isRecording: false, isTranscribing: true)
         }
         
-        // Detect app context
+        // Get context and store it
         let appContext = AppContextDetector.getCurrentAppContext()
-        print("📱 Current app: \(appContext.appName)")
+        currentContext = appContext
         
-        // Transcribe locally
         Task { [weak self] in
             guard let self = self else { return }
             
             await self.transcriptionService.transcribe(audioURL: audioURL, context: appContext)
             
-            // Check if transcription was successful
             if let error = self.transcriptionService.error {
-                print("❌ Transcription error: \(error)")
+                print("❌ Error: \(error)")
                 await MainActor.run {
                     self.resetState()
                 }
@@ -269,21 +253,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                     .lowercased()
                 
-                print("✅ Transcription: \(text)")
-                
-                // Check if it's a hallucination or too short
                 if self.isLikelyHallucination(text) {
-                    print("⚠️ Detected likely hallucination, not inserting")
+                    print("⚠️ Hallucination detected")
                 } else if text.isEmpty {
                     print("⚠️ Empty transcription")
                 } else {
-                    // Insert the original text (not lowercased)
                     let originalText = self.transcriptionService.transcription
                         .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-                    TextInserter.insertText(originalText)
+                    
+                    // Pass context to TextInserter for formatting and smart spacing
+                    TextInserter.insertText(originalText, context: self.currentContext)
                 }
                 
-                // Hide indicator after a delay
                 await MainActor.run {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                         FloatingWindowManager.shared.hideFloatingIndicator()
@@ -297,19 +278,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func isLikelyHallucination(_ text: String) -> Bool {
         let cleaned = text.lowercased()
             .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-            .replacingOccurrences(of: " ", with: "")  // Remove spaces
+            .replacingOccurrences(of: " ", with: "")
         
-        // Check if it's in our hallucination list
         if hallucinations.contains(cleaned) {
             return true
         }
         
-        // Check if it contains [BLANK_AUDIO] or similar patterns
         if cleaned.contains("blankaudio") || cleaned.contains("blankmusic") {
             return true
         }
         
-        // Check if it's very short (likely not real speech)
         if cleaned.count <= 2 {
             return true
         }
@@ -321,9 +299,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         isRecording = false
         isTranscribing = false
         recordingStartTime = nil
+        currentContext = nil
         DispatchQueue.main.async {
             FloatingWindowManager.shared.hideFloatingIndicator()
         }
-        print("♻️ State reset to idle")
+        print("♻️ Reset")
     }
 }
