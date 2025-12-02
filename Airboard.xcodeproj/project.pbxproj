@@ -7,30 +7,30 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CC26B82A2EDE2D8A00B10FA0 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = CC26B8292EDE2D8A00B10FA0 /* WhisperKit */; };
+		CC9F704B2EDF830500F2670F /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = CC9F704A2EDF830500F2670F /* WhisperKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		CC26B7F92EDCD31800B10FA0 /* murmur.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = murmur.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC26B7F92EDCD31800B10FA0 /* Airboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Airboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		CC26B8082EDCDC0700B10FA0 /* Exceptions for "murmur" folder in "murmur" target */ = {
+		CC26B8082EDCDC0700B10FA0 /* Exceptions for "Airboard" folder in "Airboard" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = CC26B7F82EDCD31800B10FA0 /* murmur */;
+			target = CC26B7F82EDCD31800B10FA0 /* Airboard */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		CC26B7FB2EDCD31800B10FA0 /* murmur */ = {
+		CC26B7FB2EDCD31800B10FA0 /* Airboard */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				CC26B8082EDCDC0700B10FA0 /* Exceptions for "murmur" folder in "murmur" target */,
+				CC26B8082EDCDC0700B10FA0 /* Exceptions for "Airboard" folder in "Airboard" target */,
 			);
-			path = murmur;
+			path = Airboard;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CC26B82A2EDE2D8A00B10FA0 /* WhisperKit in Frameworks */,
+				CC9F704B2EDF830500F2670F /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -50,7 +50,7 @@
 		CC26B7F02EDCD31800B10FA0 = {
 			isa = PBXGroup;
 			children = (
-				CC26B7FB2EDCD31800B10FA0 /* murmur */,
+				CC26B7FB2EDCD31800B10FA0 /* Airboard */,
 				CC26B7FA2EDCD31800B10FA0 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -58,7 +58,7 @@
 		CC26B7FA2EDCD31800B10FA0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				CC26B7F92EDCD31800B10FA0 /* murmur.app */,
+				CC26B7F92EDCD31800B10FA0 /* Airboard.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -66,9 +66,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		CC26B7F82EDCD31800B10FA0 /* murmur */ = {
+		CC26B7F82EDCD31800B10FA0 /* Airboard */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = CC26B8042EDCD31A00B10FA0 /* Build configuration list for PBXNativeTarget "murmur" */;
+			buildConfigurationList = CC26B8042EDCD31A00B10FA0 /* Build configuration list for PBXNativeTarget "Airboard" */;
 			buildPhases = (
 				CC26B7F52EDCD31800B10FA0 /* Sources */,
 				CC26B7F62EDCD31800B10FA0 /* Frameworks */,
@@ -79,14 +79,14 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				CC26B7FB2EDCD31800B10FA0 /* murmur */,
+				CC26B7FB2EDCD31800B10FA0 /* Airboard */,
 			);
-			name = murmur;
+			name = Airboard;
 			packageProductDependencies = (
-				CC26B8292EDE2D8A00B10FA0 /* WhisperKit */,
+				CC9F704A2EDF830500F2670F /* WhisperKit */,
 			);
 			productName = murmur;
-			productReference = CC26B7F92EDCD31800B10FA0 /* murmur.app */;
+			productReference = CC26B7F92EDCD31800B10FA0 /* Airboard.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -104,7 +104,7 @@
 					};
 				};
 			};
-			buildConfigurationList = CC26B7F42EDCD31800B10FA0 /* Build configuration list for PBXProject "murmur" */;
+			buildConfigurationList = CC26B7F42EDCD31800B10FA0 /* Build configuration list for PBXProject "Airboard" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -121,7 +121,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				CC26B7F82EDCD31800B10FA0 /* murmur */,
+				CC26B7F82EDCD31800B10FA0 /* Airboard */,
 			);
 		};
 /* End PBXProject section */
@@ -271,7 +271,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				AUTOMATION_APPLE_EVENTS = NO;
-				CODE_SIGN_ENTITLEMENTS = murmur/murmur.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Airboard/Airboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -280,15 +280,15 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = murmur/Info.plist;
+				INFOPLIST_FILE = Airboard/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Murmur needs microphone access to transcribe your voice";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Airboard needs microphone access to transcribe your voice";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pype.murmur;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pype.airboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -312,7 +312,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				AUTOMATION_APPLE_EVENTS = NO;
-				CODE_SIGN_ENTITLEMENTS = murmur/murmur.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Airboard/Airboard.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
@@ -321,15 +321,15 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = murmur/Info.plist;
+				INFOPLIST_FILE = Airboard/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Murmur needs microphone access to transcribe your voice";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Airboard needs microphone access to transcribe your voice";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.pype.murmur;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pype.airboard;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -350,7 +350,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		CC26B7F42EDCD31800B10FA0 /* Build configuration list for PBXProject "murmur" */ = {
+		CC26B7F42EDCD31800B10FA0 /* Build configuration list for PBXProject "Airboard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CC26B8022EDCD31A00B10FA0 /* Debug */,
@@ -359,7 +359,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		CC26B8042EDCD31A00B10FA0 /* Build configuration list for PBXNativeTarget "murmur" */ = {
+		CC26B8042EDCD31A00B10FA0 /* Build configuration list for PBXNativeTarget "Airboard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				CC26B8052EDCD31A00B10FA0 /* Debug */,
@@ -382,7 +382,7 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		CC26B8292EDE2D8A00B10FA0 /* WhisperKit */ = {
+		CC9F704A2EDF830500F2670F /* WhisperKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */;
 			productName = WhisperKit;

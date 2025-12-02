@@ -1,6 +1,5 @@
 //
 //  AppContextDetector.swift
-//  murmur
 //
 //  Created by Dhruv Mehra on 01/12/25.
 //
@@ -56,50 +55,50 @@ class AppContextDetector {
     }
     
     private static func getBrowserURL(bundleIdentifier: String) -> String? {
-        let lowerBundle = bundleIdentifier.lowercased()
-        
-        // Try to get URL using AppleScript based on browser
-        var script = ""
-        
-        if lowerBundle.contains("chrome") || lowerBundle.contains("brave") || lowerBundle.contains("edge") {
-            script = """
-            tell application "Google Chrome"
-                if (count of windows) > 0 then
-                    get URL of active tab of front window
-                end if
-            end tell
-            """
-        } else if lowerBundle.contains("safari") {
-            script = """
-            tell application "Safari"
-                if (count of windows) > 0 then
-                    get URL of current tab of front window
-                end if
-            end tell
-            """
-        } else if lowerBundle.contains("firefox") {
-            // Firefox doesn't support AppleScript well, return nil
-            return nil
-        } else if lowerBundle.contains("arc") {
-            script = """
-            tell application "Arc"
-                if (count of windows) > 0 then
-                    get URL of active tab of front window
-                end if
-            end tell
-            """
-        }
-        
-        guard !script.isEmpty else { return nil }
-        
-        var error: NSDictionary?
-        if let scriptObject = NSAppleScript(source: script) {
-            let output = scriptObject.executeAndReturnError(&error)
-            if error == nil, let urlString = output.stringValue {
-                return urlString
-            }
-        }
-        
+//        let lowerBundle = bundleIdentifier.lowercased()
+//        
+//        // Try to get URL using AppleScript based on browser
+//        var script = ""
+//        
+//        if lowerBundle.contains("chrome") || lowerBundle.contains("brave") || lowerBundle.contains("edge") {
+//            script = """
+//            tell application "Google Chrome"
+//                if (count of windows) > 0 then
+//                    get URL of active tab of front window
+//                end if
+//            end tell
+//            """
+//        } else if lowerBundle.contains("safari") {
+//            script = """
+//            tell application "Safari"
+//                if (count of windows) > 0 then
+//                    get URL of current tab of front window
+//                end if
+//            end tell
+//            """
+//        } else if lowerBundle.contains("firefox") {
+//            // Firefox doesn't support AppleScript well, return nil
+//            return nil
+//        } else if lowerBundle.contains("arc") {
+//            script = """
+//            tell application "Arc"
+//                if (count of windows) > 0 then
+//                    get URL of active tab of front window
+//                end if
+//            end tell
+//            """
+//        }
+//        
+//        guard !script.isEmpty else { return nil }
+//        
+//        var error: NSDictionary?
+//        if let scriptObject = NSAppleScript(source: script) {
+//            let output = scriptObject.executeAndReturnError(&error)
+//            if error == nil, let urlString = output.stringValue {
+//                return urlString
+//            }
+//        }
+//        
         return nil
     }
     

@@ -1,6 +1,5 @@
 //
 //  IntelligentFormatter.swift
-//  murmur
 //
 //  Smart pattern detection and auto-formatting
 //

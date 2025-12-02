@@ -14,7 +14,7 @@ class AudioRecorder: ObservableObject {
     }
     
     func startRecording() {
-        let audioFilename = getDocumentsDirectory().appendingPathComponent("recording_\(Date().timeIntervalSince1970).m4a")
+        let audioFilename = FileManager.default.temporaryDirectory.appendingPathComponent("recording_\(Date().timeIntervalSince1970).m4a")
         
         // IMPROVED: Higher quality audio settings
         let settings = [
@@ -52,9 +52,5 @@ class AudioRecorder: ObservableObject {
         
         print("🎙️ Recording stopped: \(recordingURL?.path ?? "unknown")")
         recordingStartTime = nil
-    }
-    
-    private func getDocumentsDirectory() -> URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 }

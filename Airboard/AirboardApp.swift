@@ -1,6 +1,5 @@
 //
-//  murmurApp.swift
-//  murmur
+//  AirboardApp.swift
 //
 //  Created by Dhruv Mehra on 01/12/25.
 //
@@ -11,7 +10,7 @@ import ApplicationServices
 import Combine
 
 @main
-struct murmurApp: App {
+struct AirboardApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
@@ -124,7 +123,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "\(permission) Permission Required"
-            alert.informativeText = "Murmur needs \(permission.lowercased()) access to work properly."
+            alert.informativeText = "Airboard needs \(permission.lowercased()) access to work properly."
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Open System Settings")
             alert.addButton(withTitle: "Cancel")
@@ -142,7 +141,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "Accessibility Permission Required"
-            alert.informativeText = "Murmur needs Accessibility access to insert text."
+            alert.informativeText = "Airboard needs Accessibility access to insert text."
             alert.alertStyle = .warning
             alert.addButton(withTitle: "Open System Settings")
             alert.addButton(withTitle: "Cancel")
@@ -159,7 +158,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "Model Downloading..."
-            alert.informativeText = "Murmur is downloading the AI model. This will take 1-2 minutes.\n\nProgress shown in bottom-right corner."
+            alert.informativeText = "Airboard is downloading the AI model. This will take 1-2 minutes.\n\nProgress shown in bottom-right corner."
             alert.alertStyle = .informational
             alert.addButton(withTitle: "OK")
             alert.runModal()

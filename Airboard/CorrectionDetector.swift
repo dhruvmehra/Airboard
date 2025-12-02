@@ -1,14 +1,5 @@
 //
 //  CorrectionDetector.swift
-//  murmur
-//
-//  Created by Dhruv Mehra on 02/12/25.
-//
-
-
-//
-//  CorrectionDetector.swift
-//  murmur
 //
 //  Detects and removes self-corrections from transcribed text
 //

@@ -1,6 +1,5 @@
 //
 //  LocalTranscriptionService.swift
-//  murmur
 //
 //  Local Whisper transcription using WhisperKit
 //
@@ -116,22 +115,12 @@ class LocalTranscriptionService: ObservableObject {
     }
     
     private func createSilentAudioFile() throws -> URL {
-        let tempDir = FileManager.default.temporaryDirectory
-        let audioURL = tempDir.appendingPathComponent("warmup_\(Date().timeIntervalSince1970).m4a")
-        
-        let settings: [String: Any] = [
-            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-            AVSampleRateKey: 16000,
-            AVNumberOfChannelsKey: 1,
-            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
-        ]
-        
-        let audioRecorder = try AVAudioRecorder(url: audioURL, settings: settings)
-        audioRecorder.record()
-        Thread.sleep(forTimeInterval: 1.0)
-        audioRecorder.stop()
-        
-        return audioURL
+        // Use bundled silent audio file instead of creating one
+        guard let bundlePath = Bundle.main.path(forResource: "silent_warmup", ofType: "m4a") else {
+            throw NSError(domain: "LocalTranscriptionService", code: -1,
+                         userInfo: [NSLocalizedDescriptionKey: "Silent warmup file not found in bundle"])
+        }
+        return URL(fileURLWithPath: bundlePath)
     }
     
     func transcribe(audioURL: URL, context: AppContext? = nil) async {
