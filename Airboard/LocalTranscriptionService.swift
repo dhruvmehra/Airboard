@@ -40,40 +40,31 @@ class LocalTranscriptionService: ObservableObject {
             print("🔄 Initializing WhisperKit...")
             print("📥 Downloading model if needed (first run only)...")
             
-            // Start a realistic progress simulation for ~60 seconds (small model download)
             let progressTask = Task {
-                // Slower, more realistic progress
-                for i in 1...600 {  // 600 steps over 60 seconds
-                    try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-                    
-                    // Use logarithmic progress - fast at start, slower near end
+                for i in 1...600 {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
                     let progress = min(0.95, Double(i) / 600.0)
-                    
                     await MainActor.run {
                         self.downloadProgress = progress
                     }
-                    
                     if Task.isCancelled { break }
                 }
-                
-                // Stay at 95% until actual download completes
                 await MainActor.run {
                     self.downloadProgress = 0.95
                 }
             }
             
-            // Actually download the model (this is the real download)
-            whisperKit = try await WhisperKit(model: "small")
+            // Initialize WhisperKit with config
+            let config = WhisperKitConfig(model: "small")
+            whisperKit = try await WhisperKit(config)
             
-            // Cancel progress simulation and jump to 100%
             progressTask.cancel()
             
             await MainActor.run {
                 self.downloadProgress = 1.0
             }
             
-            // Small delay to show 100% before hiding
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            try? await Task.sleep(nanoseconds: 500_000_000)
             
             await MainActor.run {
                 self.isDownloadingModel = false
@@ -115,7 +106,6 @@ class LocalTranscriptionService: ObservableObject {
     }
     
     private func createSilentAudioFile() throws -> URL {
-        // Use bundled silent audio file instead of creating one
         guard let bundlePath = Bundle.main.path(forResource: "silent_warmup", ofType: "m4a") else {
             throw NSError(domain: "LocalTranscriptionService", code: -1,
                          userInfo: [NSLocalizedDescriptionKey: "Silent warmup file not found in bundle"])
@@ -165,10 +155,11 @@ class LocalTranscriptionService: ObservableObject {
         do {
             print("🌐 Transcribing...")
             
-            if let context = context, !context.prompt.isEmpty {
+            if let context = context {
                 print("📝 Context: \(context.appType)")
             }
             
+            // Transcribe with default settings (WhisperKit handles optimization internally)
             let results = try await whisperKit.transcribe(audioPath: audioURL.path)
             
             let duration = Date().timeIntervalSince(startTime) * 1000
@@ -182,10 +173,13 @@ class LocalTranscriptionService: ObservableObject {
                 return
             }
             
-            let transcribedText = result.text
+            var transcribedText = result.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            
+            // Post-process for better punctuation
+            transcribedText = improveTranscription(transcribedText, context: context)
             
             await MainActor.run {
-                self.transcription = transcribedText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                self.transcription = transcribedText
                 self.isTranscribing = false
             }
             
@@ -207,6 +201,84 @@ class LocalTranscriptionService: ObservableObject {
             
             deleteAudioFile(at: audioURL)
         }
+    }
+    
+    /// Improve transcription with smart punctuation rules
+    private func improveTranscription(_ text: String, context: AppContext?) -> String {
+        var improved = text
+        
+        // Fix common Whisper issues
+        improved = fixCommonIssues(improved)
+        
+        // Add smart punctuation
+        improved = addSmartPunctuation(improved, context: context)
+        
+        return improved
+    }
+    
+    /// Fix common Whisper transcription issues
+    private func fixCommonIssues(_ text: String) -> String {
+        var fixed = text
+        
+        // Fix missing spaces after punctuation
+        fixed = fixed.replacingOccurrences(of: "\\.([A-Z])", with: ". $1", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: ",([A-Z])", with: ", $1", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: "\\?([A-Z])", with: "? $1", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: "!([A-Z])", with: "! $1", options: .regularExpression)
+        
+        // Fix double spaces
+        fixed = fixed.replacingOccurrences(of: "  +", with: " ", options: .regularExpression)
+        
+        // Fix spacing around contractions
+        fixed = fixed.replacingOccurrences(of: " n't", with: "n't")
+        fixed = fixed.replacingOccurrences(of: " 's", with: "'s")
+        fixed = fixed.replacingOccurrences(of: " 're", with: "'re")
+        fixed = fixed.replacingOccurrences(of: " 'll", with: "'ll")
+        fixed = fixed.replacingOccurrences(of: " 've", with: "'ve")
+        fixed = fixed.replacingOccurrences(of: " 'd", with: "'d")
+        
+        return fixed
+    }
+    
+    /// Add smart punctuation based on context
+    private func addSmartPunctuation(_ text: String, context: AppContext?) -> String {
+        var punctuated = text
+        
+        // Don't add punctuation if it already has ending punctuation
+        let hasEndPunctuation = [".", "!", "?", ",", ";", ":"].contains(where: { punctuated.hasSuffix($0) })
+        
+        if !hasEndPunctuation && !punctuated.isEmpty {
+            // Check if it's a question
+            let questionWords = ["who", "what", "when", "where", "why", "how", "is", "are", "can", "could", "would", "should", "do", "does", "did"]
+            let firstWord = punctuated.lowercased().components(separatedBy: " ").first ?? ""
+            
+            if questionWords.contains(firstWord) {
+                punctuated += "?"
+            } else {
+                punctuated += "."
+            }
+        }
+        
+        // Capitalize first letter
+        if let first = punctuated.first, first.isLowercase {
+            punctuated = punctuated.prefix(1).uppercased() + punctuated.dropFirst()
+        }
+        
+        // Capitalize after sentence-ending punctuation
+        if let regex = try? NSRegularExpression(pattern: "([.!?])\\s+([a-z])") {
+            let matches = regex.matches(in: punctuated, range: NSRange(punctuated.startIndex..., in: punctuated))
+            
+            var result = punctuated
+            for match in matches.reversed() {
+                if let range = Range(match.range(at: 2), in: result) {
+                    let letter = result[range].uppercased()
+                    result.replaceSubrange(range, with: letter)
+                }
+            }
+            punctuated = result
+        }
+        
+        return punctuated
     }
     
     private func deleteAudioFile(at url: URL) {
