@@ -176,7 +176,7 @@ class TextInserter {
     private static func keyCodeForCharacter(_ character: Character) -> CGKeyCode? {
         let char = String(character).lowercased().first ?? character
         
-        // Map of characters to key codes
+        // Map of characters to key codes (including shifted punctuation)
         let keyMap: [Character: CGKeyCode] = [
             "a": 0, "b": 11, "c": 8, "d": 2, "e": 14, "f": 3, "g": 5, "h": 4,
             "i": 34, "j": 38, "k": 40, "l": 37, "m": 46, "n": 45, "o": 31,
@@ -189,7 +189,30 @@ class TextInserter {
             " ": 49, // Space
             "-": 27, "=": 24, "[": 33, "]": 30, "\\": 42,
             ";": 41, "'": 39, ",": 43, ".": 47, "/": 44,
-            "`": 50
+            "`": 50,
+            
+            // Shifted punctuation (uses same key codes as their base keys)
+            "!": 18, // Shift+1
+            "@": 19, // Shift+2
+            "#": 20, // Shift+3
+            "$": 21, // Shift+4
+            "%": 23, // Shift+5
+            "^": 22, // Shift+6
+            "&": 26, // Shift+7
+            "*": 28, // Shift+8
+            "(": 25, // Shift+9
+            ")": 29, // Shift+0
+            "_": 27, // Shift+-
+            "+": 24, // Shift+=
+            "{": 33, // Shift+[
+            "}": 30, // Shift+]
+            "|": 42, // Shift+\
+            ":": 41, // Shift+;
+            "\"": 39, // Shift+'
+            "<": 43, // Shift+,
+            ">": 47, // Shift+.
+            "?": 44, // Shift+/
+            "~": 50  // Shift+`
         ]
         
         return keyMap[char]

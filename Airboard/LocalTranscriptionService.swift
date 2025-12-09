@@ -1,7 +1,7 @@
 //
 //  LocalTranscriptionService.swift
 //
-//  Local Whisper transcription using WhisperKit
+//  Local Whisper transcription using WhisperKit with Llama cleanup
 //
 
 import Foundation
@@ -23,6 +23,13 @@ class LocalTranscriptionService: ObservableObject {
     init() {
         initializationTask = Task {
             await initializeWhisper()
+        }
+        
+        // Try to load Llama if available
+        Task {
+            if ModelDownloadManager.shared.isModelReady {
+                try? await LlamaService.shared.loadModel()
+            }
         }
     }
     
@@ -92,26 +99,9 @@ class LocalTranscriptionService: ObservableObject {
     }
     
     private func warmUpModel() async {
-        guard let whisperKit = whisperKit else { return }
-        print("🔥 Warming up model...")
-        
-        do {
-            let silentAudioURL = try createSilentAudioFile()
-            _ = try await whisperKit.transcribe(audioPath: silentAudioURL.path)
-            try? FileManager.default.removeItem(at: silentAudioURL)
-            print("✅ Model warmed up")
-        } catch {
-            print("⚠️ Warmup failed: \(error.localizedDescription)")
-        }
+        print("⏭️ Skipping warmup - first transcription will initialize model")
     }
     
-    private func createSilentAudioFile() throws -> URL {
-        guard let bundlePath = Bundle.main.path(forResource: "silent_warmup", ofType: "m4a") else {
-            throw NSError(domain: "LocalTranscriptionService", code: -1,
-                         userInfo: [NSLocalizedDescriptionKey: "Silent warmup file not found in bundle"])
-        }
-        return URL(fileURLWithPath: bundlePath)
-    }
     
     func transcribe(audioURL: URL, context: AppContext? = nil) async {
         let startTime = Date()
@@ -160,7 +150,19 @@ class LocalTranscriptionService: ObservableObject {
             }
             
             // Transcribe with default settings (WhisperKit handles optimization internally)
-            let results = try await whisperKit.transcribe(audioPath: audioURL.path)
+            let decodeOptions = DecodingOptions(
+                task: .transcribe,
+                language: "en",
+                temperature: 0.0,
+                wordTimestamps: true,
+                clipTimestamps: [],
+                promptTokens: []
+            )
+
+            let results = try await whisperKit.transcribe(
+                audioPath: audioURL.path,
+                decodeOptions: decodeOptions
+            )
             
             let duration = Date().timeIntervalSince(startTime) * 1000
             
@@ -175,8 +177,31 @@ class LocalTranscriptionService: ObservableObject {
             
             var transcribedText = result.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             
-            // Post-process for better punctuation
-            transcribedText = improveTranscription(transcribedText, context: context)
+            // LOG: Show raw Whisper output
+            print("📝 Raw Whisper output: '\(transcribedText)'")
+
+            // Post-process: Basic cleanup first
+            transcribedText = fixCommonIssues(transcribedText)
+            print("🔧 After basic cleanup: '\(transcribedText)'")
+            
+            // Try Llama cleanup if available
+//            if await LlamaService.shared.isAvailable() {
+//                do {
+//                    transcribedText = try await LlamaService.shared.cleanupText(transcribedText)
+//                    print("✨ Llama cleanup applied")
+//                } catch {
+//                    print("⚠️ Llama cleanup failed, using basic: \(error.localizedDescription)")
+//                    // Already have basic cleanup, continue
+//                }
+//            }
+//            
+            // Apply context-specific formatting
+            if let context = context {
+                transcribedText = IntelligentFormatter.format(transcribedText, context: context)
+            } else {
+                // Apply smart punctuation if no context
+                transcribedText = addSmartPunctuation(transcribedText)
+            }
             
             await MainActor.run {
                 self.transcription = transcribedText
@@ -203,19 +228,6 @@ class LocalTranscriptionService: ObservableObject {
         }
     }
     
-    /// Improve transcription with smart punctuation rules
-    private func improveTranscription(_ text: String, context: AppContext?) -> String {
-        var improved = text
-        
-        // Fix common Whisper issues
-        improved = fixCommonIssues(improved)
-        
-        // Add smart punctuation
-        improved = addSmartPunctuation(improved, context: context)
-        
-        return improved
-    }
-    
     /// Fix common Whisper transcription issues
     private func fixCommonIssues(_ text: String) -> String {
         var fixed = text
@@ -237,11 +249,17 @@ class LocalTranscriptionService: ObservableObject {
         fixed = fixed.replacingOccurrences(of: " 've", with: "'ve")
         fixed = fixed.replacingOccurrences(of: " 'd", with: "'d")
         
+        // Fix spacing before punctuation
+        fixed = fixed.replacingOccurrences(of: " \\.", with: ".", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: " ,", with: ",")
+        fixed = fixed.replacingOccurrences(of: " \\?", with: "?", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: " !", with: "!")
+        
         return fixed
     }
     
-    /// Add smart punctuation based on context
-    private func addSmartPunctuation(_ text: String, context: AppContext?) -> String {
+    /// Add smart punctuation
+    private func addSmartPunctuation(_ text: String) -> String {
         var punctuated = text
         
         // Don't add punctuation if it already has ending punctuation

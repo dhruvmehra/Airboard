@@ -7,301 +7,212 @@
 import SwiftUI
 import AVFoundation
 import ApplicationServices
-import Combine
 
 @main
 struct AirboardApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     var body: some Scene {
-        Settings {
-            EmptyView()
-        }
+        Settings { EmptyView() }
     }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    var audioRecorder = AudioRecorder()
-    var hotkeyManager = HotkeyManager()
-    
-    // Initialize transcription service immediately on launch
-    var transcriptionService = LocalTranscriptionService()
-    
-    // State management
-    private var isRecording = false
-    private var isTranscribing = false
-    private var recordingStartTime: Date?
-    private var cancellables = Set<AnyCancellable>()
-    private var currentContext: AppContext?
-    
-    // Common Whisper hallucinations when there's silence
-    private let hallucinations = [
-        "thank you",
-        "thanks for watching",
-        "bye",
-        "goodbye",
-        "you",
-        ".",
-        "",
-        "[blank_audio]",
-        "blank_audio",
-        "[music]",
-        "[silence]",
-        "music",
-        "silence"
-    ]
+    private var hotkeyManager = HotkeyManager()
+    private lazy var coordinator = TranscriptionCoordinator.shared
+    private var modelManagerWindow: NSWindow?
+    private var keyMonitor: Any?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        print("🚀 App launched - Using local Whisper transcription")
+        print("🚀 Airboard launched")
         
-        // Hide the app from the Dock
+        // Prevent multiple instances from running
+        let runningInstances = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
+        if runningInstances.count > 1 {
+            print("⚠️ Another instance is already running - terminating this one")
+            NSApp.terminate(nil)
+            return
+        }
+
         NSApp.setActivationPolicy(.accessory)
-        
-        // Check and request permissions
+        setupKeyboardShortcut()
         checkPermissions()
         
-        // Observe download progress
-        transcriptionService.$downloadProgress
-            .sink { progress in
-                FloatingWindowManager.shared.showDownloadProgress(progress: progress)
-            }
-            .store(in: &cancellables)
+        Task { await coordinator.initialize() }
         
-        // Observe download completion
-        transcriptionService.$isDownloadingModel
-            .sink { isDownloading in
-                if !isDownloading {
-                    FloatingWindowManager.shared.hideFloatingIndicator()
-                }
-            }
-            .store(in: &cancellables)
-        
-        // Initialize WhisperKit model in background
-        Task {
-            await transcriptionService.ensureModelReady()
-        }
-        
-        // Set up hotkey monitoring
         hotkeyManager.startMonitoring(
-            onPress: { [weak self] in
-                self?.startRecording()
-            },
-            onRelease: { [weak self] in
-                self?.stopRecording()
-            }
+            onPress: { [weak self] in self?.coordinator.startRecording() },
+            onRelease: { [weak self] in self?.coordinator.stopRecording() }
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(openModelManager),
+            name: .openModelManager,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(openFeedbackReport),
+            name: .openFeedbackReport,
+            object: nil
         )
     }
     
-    private func checkPermissions() {
-        let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-        print("🎤 Microphone permission status: \(micStatus.rawValue)")
-        
-        if micStatus == .notDetermined {
-            print("🎤 Requesting microphone permission...")
-            AVCaptureDevice.requestAccess(for: .audio) { granted in
-                print("🎤 Microphone permission granted: \(granted)")
-            }
-        } else if micStatus == .denied || micStatus == .restricted {
-            print("❌ Microphone permission denied")
-            showPermissionAlert(for: "Microphone")
-        } else {
-            print("✅ Microphone permission granted")
+    func applicationWillTerminate(_ notification: Notification) {
+        print("👋 App terminating - cleaning up")
+        hotkeyManager.stopMonitoring()
+        FloatingWindowManager.shared.cleanup()
+        modelManagerWindow?.close()
+        modelManagerWindow = nil
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        if let monitor = keyMonitor {
+            NSEvent.removeMonitor(monitor)
         }
-        
-        let accessibilityEnabled = AXIsProcessTrusted()
-        print("🔐 Accessibility permission: \(accessibilityEnabled)")
-        
-        if !accessibilityEnabled {
-            print("⚠️ Accessibility permission not granted")
-            showAccessibilityAlert()
-        } else {
-            print("✅ Accessibility permission granted")
+        FloatingWindowManager.shared.cleanup()
+    }
+    
+    private func setupKeyboardShortcut() {
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "m" {
+                self?.openModelManager()
+                return nil
+            }
+            return event
         }
     }
     
-    private func showPermissionAlert(for permission: String) {
-        DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = "\(permission) Permission Required"
-            alert.informativeText = "Airboard needs \(permission.lowercased()) access to work properly."
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: "Open System Settings")
-            alert.addButton(withTitle: "Cancel")
+    @objc func openModelManager() {
+        print("✨ Opening AI Enhancements")
+        
+        if let window = modelManagerWindow {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 340, height: 300),
+            styleMask: [.titled, .closable, .miniaturizable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.title = "AI Enhancements"
+        window.contentView = NSHostingView(rootView: ModelDownloadView())
+        window.center()
+        window.delegate = self
+        window.isReleasedWhenClosed = false
+        
+        modelManagerWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    @objc func openFeedbackReport() {
+        print("📝 Opening feedback report - START")
+        
+        DispatchQueue.main.async { [weak self] in
+            print("📝 On main thread")
             
-            let response = alert.runModal()
-            if response == .alertFirstButtonReturn {
-                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
-                    NSWorkspace.shared.open(url)
-                }
-            }
-        }
-    }
-    
-    private func showAccessibilityAlert() {
-        DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = "Accessibility Permission Required"
-            alert.informativeText = "Airboard needs Accessibility access to insert text."
-            alert.alertStyle = .warning
-            alert.addButton(withTitle: "Open System Settings")
-            alert.addButton(withTitle: "Cancel")
-            
-            let response = alert.runModal()
-            if response == .alertFirstButtonReturn {
-                let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: true]
-                AXIsProcessTrustedWithOptions(options)
-            }
-        }
-    }
-    
-    private func showModelDownloadingAlert() {
-        DispatchQueue.main.async {
-            let alert = NSAlert()
-            alert.messageText = "Model Downloading..."
-            alert.informativeText = "Airboard is downloading the AI model. This will take 1-2 minutes.\n\nProgress shown in bottom-right corner."
-            alert.alertStyle = .informational
-            alert.addButton(withTitle: "OK")
-            alert.runModal()
-        }
-    }
-    
-    private func startRecording() {
-        if transcriptionService.isDownloadingModel {
-            print("⚠️ Model downloading")
-            showModelDownloadingAlert()
-            return
-        }
-        
-        guard !isRecording && !isTranscribing else {
-            print("⚠️ Busy")
-            return
-        }
-        
-        print("✅ Starting recording...")
-        isRecording = true
-        recordingStartTime = Date()
-        
-        DispatchQueue.main.async {
-            FloatingWindowManager.shared.showFloatingIndicator(isRecording: true, isTranscribing: false)
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.audioRecorder.startRecording()
-        }
-    }
-    
-    private func stopRecording() {
-        if transcriptionService.isDownloadingModel {
-            print("⚠️ Model downloading")
-            return
-        }
-        
-        guard isRecording else {
-            print("⚠️ Not recording")
-            return
-        }
-        
-        if let startTime = recordingStartTime {
-            let duration = Date().timeIntervalSince(startTime)
-            if duration < 0.3 {
-                print("⚠️ Recording too short")
-                isRecording = false
-                audioRecorder.stopRecording()
-                
-                if let audioURL = audioRecorder.recordingURL {
-                    try? FileManager.default.removeItem(at: audioURL)
-                }
-                
-                resetState()
+            guard let self = self else {
+                print("❌ Self is nil")
                 return
             }
-        }
-        
-        print("✅ Stopping recording...")
-        isRecording = false
-        isTranscribing = true
-        
-        audioRecorder.stopRecording()
-        
-        guard let audioURL = audioRecorder.recordingURL else {
-            print("❌ No audio URL")
-            resetState()
-            return
-        }
-        
-        DispatchQueue.main.async {
-            FloatingWindowManager.shared.showFloatingIndicator(isRecording: false, isTranscribing: true)
-        }
-        
-        // Get context and store it
-        let appContext = AppContextDetector.getCurrentAppContext()
-        currentContext = appContext
-        
-        Task { [weak self] in
-            guard let self = self else { return }
             
-            await self.transcriptionService.transcribe(audioURL: audioURL, context: appContext)
+            print("📝 Self exists")
             
-            if let error = self.transcriptionService.error {
-                print("❌ Error: \(error)")
-                await MainActor.run {
-                    self.resetState()
-                }
-            } else {
-                let text = self.transcriptionService.transcription
-                    .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-                    .lowercased()
-                
-                if self.isLikelyHallucination(text) {
-                    print("⚠️ Hallucination detected")
-                } else if text.isEmpty {
-                    print("⚠️ Empty transcription")
-                } else {
-                    let originalText = self.transcriptionService.transcription
-                        .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-                    
-                    // Pass context to TextInserter for formatting and smart spacing
-                    TextInserter.insertText(originalText, context: self.currentContext)
-                }
-                
-                await MainActor.run {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                        FloatingWindowManager.shared.hideFloatingIndicator()
-                        self.resetState()
-                    }
-                }
+            // Try to access coordinator very carefully
+            let coord = TranscriptionCoordinator.shared
+            print("📝 Got coordinator reference")
+            
+            let text = coord.lastTranscribedText
+            print("📝 Got text: \(text ?? "nil")")
+            
+            let context = coord.lastContext
+            print("📝 Got context: \(String(describing: context))")
+            
+            print("📝 Calling FeedbackManager")
+            FeedbackManager.shared.reportIssue(
+                transcribedText: text,
+                context: context
+            )
+            print("📝 FeedbackManager called")
+        }
+    }
+    
+    private func checkPermissions() {
+        Task {
+            await checkMicrophonePermission()
+            await checkAccessibilityPermission()
+        }
+    }
+    
+    private func checkMicrophonePermission() async {
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        if status == .notDetermined {
+            _ = await AVCaptureDevice.requestAccess(for: .audio)
+        } else if status == .denied || status == .restricted {
+            await MainActor.run {
+                showAlert(
+                    title: "Microphone Access Required",
+                    message: "Please enable microphone access in System Settings."
+                )
             }
         }
     }
     
-    private func isLikelyHallucination(_ text: String) -> Bool {
-        let cleaned = text.lowercased()
-            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-            .replacingOccurrences(of: " ", with: "")
+    private func checkAccessibilityPermission() async {
+        guard !AXIsProcessTrusted() else { return }
         
-        if hallucinations.contains(cleaned) {
-            return true
+        await MainActor.run {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.showAlert(
+                    title: "Accessibility Access Required",
+                    message: "Please enable accessibility access in System Settings."
+                )
+            }
         }
-        
-        if cleaned.contains("blankaudio") || cleaned.contains("blankmusic") {
-            return true
-        }
-        
-        if cleaned.count <= 2 {
-            return true
-        }
-        
-        return false
     }
     
-    private func resetState() {
-        isRecording = false
-        isTranscribing = false
-        recordingStartTime = nil
-        currentContext = nil
-        DispatchQueue.main.async {
-            FloatingWindowManager.shared.hideFloatingIndicator()
+    private func showAlert(title: String, message: String) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Open Settings")
+        alert.addButton(withTitle: "Later")
+        
+        if alert.runModal() == .alertFirstButtonReturn {
+            if title.contains("Accessibility") {
+                let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as NSString: true]
+                AXIsProcessTrustedWithOptions(options)
+            } else {
+                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
+            }
         }
-        print("♻️ Reset")
+    }
+}
+
+extension AppDelegate: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        if notification.object as? NSWindow == modelManagerWindow {
+            if ModelDownloadManager.shared.isDownloading {
+                let alert = NSAlert()
+                alert.messageText = "Cancel Download?"
+                alert.informativeText = "Download is in progress."
+                alert.alertStyle = .warning
+                alert.addButton(withTitle: "Cancel Download")
+                alert.addButton(withTitle: "Continue")
+                
+                if alert.runModal() == .alertFirstButtonReturn {
+                    ModelDownloadManager.shared.cancelDownload()
+                }
+            }
+            modelManagerWindow = nil
+        }
     }
 }

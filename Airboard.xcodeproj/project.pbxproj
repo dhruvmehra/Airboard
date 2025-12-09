@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		CC9F704B2EDF830500F2670F /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = CC9F704A2EDF830500F2670F /* WhisperKit */; };
+		CC9F70562EE0652500F2670F /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = CC9F70552EE0652500F2670F /* LLM */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,6 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CC9F70562EE0652500F2670F /* LLM in Frameworks */,
 				CC9F704B2EDF830500F2670F /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -84,6 +86,7 @@
 			name = Airboard;
 			packageProductDependencies = (
 				CC9F704A2EDF830500F2670F /* WhisperKit */,
+				CC9F70552EE0652500F2670F /* LLM */,
 			);
 			productName = murmur;
 			productReference = CC26B7F92EDCD31800B10FA0 /* Airboard.app */;
@@ -115,6 +118,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				CC9F70542EE0652500F2670F /* XCRemoteSwiftPackageReference "LLM" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CC26B7FA2EDCD31800B10FA0 /* Products */;
@@ -383,6 +387,14 @@
 				kind = branch;
 			};
 		};
+		CC9F70542EE0652500F2670F /* XCRemoteSwiftPackageReference "LLM" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/eastriverlee/LLM.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -390,6 +402,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */;
 			productName = WhisperKit;
+		};
+		CC9F70552EE0652500F2670F /* LLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CC9F70542EE0652500F2670F /* XCRemoteSwiftPackageReference "LLM" */;
+			productName = LLM;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
