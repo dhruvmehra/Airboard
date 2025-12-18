@@ -12,8 +12,8 @@ class ModelDownloadManager: NSObject, ObservableObject {
     @Published var isModelReady: Bool = false
     
     // MARK: - Properties
-    private let modelURL = "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
-    private let modelName = "llama-3.2-1b-instruct-q4.gguf"
+    private let modelURL = "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf"
+    private let modelName = "gemma-2-2b-it-q4.gguf"
     private var downloadTask: URLSessionDownloadTask?
     private var retryCount = 0
     private let maxRetries = 3

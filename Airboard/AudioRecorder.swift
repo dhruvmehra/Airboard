@@ -15,14 +15,14 @@ class AudioRecorder: ObservableObject {
     
     private func setupAudioSession() {
         #if os(macOS)
-        // macOS doesn't require audio session setup
-        print("✅ macOS - no audio session setup needed")
+        print("✅ macOS - using AVAudioRecorder with post-processing")
         #else
         let audioSession = AVAudioSession.sharedInstance()
         do {
-            try audioSession.setCategory(.playAndRecord, mode: .default)
+            // iOS: Enable noise cancellation
+            try audioSession.setCategory(.record, mode: .measurement, options: [])
             try audioSession.setActive(true)
-            print("✅ Audio session configured")
+            print("✅ Audio session configured with noise suppression")
         } catch {
             print("❌ Audio session setup failed: \(error.localizedDescription)")
         }
@@ -30,24 +30,22 @@ class AudioRecorder: ObservableObject {
     }
     
     func startRecording() {
-        // ✅ Changed from .m4a to .wav
         let audioFilename = FileManager.default.temporaryDirectory
             .appendingPathComponent("recording_\(Date().timeIntervalSince1970).wav")
         
-        // ✅ FIXED: PCM format instead of AAC for WhisperKit compatibility
         let settings: [String: Any] = [
-            AVFormatIDKey: Int(kAudioFormatLinearPCM),  // ← Changed from AAC
-            AVSampleRateKey: 16000.0,  // ← Changed from 44100 to 16000 (Whisper optimal)
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),
+            AVSampleRateKey: 16000.0,
             AVNumberOfChannelsKey: 1,  // Mono
-            AVLinearPCMBitDepthKey: 16,  // ← PCM specific
-            AVLinearPCMIsFloatKey: false,  // ← PCM specific
-            AVLinearPCMIsBigEndianKey: false,  // ← PCM specific
-            AVLinearPCMIsNonInterleaved: false  // ← PCM specific
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false
         ]
         
         do {
             audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
-            audioRecorder?.prepareToRecord()  // ← Added prepare
+            audioRecorder?.prepareToRecord()
             
             let success = audioRecorder?.record() ?? false
             if success {
@@ -67,7 +65,6 @@ class AudioRecorder: ObservableObject {
         audioRecorder?.stop()
         isRecording = false
         
-        // Calculate recording duration
         let duration: TimeInterval
         if let startTime = recordingStartTime {
             duration = Date().timeIntervalSince(startTime)
@@ -76,7 +73,6 @@ class AudioRecorder: ObservableObject {
             duration = 0
         }
         
-        // ✅ Added file validation
         if let url = recordingURL {
             do {
                 let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
@@ -84,7 +80,10 @@ class AudioRecorder: ObservableObject {
                     let sizeKB = Double(fileSize) / 1024.0
                     print("📊 Recording size: \(String(format: "%.1f", sizeKB))KB")
                     
-                    if fileSize < 1000 {
+                    if fileSize >= 1000 {
+                        // Apply audio processing on macOS (post-processing)
+                        processAudioForWhisper(url: url)
+                    } else {
                         print("⚠️ Recording too small - likely invalid")
                     }
                 }
@@ -99,7 +98,6 @@ class AudioRecorder: ObservableObject {
         
         recordingStartTime = nil
         
-        // ✅ Deactivate audio session (iOS only)
         #if !os(macOS)
         do {
             try AVAudioSession.sharedInstance().setActive(false)
@@ -109,7 +107,97 @@ class AudioRecorder: ObservableObject {
         #endif
     }
     
-    // ✅ Added cleanup method
+    /// Process audio for better Whisper recognition
+    /// Only normalizes volume - Whisper handles noise well on its own
+    private func processAudioForWhisper(url: URL) {
+        do {
+            let audioFile = try AVAudioFile(forReading: url)
+            let format = audioFile.processingFormat
+            let frameCount = UInt32(audioFile.length)
+            
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
+                print("⚠️ Failed to create audio buffer")
+                return
+            }
+            
+            try audioFile.read(into: buffer)
+            
+            guard let channelData = buffer.floatChannelData else {
+                print("⚠️ No channel data available")
+                return
+            }
+            
+            let samples = channelData[0]
+            let sampleCount = Int(buffer.frameLength)
+            
+            // Analyze current audio levels
+            let peakLevel = findPeakLevel(samples: samples, count: sampleCount)
+            let rmsLevel = findRMSLevel(samples: samples, count: sampleCount)
+            print("📊 Audio levels - Peak: \(String(format: "%.4f", peakLevel)), RMS: \(String(format: "%.4f", rmsLevel))")
+            
+            // ONLY normalize - no filtering, no noise gate
+            // Whisper handles noise well, we just need adequate volume
+            normalizeAudio(samples: samples, count: sampleCount, currentPeak: peakLevel)
+            
+            // Write back
+            let outputFile = try AVAudioFile(forWriting: url, settings: format.settings, commonFormat: format.commonFormat, interleaved: format.isInterleaved)
+            try outputFile.write(from: buffer)
+            
+            print("✅ Audio processing complete (normalize only)")
+        } catch {
+            print("⚠️ Audio processing failed: \(error.localizedDescription)")
+        }
+    }
+    
+    /// Find peak amplitude in audio
+    private func findPeakLevel(samples: UnsafeMutablePointer<Float>, count: Int) -> Float {
+        var peak: Float = 0.0
+        for i in 0..<count {
+            let absValue = Swift.abs(samples[i])
+            if absValue > peak {
+                peak = absValue
+            }
+        }
+        return peak
+    }
+    
+    /// Find RMS (average) level in audio
+    private func findRMSLevel(samples: UnsafeMutablePointer<Float>, count: Int) -> Float {
+        var sumSquares: Float = 0.0
+        for i in 0..<count {
+            sumSquares += samples[i] * samples[i]
+        }
+        return sqrt(sumSquares / Float(count))
+    }
+    
+    /// Normalize audio to boost quiet recordings so Whisper can hear them
+    private func normalizeAudio(samples: UnsafeMutablePointer<Float>, count: Int, currentPeak: Float, targetPeak: Float = 0.8) {
+        // Skip if audio is already loud enough or too quiet (likely silence)
+        guard currentPeak < 0.5 && currentPeak > 0.001 else {
+            if currentPeak <= 0.001 {
+                print("📊 Audio too quiet (likely silence), skipping normalization")
+            } else {
+                print("📊 Audio level OK (\(String(format: "%.4f", currentPeak))), no normalization needed")
+            }
+            return
+        }
+        
+        let gain = targetPeak / currentPeak
+        let safeGain = min(gain, 15.0)  // Allow up to 15x for very quiet speech
+        
+        print("🔊 Boosting audio by \(String(format: "%.1f", safeGain))x (peak: \(String(format: "%.4f", currentPeak)) → \(String(format: "%.2f", min(currentPeak * safeGain, targetPeak))))")
+        
+        for i in 0..<count {
+            samples[i] *= safeGain
+            // Soft clipping to prevent harsh distortion
+            if samples[i] > 0.95 {
+                samples[i] = 0.95
+            } else if samples[i] < -0.95 {
+                samples[i] = -0.95
+            }
+        }
+    }
+    
     deinit {
         if isRecording {
             stopRecording()

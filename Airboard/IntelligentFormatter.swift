@@ -110,8 +110,6 @@ class IntelligentFormatter {
             "bullet point",
             "bullet points",
             "bulleted list",
-            "list of",
-            "items are",
             "following points"
         ]
         

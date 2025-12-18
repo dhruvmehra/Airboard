@@ -21,10 +21,12 @@ struct AirboardPopover: View {
     let downloadProgress: Double
     let onDownloadModel: () -> Void
     let onRemoveModel: () -> Void
+    let onOpenDictionary: () -> Void  // NEW
     let onReportIssue: () -> Void
     let onDismiss: () -> Void
     
     @State private var isHoveringDownload = false
+    @State private var isHoveringDictionary = false  // NEW
     @State private var isHoveringReport = false
     @State private var isHoveringRemove = false
     @State private var showingRemoveConfirm = false
@@ -77,6 +79,45 @@ struct AirboardPopover: View {
             
             // Actions Section
             VStack(spacing: 8) {
+                // Dictionary Button - NEW
+                Button(action: onOpenDictionary) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue.opacity(isHoveringDictionary ? 0.15 : 0.1))
+                                .frame(width: 32, height: 32)
+                            
+                            Image(systemName: "book.fill")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Color.blue)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Dictionary")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Text("Manage custom vocabulary")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.primary.opacity(isHoveringDictionary ? 0.04 : 0))
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveringDictionary = $0 }
+                
                 // Report Issue Button
                 Button(action: onReportIssue) {
                     HStack(spacing: 12) {
@@ -151,7 +192,7 @@ struct AirboardPopover: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This will free up 1.3 GB of storage. You can download it again anytime.")
+            Text("This will free up 0.5 GB of storage. You can download it again anytime.")
         }
     }
     
@@ -185,7 +226,7 @@ struct AirboardPopover: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.primary)
                         
-                        Text("\(Int(downloadProgress * 1300)) of 1,300 MB")
+                        Text("\(Int(downloadProgress * 500)) of 500 MB")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -233,7 +274,7 @@ struct AirboardPopover: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("AI Enhancements Active")
+                    Text("AI Active")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.primary)
                     
@@ -284,7 +325,7 @@ struct AirboardPopover: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.primary)
                         
-                        Text("Better formatting & spacing • 1.3 GB")
+                        Text("Better formatting & spacing • 0.5 GB")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -345,6 +386,7 @@ struct VisualEffectBlur: NSViewRepresentable {
                 downloadProgress: 0.0,
                 onDownloadModel: {},
                 onRemoveModel: {},
+                onOpenDictionary: {},  // NEW
                 onReportIssue: {},
                 onDismiss: {}
             )

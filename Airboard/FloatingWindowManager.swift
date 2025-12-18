@@ -12,6 +12,7 @@ class FloatingWindowManager {
     static let shared = FloatingWindowManager()
     private var floatingWindow: NSWindow?
     private var popoverWindow: NSWindow?
+    private var dictionaryWindow: NSWindow?  // NEW
     
     init() {
         DispatchQueue.main.async {
@@ -123,6 +124,9 @@ class FloatingWindowManager {
             onRemoveModel: { [weak self] in
                 self?.handleRemoveModel()
             },
+            onOpenDictionary: { [weak self] in  // NEW
+                self?.handleOpenDictionary()
+            },
             onReportIssue: { [weak self] in
                 self?.handleReportIssue()
             },
@@ -233,15 +237,50 @@ class FloatingWindowManager {
         ModelDownloadManager.shared.deleteModel()
     }
     
+    // NEW
+    private func handleOpenDictionary() {
+        hidePopover()
+        showDictionaryWindow()
+    }
+    
     private func handleReportIssue() {
         hidePopover()
         NotificationCenter.default.post(name: .openFeedbackReport, object: nil)
+    }
+    
+    // NEW - Dictionary Window
+    private func showDictionaryWindow() {
+        // Close existing window if open
+        if let existing = dictionaryWindow {
+            existing.close()
+            dictionaryWindow = nil
+        }
+        
+        let dictionaryView = DictionaryView()
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 450),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.title = "Dictionary"
+        window.contentView = NSHostingView(rootView: dictionaryView)
+        window.center()
+        window.isReleasedWhenClosed = false
+        
+        dictionaryWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
     
     func cleanup() {
         DispatchQueue.main.async {
             self.popoverWindow?.close()
             self.popoverWindow = nil
+            self.dictionaryWindow?.close()  // NEW
+            self.dictionaryWindow = nil  // NEW
             self.floatingWindow?.orderOut(nil)
             self.floatingWindow?.close()
             self.floatingWindow = nil
@@ -329,17 +368,17 @@ struct FloatingIndicatorView: View {
                             .font(.system(size: 8, weight: .semibold, design: .rounded))
                             .foregroundStyle(.blue.opacity(0.8))
                     }
-                    .allowsHitTesting(false)  // ← Important!
+                    .allowsHitTesting(false)
                 } else {
                     Image(systemName: iconName)
                         .font(.system(size: iconSize, weight: .medium))
                         .foregroundStyle(iconColor)
                         .symbolEffect(.bounce, value: isRecording)
-                        .allowsHitTesting(false)  // ← Important!
+                        .allowsHitTesting(false)
                 }
             }
             .frame(width: 52, height: 52)
-            .contentShape(Rectangle())  // ← Important! Makes entire area clickable
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }

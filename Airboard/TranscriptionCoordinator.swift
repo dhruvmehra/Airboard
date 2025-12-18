@@ -23,6 +23,11 @@ class TranscriptionCoordinator: ObservableObject {
     
     private var recordingStartTime: Date?
     private var currentContext: AppContext?
+    
+    // NEW: Store the target app when recording starts
+    private var targetApp: NSRunningApplication?
+    private var targetAppPID: pid_t?
+    
     @Published private(set) var lastTranscribedText: String?
     @Published private(set) var lastContext: AppContext?
 
@@ -97,7 +102,7 @@ class TranscriptionCoordinator: ObservableObject {
             try? await LlamaService.shared.loadModel()
         }
         
-        print("🎉 Llama model ready - AI enhancements activated")
+        print("🎉 LLM is ready - AI enhancements activated")
     }
     
     func initialize() async {
@@ -129,6 +134,16 @@ class TranscriptionCoordinator: ObservableObject {
             showDownloadingAlert()
             return
         }
+        
+        // IMPORTANT: Capture the target app NOW, before recording starts
+        // This is the app where text will be inserted
+        targetApp = NSWorkspace.shared.frontmostApplication
+        targetAppPID = targetApp?.processIdentifier
+        
+        // Also capture context now
+        currentContext = AppContextDetector.getCurrentAppContext()
+        
+        print("🎯 Target app captured: \(targetApp?.localizedName ?? "Unknown") (PID: \(targetAppPID ?? 0))")
         
         isRecording = true
         recordingStartTime = Date()
@@ -165,7 +180,9 @@ class TranscriptionCoordinator: ObservableObject {
         }
         
         FloatingWindowManager.shared.showFloatingIndicator(isRecording: false, isTranscribing: true)
-        currentContext = AppContextDetector.getCurrentAppContext()
+        
+        // NOTE: We already captured currentContext in startRecording()
+        // Don't recapture here as the user may have switched apps
         
         Task { await processTranscription(audioURL: audioURL) }
     }
@@ -189,7 +206,11 @@ class TranscriptionCoordinator: ObservableObject {
         
         lastTranscribedText = text  // Store for feedback
         lastContext = currentContext
-        TextInserter.insertText(text, context: currentContext)
+        
+        // IMPORTANT: Insert text into the TARGET app, not the current frontmost app
+        await MainActor.run {
+            insertTextIntoTargetApp(text)
+        }
         
         // Show ModelDownloadView after first successful transcription (if model not ready)
         if !hasCompletedFirstTranscription && !ModelDownloadManager.shared.isModelReady {
@@ -209,6 +230,40 @@ class TranscriptionCoordinator: ObservableObject {
         }
     }
     
+    /// Insert text into the app that was active when recording started
+    private func insertTextIntoTargetApp(_ text: String) {
+        guard let targetPID = targetAppPID else {
+            print("⚠️ No target app captured, inserting into frontmost app")
+            TextInserter.insertText(text, context: currentContext)
+            return
+        }
+        
+        // Check if target app is still running
+        guard let targetApp = targetApp, !targetApp.isTerminated else {
+            print("⚠️ Target app is no longer running, inserting into frontmost app")
+            TextInserter.insertText(text, context: currentContext)
+            return
+        }
+        
+        let currentFrontmost = NSWorkspace.shared.frontmostApplication
+        let needToSwitch = currentFrontmost?.processIdentifier != targetPID
+        
+        if needToSwitch {
+            print("🔄 Switching back to target app: \(targetApp.localizedName ?? "Unknown")")
+            
+            // Activate the target app
+            targetApp.activate()
+            
+            // Wait a moment for the app to come to front
+            usleep(150000) // 0.15 seconds
+        }
+        
+        // Now insert the text
+        TextInserter.insertText(text, context: currentContext)
+        
+        print("✅ Text inserted into: \(targetApp.localizedName ?? "Unknown")")
+    }
+    
     private func cancelRecording() {
         isRecording = false
         audioRecorder.stopRecording()
@@ -223,6 +278,8 @@ class TranscriptionCoordinator: ObservableObject {
         isTranscribing = false
         recordingStartTime = nil
         currentContext = nil
+        targetApp = nil
+        targetAppPID = nil
         FloatingWindowManager.shared.hideFloatingIndicator()
     }
     

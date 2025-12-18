@@ -1,7 +1,7 @@
 //
 //  LocalTranscriptionService.swift
 //
-//  Local Whisper transcription using WhisperKit with Llama cleanup
+//  Local Whisper transcription using WhisperKit with vocabulary prompts
 //
 
 import Foundation
@@ -99,9 +99,91 @@ class LocalTranscriptionService: ObservableObject {
     }
     
     private func warmUpModel() async {
-        print("⏭️ Skipping warmup - first transcription will initialize model")
+        print("🔥 Warming up model with dummy transcription...")
+        
+        // Create a tiny silent audio file to force model + tokenizer initialization
+        let silentAudio = createSilentAudio(duration: 0.1) // 100ms of silence
+        
+        do {
+            // This will force WhisperKit to fully initialize including the tokenizer
+            _ = try await whisperKit?.transcribe(audioArray: silentAudio)
+            
+            // Now verify tokenizer is available
+            if let tokenizer = whisperKit?.tokenizer {
+                let testTokens = tokenizer.encode(text: "test")
+                print("✅ Tokenizer ready (\(testTokens.count) tokens for 'test')")
+            } else {
+                print("⚠️ Tokenizer still not available after warmup")
+            }
+        } catch {
+            print("⚠️ Warmup transcription failed: \(error.localizedDescription)")
+        }
+    }
+
+    /// Create a silent audio array for warmup
+    private func createSilentAudio(duration: Double) -> [Float] {
+        let sampleRate = 16000 // WhisperKit uses 16kHz
+        let sampleCount = Int(duration * Double(sampleRate))
+        return [Float](repeating: 0.0, count: sampleCount)
     }
     
+    /// Build Whisper prompt from vocabulary and conversation history
+    private func buildWhisperPrompt(for context: AppContext?) -> [Int] {
+        var promptParts: [String] = []
+        
+        // 1. Add custom vocabulary
+        let vocabularyPrompt = VocabularyManager.shared.getPromptString()
+        if !vocabularyPrompt.isEmpty {
+            promptParts.append(vocabularyPrompt)
+        }
+        
+        // 2. Add context-specific hints
+        if let context = context {
+            switch context.appType {
+            case .email:
+                promptParts.append("Email: Hi, Dear, Thanks, Best regards.")
+                
+            case .code:
+                promptParts.append("Code: function, variable, const, import, return.")
+                
+            case .messaging:
+                promptParts.append("Message: hey, lol, btw, gonna.")
+                
+            case .document, .notes:
+                promptParts.append("Document: However, Therefore, Additionally.")
+                
+            default:
+                break
+            }
+        }
+        
+        let promptText = promptParts.joined(separator: " ")
+        
+        // Whisper prompts should be under 224 tokens (~200 words)
+        let words = promptText.split(separator: " ")
+        let truncated = words.prefix(200).joined(separator: " ")
+        
+        if !truncated.isEmpty {
+            print("🎯 Whisper context prompt: '\(truncated)'")
+            
+            // Convert text to token IDs using WhisperKit's tokenizer
+            guard let whisperKit = whisperKit, let tokenizer = whisperKit.tokenizer else {
+                print("⚠️ Tokenizer not available yet")
+                return []
+            }
+            
+            let tokens = tokenizer.encode(text: truncated)
+            if tokens.isEmpty {
+                print("⚠️ Tokenization failed - returned empty array")
+            } else {
+                print("🔢 Converted to \(tokens.count) tokens")
+                print("📝 Prompt Tokens: \(tokens)")
+            }
+            return tokens
+        }
+        
+        return []
+    }
     
     func transcribe(audioURL: URL, context: AppContext? = nil) async {
         let startTime = Date()
@@ -149,14 +231,17 @@ class LocalTranscriptionService: ObservableObject {
                 print("📝 Context: \(context.appType)")
             }
             
-            // Transcribe with default settings (WhisperKit handles optimization internally)
+            // Build context prompt
+            let promptTokens = buildWhisperPrompt(for: context)
+            print("📝 Prompt Tokens: \(promptTokens)")
+            // Transcribe with context prompt
             let decodeOptions = DecodingOptions(
                 task: .transcribe,
                 language: "en",
                 temperature: 0.0,
                 wordTimestamps: true,
                 clipTimestamps: [],
-                promptTokens: []
+                promptTokens: promptTokens.isEmpty ? nil : promptTokens
             )
 
             let results = try await whisperKit.transcribe(
@@ -184,23 +269,34 @@ class LocalTranscriptionService: ObservableObject {
             transcribedText = fixCommonIssues(transcribedText)
             print("🔧 After basic cleanup: '\(transcribedText)'")
             
-            // Try Llama cleanup if available
-//            if await LlamaService.shared.isAvailable() {
-//                do {
-//                    transcribedText = try await LlamaService.shared.cleanupText(transcribedText)
-//                    print("✨ Llama cleanup applied")
-//                } catch {
-//                    print("⚠️ Llama cleanup failed, using basic: \(error.localizedDescription)")
-//                    // Already have basic cleanup, continue
-//                }
-//            }
-//            
-            // Apply context-specific formatting
-            if let context = context {
-                transcribedText = IntelligentFormatter.format(transcribedText, context: context)
-            } else {
-                // Apply smart punctuation if no context
-                transcribedText = addSmartPunctuation(transcribedText)
+            // Try LLM context-aware formatting if available
+            let llmAvailable = await LlamaService.shared.isAvailable()
+            
+            if llmAvailable {
+                do {
+                    if let context = context {
+                        // Use context-aware formatting
+                        transcribedText = try await LlamaService.shared.formatWithContext(transcribedText, context: context)
+                        print("✨ Context-aware formatting applied")
+                    } else {
+                        // No context, just basic cleanup
+                        transcribedText = try await LlamaService.shared.cleanupText(transcribedText)
+                        print("✨ Basic LLM cleanup applied")
+                    }
+                } catch {
+                    print("⚠️ LLM formatting failed, using basic: \(error.localizedDescription)")
+                    // Already have basic cleanup, continue
+                }
+            }
+            
+            // Apply context-specific formatting (only if LLM didn't handle it)
+            if !llmAvailable {
+                if let context = context {
+                    transcribedText = IntelligentFormatter.format(transcribedText, context: context)
+                } else {
+                    // Apply smart punctuation if no context
+                    transcribedText = addSmartPunctuation(transcribedText)
+                }
             }
             
             await MainActor.run {
@@ -228,18 +324,22 @@ class LocalTranscriptionService: ObservableObject {
         }
     }
     
+    
     /// Fix common Whisper transcription issues
     private func fixCommonIssues(_ text: String) -> String {
         var fixed = text
         
         // Fix missing spaces after punctuation
-        fixed = fixed.replacingOccurrences(of: "\\.([A-Z])", with: ". $1", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: ",([A-Z])", with: ", $1", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: "\\?([A-Z])", with: "? $1", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: "!([A-Z])", with: "! $1", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: "\\.([A-Za-z])", with: ". $1", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: ",([A-Za-z])", with: ", $1", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: "\\?([A-Za-z])", with: "? $1", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: "!([A-Za-z])", with: "! $1", options: .regularExpression)
         
-        // Fix double spaces
-        fixed = fixed.replacingOccurrences(of: "  +", with: " ", options: .regularExpression)
+        // Fix concatenated words (common Whisper bug)
+        fixed = fixed.replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
+        
+        // Fix double/triple spaces
+        fixed = fixed.replacingOccurrences(of: " {2,}", with: " ", options: .regularExpression)
         
         // Fix spacing around contractions
         fixed = fixed.replacingOccurrences(of: " n't", with: "n't")
@@ -248,32 +348,46 @@ class LocalTranscriptionService: ObservableObject {
         fixed = fixed.replacingOccurrences(of: " 'll", with: "'ll")
         fixed = fixed.replacingOccurrences(of: " 've", with: "'ve")
         fixed = fixed.replacingOccurrences(of: " 'd", with: "'d")
+        fixed = fixed.replacingOccurrences(of: " 'm", with: "'m")
         
         // Fix spacing before punctuation
-        fixed = fixed.replacingOccurrences(of: " \\.", with: ".", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: " ,", with: ",")
-        fixed = fixed.replacingOccurrences(of: " \\?", with: "?", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: " !", with: "!")
+        fixed = fixed.replacingOccurrences(of: " +\\.", with: ".", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: " +,", with: ",", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: " +\\?", with: "?", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: " +!", with: "!", options: .regularExpression)
+        
+        // Fix weird punctuation combinations
+        fixed = fixed.replacingOccurrences(of: "\\.+", with: ".", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: ",+", with: ",", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: "\\?,", with: "?", options: .regularExpression)
+        fixed = fixed.replacingOccurrences(of: ",\\.", with: ".", options: .regularExpression)
         
         return fixed
     }
     
     /// Add smart punctuation
     private func addSmartPunctuation(_ text: String) -> String {
-        var punctuated = text
+        var punctuated = text.trimmingCharacters(in: .whitespacesAndNewlines)
         
         // Don't add punctuation if it already has ending punctuation
         let hasEndPunctuation = [".", "!", "?", ",", ";", ":"].contains(where: { punctuated.hasSuffix($0) })
         
         if !hasEndPunctuation && !punctuated.isEmpty {
             // Check if it's a question
-            let questionWords = ["who", "what", "when", "where", "why", "how", "is", "are", "can", "could", "would", "should", "do", "does", "did"]
+            let questionWords = ["who", "what", "when", "where", "why", "how",
+                                "is", "are", "can", "could", "would", "should",
+                                "do", "does", "did", "will", "was", "were"]
             let firstWord = punctuated.lowercased().components(separatedBy: " ").first ?? ""
             
             if questionWords.contains(firstWord) {
                 punctuated += "?"
             } else {
-                punctuated += "."
+                // Check if it looks like a complete sentence (has a verb)
+                let hasVerb = punctuated.lowercased().range(of: "\\b(is|are|was|were|am|be|been|have|has|had|do|does|did|can|could|will|would|should|may|might)\\b", options: .regularExpression) != nil
+                
+                if hasVerb || punctuated.split(separator: " ").count > 3 {
+                    punctuated += "."
+                }
             }
         }
         

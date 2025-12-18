@@ -20,12 +20,22 @@ struct AirboardApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyManager = HotkeyManager()
     private lazy var coordinator = TranscriptionCoordinator.shared
-    private var modelManagerWindow: NSWindow?
     private var keyMonitor: Any?
+    
+    private func suppressLibraryLogs() {
+        // Redirect stderr to /dev/null
+        let devNull = open("/dev/null", O_WRONLY)
+        if devNull != -1 {
+            dup2(devNull, STDERR_FILENO)
+            close(devNull)
+        }
+    }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("🚀 Airboard launched")
+        // supress logs
         
+        suppressLibraryLogs()
         // Prevent multiple instances from running
         let runningInstances = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
         if runningInstances.count > 1 {
@@ -35,7 +45,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         NSApp.setActivationPolicy(.accessory)
-        setupKeyboardShortcut()
         checkPermissions()
         
         Task { await coordinator.initialize() }
@@ -45,12 +54,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             onRelease: { [weak self] in self?.coordinator.stopRecording() }
         )
         
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(openModelManager),
-            name: .openModelManager,
-            object: nil
-        )
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(openFeedbackReport),
@@ -63,8 +66,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("👋 App terminating - cleaning up")
         hotkeyManager.stopMonitoring()
         FloatingWindowManager.shared.cleanup()
-        modelManagerWindow?.close()
-        modelManagerWindow = nil
     }
 
     deinit {
@@ -75,50 +76,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         FloatingWindowManager.shared.cleanup()
     }
     
-    private func setupKeyboardShortcut() {
-        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "m" {
-                self?.openModelManager()
-                return nil
-            }
-            return event
-        }
-    }
-    
-    @objc func openModelManager() {
-        print("✨ Opening AI Enhancements")
-        
-        if let window = modelManagerWindow {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
-        
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 340, height: 300),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        
-        window.title = "AI Enhancements"
-        window.contentView = NSHostingView(rootView: ModelDownloadView())
-        window.center()
-        window.delegate = self
-        window.isReleasedWhenClosed = false
-        
-        modelManagerWindow = window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-    
     @objc func openFeedbackReport() {
         print("📝 Opening feedback report - START")
         
         DispatchQueue.main.async { [weak self] in
             print("📝 On main thread")
             
-            guard let self = self else {
+            guard self != nil else {
                 print("❌ Self is nil")
                 return
             }
@@ -193,26 +157,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
             }
-        }
-    }
-}
-
-extension AppDelegate: NSWindowDelegate {
-    func windowWillClose(_ notification: Notification) {
-        if notification.object as? NSWindow == modelManagerWindow {
-            if ModelDownloadManager.shared.isDownloading {
-                let alert = NSAlert()
-                alert.messageText = "Cancel Download?"
-                alert.informativeText = "Download is in progress."
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Cancel Download")
-                alert.addButton(withTitle: "Continue")
-                
-                if alert.runModal() == .alertFirstButtonReturn {
-                    ModelDownloadManager.shared.cancelDownload()
-                }
-            }
-            modelManagerWindow = nil
         }
     }
 }

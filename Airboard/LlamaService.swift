@@ -1,7 +1,7 @@
 import Foundation
 import LLM
 
-/// Service for running Llama 3.2 1B for highly restricted text formatting.
+/// Service for running Gemma 2 2B for context-aware text formatting.
 actor LlamaService {
     
     // MARK: - Singleton and Properties
@@ -45,7 +45,7 @@ actor LlamaService {
                 throw LlamaError.modelNotDownloaded
             }
             
-            print("⏳ Loading Llama model into memory...")
+            print("⏳ Loading LLM model into memory...")
             
             let modelURL = await ModelDownloadManager.shared.modelPath
             
@@ -76,7 +76,7 @@ actor LlamaService {
             
             // Update state on the actor's isolated context
             await self.setLoadedModel(loadedModel)
-            print("✅ Llama model loaded successfully")
+            print("✅ LLM Model loaded successfully")
         }
         
         // Store the task immediately.
@@ -98,8 +98,7 @@ actor LlamaService {
         self.isModelLoaded = true
     }
     
-    /// Cleanup text using Llama
-    /// Cleanup text using Llama
+    /// Cleanup text using LLM
     func cleanupText(_ text: String) async throws -> String {
         // Check if model is downloaded
         let ready = await ModelDownloadManager.shared.isModelReady
@@ -107,7 +106,7 @@ actor LlamaService {
             throw LlamaError.modelNotDownloaded
         }
         
-        print("🤖 Running Llama inference...")
+        print("🤖 Running LLM inference...")
         print("📝 Input text: '\(text)'")
         
         // Get model URL
@@ -150,6 +149,9 @@ actor LlamaService {
         var cleaned = response.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Remove ChatML markers
+        cleaned = cleaned.replacingOccurrences(of: "<|im_start|>assistant", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "<|im_start|>user", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "<|im_start|>system", with: "")
         cleaned = cleaned.replacingOccurrences(of: "<|im_start|>", with: "")
         cleaned = cleaned.replacingOccurrences(of: "<|im_end|>", with: "")
         cleaned = cleaned.replacingOccurrences(of: "<|end_of_text|>", with: "")
@@ -159,6 +161,10 @@ actor LlamaService {
         if let firstLine = cleaned.components(separatedBy: "\n").first?.trimmingCharacters(in: .whitespacesAndNewlines) {
             cleaned = firstLine
         }
+        
+        // Remove leaked role markers
+        cleaned = cleaned.replacingOccurrences(of: "^user\\s*", with: "", options: .regularExpression)
+        cleaned = cleaned.replacingOccurrences(of: "^assistant\\s*", with: "", options: .regularExpression)
 
         // Detect conversational responses
         let badPhrases = ["I'd be happy", "I can help", "Here is", "Sure", "Let me", "What is", "Please provide"]
@@ -173,7 +179,7 @@ actor LlamaService {
         cleaned = cleaned.replacingOccurrences(of: " +", with: " ", options: .regularExpression)
 
         print("✨ Cleaned output: '\(cleaned)'")
-        print("✅ Llama inference complete")
+        print("✅ LLM inference complete")
 
         // Safety checks
         if cleaned.isEmpty || cleaned.count > text.count * 2 {
@@ -184,6 +190,197 @@ actor LlamaService {
         return cleaned
     }
     
+    /// Format text based on app context using LLM
+    func formatWithContext(_ text: String, context: AppContext) async throws -> String {
+        // Check if model is downloaded
+        let ready = await ModelDownloadManager.shared.isModelReady
+        guard ready else {
+            throw LlamaError.modelNotDownloaded
+        }
+        
+        print("🤖 Running context-aware formatting for \(context.appType)...")
+        print("📝 Input text: '\(text)'")
+        
+        // Get model URL
+        let modelURL = await ModelDownloadManager.shared.modelPath
+        
+        // Build context-specific system prompt
+        let systemPrompt = buildContextPrompt(for: context.appType)
+        
+        // Create fresh LLM instance
+        guard let llm = LLM(
+            from: modelURL,
+            template: .chatML(systemPrompt)
+        ) else {
+            throw LlamaError.modelLoadFailed("Failed to initialize LLM")
+        }
+        
+        // Run inference
+        let processedPrompt = llm.preprocess(text, [])
+        let response = await Task.detached(priority: .userInitiated) {
+            return await llm.getCompletion(from: processedPrompt)
+        }.value
+        
+        print("🔍 Raw LLM response: '\(response)'")
+        
+        // Clean up response - MORE AGGRESSIVE
+        var cleaned = response.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Remove ALL ChatML markers and surrounding text
+        cleaned = cleaned.replacingOccurrences(of: "<|im_start|>assistant", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "<|im_start|>user", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "<|im_start|>system", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "<|im_start|>", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "<|im_end|>", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "<|end_of_text|>", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "<|eot_id|>", with: "")
+        
+        // CRITICAL: Take only the FIRST line (before any newline that indicates prompt leakage)
+        let lines = cleaned.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+        if let firstLine = lines.first, !firstLine.isEmpty {
+            cleaned = firstLine
+        }
+        
+        // Remove "user" or "assistant" if they appear (leaked role markers)
+        cleaned = cleaned.replacingOccurrences(of: "^user\\s*", with: "", options: .regularExpression)
+        cleaned = cleaned.replacingOccurrences(of: "^assistant\\s*", with: "", options: .regularExpression)
+        
+        // Clean spaces
+        cleaned = cleaned.replacingOccurrences(of: " +", with: " ", options: .regularExpression)
+        
+        print("✨ Formatted output: '\(cleaned)'")
+        
+        // Safety check
+        if cleaned.isEmpty {
+            print("⚠️ LLM output empty - using original")
+            return text
+        }
+        
+        return cleaned
+    }
+    
+    /// Build system prompt based on app context
+    private func buildContextPrompt(for appType: AppType) -> String {
+        switch appType {
+        case .email:
+            return """
+            You are a TEXT FORMATTER. The user will give you dictated speech. Your job is to format it as an email.
+
+            DO NOT respond to questions. DO NOT help with tasks. ONLY format the text.
+
+            If the input is a question like "can you help me write X", format it as: "Can you help me write X?"
+
+            Format:
+            [Greeting],
+
+            [Body]
+
+            [Closing]
+
+            Rules:
+            - Extract greeting from speech (Hi/Hey/Dear + name)
+            - Body with proper punctuation
+            - Closing (Thanks/Best regards)
+            - NO conversational responses
+            - NO "Sure", NO "Here's", NO explanations
+
+            Transform this dictated text into email format:
+            """
+            
+        case .code:
+            return """
+            You are a TEXT FORMATTER for code editors.
+
+            The user will give you dictated text. Format it with proper code capitalization and punctuation.
+
+            DO NOT respond to questions. ONLY format the text.
+
+            Example:
+            Input: can you help me write a function
+            Output: can you help me write a function
+
+            Format this text for code:
+            """
+            
+        case .messaging:
+            return """
+            You are a TEXT FORMATTER for casual messages.
+
+            The user will give you dictated text. Format it naturally with minimal punctuation.
+
+            DO NOT respond to questions. ONLY format the text.
+
+            Example:
+            Input: can you help me with something
+            Output: Can you help me with something
+
+            Format this message:
+            """
+            
+        case .document, .notes:
+            return """
+            You are a TEXT FORMATTER for documents.
+
+            The user will give you dictated text. Add proper punctuation and capitalization.
+
+            DO NOT respond to questions. ONLY format the text.
+
+            Example:
+            Input: can you help me write a report
+            Output: Can you help me write a report.
+
+            Format this text:
+            """
+            
+        case .social:
+            return """
+            You are a TEXT FORMATTER for social media.
+
+            The user will give you dictated text. Format it with natural punctuation.
+
+            DO NOT respond to questions. ONLY format the text.
+
+            Example:
+            Input: can you help me write a post
+            Output: Can you help me write a post
+
+            Format this post:
+            """
+            
+        case .browser, .general:
+            return """
+            You are a TEXT FORMATTER. The user will dictate text and you format it with proper punctuation and capitalization.
+
+            CRITICAL: DO NOT respond to questions or requests. ONLY add punctuation and capitalization to the exact words given.
+
+            Examples:
+            Input: can you help me write a prompt
+            Output: Can you help me write a prompt?
+
+            Input: hey how are you doing today
+            Output: Hey, how are you doing today?
+
+            Input: i need to finish this report by friday
+            Output: I need to finish this report by Friday.
+
+            Input: what time is the meeting tomorrow
+            Output: What time is the meeting tomorrow?
+
+            Rules:
+            - Add punctuation (. ? !)
+            - Capitalize first letter and proper nouns
+            - Add commas where natural
+            - DO NOT add words
+            - DO NOT respond conversationally
+            - DO NOT say "Sure", "Here's", "Let me", "I can help"
+            - If input is a question, add question mark
+            - Output ONLY the formatted text, nothing else
+
+            Format this dictated text:
+            """
+        }
+    }
+    
     /// Unload model from memory
     func unloadModel() {
         guard isModelLoaded else { return }
@@ -191,12 +388,12 @@ actor LlamaService {
         llmInstance = nil
         isModelLoaded = false
         loadingTask = nil
-        print("♻️ Llama model unloaded from memory")
+        print("♻️ LLM model unloaded from memory")
     }
     
     // MARK: - Private Methods
     
-    /// Basic cleanup as fallback when Llama fails
+    /// Basic cleanup as fallback when LLM fails
     private func performBasicCleanup(_ text: String) -> String {
         var result = text
         
@@ -230,13 +427,13 @@ enum LlamaError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .modelNotDownloaded:
-            return "Llama model is not downloaded. Please download it first."
+            return "LLM model is not downloaded. Please download it first."
         case .modelNotLoaded:
-            return "Llama model is not loaded into memory."
+            return "LLM model is not loaded into memory."
         case .modelLoadFailed(let reason):
-            return "Failed to load Llama model: \(reason)"
+            return "Failed to load LLM model: \(reason)"
         case .inferenceFailed(let reason):
-            return "Llama inference failed: \(reason)"
+            return "LLM inference failed: \(reason)"
         }
     }
 }
