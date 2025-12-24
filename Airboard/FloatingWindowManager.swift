@@ -8,34 +8,44 @@
 import SwiftUI
 import AppKit
 
-class FloatingWindowManager {
+class FloatingWindowManager: NSObject {
     static let shared = FloatingWindowManager()
     private var floatingWindow: NSWindow?
     private var popoverWindow: NSWindow?
-    private var dictionaryWindow: NSWindow?  // NEW
+    private var dictionaryWindow: NSWindow?
     
-    init() {
-        DispatchQueue.main.async {
-            self.createFloatingWindow()
-            self.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: false, downloadProgress: 0.0)
+    override init() {
+        super.init()
+        
+        DispatchQueue.main.async { [weak self] in
+            self?.createFloatingWindow()
+            self?.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: false, downloadProgress: 0.0)
         }
+        
+        // Listen for pulse notification (for onboarding)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(pulseIcon),
+            name: .pulseFloatingIcon,
+            object: nil
+        )
     }
     
     func showFloatingIndicator(isRecording: Bool, isTranscribing: Bool) {
-        DispatchQueue.main.async {
-            self.updateIndicatorState(isRecording: isRecording, isTranscribing: isTranscribing, isDownloading: false, downloadProgress: 0.0)
+        DispatchQueue.main.async { [weak self] in
+            self?.updateIndicatorState(isRecording: isRecording, isTranscribing: isTranscribing, isDownloading: false, downloadProgress: 0.0)
         }
     }
     
     func showDownloadProgress(progress: Double) {
-        DispatchQueue.main.async {
-            self.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: true, downloadProgress: progress)
+        DispatchQueue.main.async { [weak self] in
+            self?.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: true, downloadProgress: progress)
         }
     }
     
     func hideFloatingIndicator() {
-        DispatchQueue.main.async {
-            self.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: false, downloadProgress: 0.0)
+        DispatchQueue.main.async { [weak self] in
+            self?.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: false, downloadProgress: 0.0)
         }
     }
     
@@ -94,6 +104,33 @@ class FloatingWindowManager {
         print("✅ Clickable floating indicator created")
     }
     
+    // MARK: - Pulse Animation (for onboarding)
+    
+    @objc private func pulseIcon() {
+        DispatchQueue.main.async { [weak self] in
+            self?.pulseOnce()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { self?.pulseOnce() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { self?.pulseOnce() }
+        }
+    }
+    
+    private func pulseOnce() {
+        guard let window = floatingWindow else { return }
+        
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.3
+            window.animator().alphaValue = 0.3
+        }, completionHandler: { [weak self] in
+            guard let window = self?.floatingWindow else { return }
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.3
+                window.animator().alphaValue = 1.0
+            })
+        })
+    }
+    
+    // MARK: - Tap Handling
+    
     private func handleTap(isRecording: Bool, isTranscribing: Bool) {
         guard !isRecording && !isTranscribing else { return }
         print("🖱️ Floating icon tapped")
@@ -124,7 +161,7 @@ class FloatingWindowManager {
             onRemoveModel: { [weak self] in
                 self?.handleRemoveModel()
             },
-            onOpenDictionary: { [weak self] in  // NEW
+            onOpenDictionary: { [weak self] in
                 self?.handleOpenDictionary()
             },
             onReportIssue: { [weak self] in
@@ -178,10 +215,8 @@ class FloatingWindowManager {
         
         // Check if popover would go off the top of screen
         if popoverY + popoverHeight > screenFrame.maxY {
-            // Not enough space above, position below the icon instead
             popoverY = floatingFrame.origin.y - popoverHeight - margin
             
-            // If also not enough space below, just put it at top with margin
             if popoverY < screenFrame.minY {
                 popoverY = screenFrame.maxY - popoverHeight - margin
             }
@@ -189,7 +224,6 @@ class FloatingWindowManager {
         
         window.setFrameOrigin(NSPoint(x: popoverX, y: popoverY))
         
-        // Animate in
         window.alphaValue = 0
         window.orderFrontRegardless()
         
@@ -201,9 +235,8 @@ class FloatingWindowManager {
         
         popoverWindow = window
         
-        // Auto-hide when clicking outside
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { event in
                 if let popoverWindow = self?.popoverWindow,
                    !popoverWindow.frame.contains(event.locationInWindow) {
                     self?.hidePopover()
@@ -219,9 +252,9 @@ class FloatingWindowManager {
             context.duration = 0.15
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
             window.animator().alphaValue = 0
-        }, completionHandler: {
-            window.close()
-            self.popoverWindow = nil
+        }, completionHandler: { [weak self] in
+            self?.popoverWindow?.close()
+            self?.popoverWindow = nil
         })
     }
     
@@ -237,7 +270,6 @@ class FloatingWindowManager {
         ModelDownloadManager.shared.deleteModel()
     }
     
-    // NEW
     private func handleOpenDictionary() {
         hidePopover()
         showDictionaryWindow()
@@ -248,9 +280,9 @@ class FloatingWindowManager {
         NotificationCenter.default.post(name: .openFeedbackReport, object: nil)
     }
     
-    // NEW - Dictionary Window
+    // MARK: - Dictionary Window
+    
     private func showDictionaryWindow() {
-        // Close existing window if open
         if let existing = dictionaryWindow {
             existing.close()
             dictionaryWindow = nil
@@ -276,16 +308,21 @@ class FloatingWindowManager {
     }
     
     func cleanup() {
-        DispatchQueue.main.async {
-            self.popoverWindow?.close()
-            self.popoverWindow = nil
-            self.dictionaryWindow?.close()  // NEW
-            self.dictionaryWindow = nil  // NEW
-            self.floatingWindow?.orderOut(nil)
-            self.floatingWindow?.close()
-            self.floatingWindow = nil
+        NotificationCenter.default.removeObserver(self)
+        DispatchQueue.main.async { [weak self] in
+            self?.popoverWindow?.close()
+            self?.popoverWindow = nil
+            self?.dictionaryWindow?.close()
+            self?.dictionaryWindow = nil
+            self?.floatingWindow?.orderOut(nil)
+            self?.floatingWindow?.close()
+            self?.floatingWindow = nil
             print("🧹 Floating window cleaned up")
         }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }
 
@@ -304,7 +341,6 @@ struct FloatingIndicatorView: View {
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                // Pulse animation (background)
                 if isRecording || isTranscribing {
                     Circle()
                         .stroke(accentColor.opacity(0.2), lineWidth: 2)
@@ -318,7 +354,6 @@ struct FloatingIndicatorView: View {
                         }
                 }
                 
-                // Main circle background
                 Circle()
                     .fill(Color.black.opacity(0.08))
                     .frame(width: 44, height: 44)
@@ -343,7 +378,6 @@ struct FloatingIndicatorView: View {
                             .stroke(Color.blue.opacity(isHovered ? 0.6 : 0), lineWidth: 2)
                     )
                 
-                // Status ring
                 if isRecording || isTranscribing {
                     Circle()
                         .stroke(accentColor, lineWidth: 2)
@@ -358,7 +392,6 @@ struct FloatingIndicatorView: View {
                         .rotationEffect(.degrees(-90))
                 }
                 
-                // Icon on top
                 if isDownloading {
                     VStack(spacing: 0) {
                         Image(systemName: "arrow.down")

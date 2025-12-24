@@ -10,4 +10,5 @@ import Foundation
 extension Notification.Name {
     static let openModelManager = Notification.Name("openModelManager")
     static let openFeedbackReport = Notification.Name("openFeedbackReport")
+    static let pulseFloatingIcon = Notification.Name("pulseFloatingIcon")
 }

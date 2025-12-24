@@ -21,6 +21,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyManager = HotkeyManager()
     private lazy var coordinator = TranscriptionCoordinator.shared
     private var keyMonitor: Any?
+    private var onboardingManager: OnboardingManager?
+
     
     private func suppressLibraryLogs() {
         // Redirect stderr to /dev/null
@@ -46,6 +48,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         NSApp.setActivationPolicy(.accessory)
         checkPermissions()
+        
+        MenuBarManager.shared.setup()
+        // Show onboarding after app is fully initialized
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+            self?.onboardingManager = OnboardingManager()
+            self?.onboardingManager?.showOnboardingIfNeeded()
+        }
         
         Task { await coordinator.initialize() }
         
