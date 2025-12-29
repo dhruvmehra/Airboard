@@ -4,6 +4,7 @@
 //
 
 import AppKit
+import AVFoundation
 
 class MenuBarManager: NSObject {
     static let shared = MenuBarManager()
@@ -23,12 +24,35 @@ class MenuBarManager: NSObject {
             button.image?.isTemplate = true
         }
         
+        rebuildMenu()
+        
+        print("✅ Menu bar icon created")
+    }
+    
+    func rebuildMenu() {
         let menu = NSMenu()
         
-        // Title
-        let titleItem = NSMenuItem(title: "Airboard", action: nil, keyEquivalent: "")
-        titleItem.isEnabled = false
-        menu.addItem(titleItem)
+        // Status
+        let allGranted = SetupWindowController.shared.allPermissionsGranted
+        let statusText = allGranted ? "✓ Airboard Ready" : "⚠ Setup Required"
+        let statusMenuItem = NSMenuItem(title: statusText, action: nil, keyEquivalent: "")
+        statusMenuItem.isEnabled = false
+        menu.addItem(statusMenuItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        
+        // Set Up Permissions (always show if not granted)
+        if !allGranted {
+            let setupItem = NSMenuItem(title: "Set Up Permissions...", action: #selector(setupPermissions), keyEquivalent: "")
+            setupItem.target = self
+            menu.addItem(setupItem)
+            menu.addItem(NSMenuItem.separator())
+        }
+        
+        // Check Permissions
+        let checkItem = NSMenuItem(title: "Check Permissions...", action: #selector(checkPermissions), keyEquivalent: "")
+        checkItem.target = self
+        menu.addItem(checkItem)
         
         menu.addItem(NSMenuItem.separator())
         
@@ -38,8 +62,32 @@ class MenuBarManager: NSObject {
         menu.addItem(quitItem)
         
         statusItem?.menu = menu
+    }
+    
+    @objc private func setupPermissions() {
+        SetupWindowController.shared.showPermissionSetup()
+    }
+    
+    @objc private func checkPermissions() {
+        let mic = SetupWindowController.shared.isMicrophoneGranted ? "✅" : "❌"
+        let acc = SetupWindowController.shared.isAccessibilityGranted ? "✅" : "❌"
         
-        print("✅ Menu bar icon created")
+        let alert = NSAlert()
+        alert.messageText = "Permission Status"
+        alert.informativeText = "\(mic) Microphone\n\(acc) Accessibility"
+        alert.alertStyle = SetupWindowController.shared.allPermissionsGranted ? .informational : .warning
+        
+        if !SetupWindowController.shared.allPermissionsGranted {
+            alert.addButton(withTitle: "Set Up")
+            alert.addButton(withTitle: "Close")
+            
+            if alert.runModal() == .alertFirstButtonReturn {
+                SetupWindowController.shared.showPermissionSetup()
+            }
+        } else {
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
     }
     
     @objc private func quitApp() {

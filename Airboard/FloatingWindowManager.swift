@@ -13,6 +13,7 @@ class FloatingWindowManager: NSObject {
     private var floatingWindow: NSWindow?
     private var popoverWindow: NSWindow?
     private var dictionaryWindow: NSWindow?
+    private var hotkeyWindow: NSWindow?
     
     override init() {
         super.init()
@@ -164,6 +165,9 @@ class FloatingWindowManager: NSObject {
             onOpenDictionary: { [weak self] in
                 self?.handleOpenDictionary()
             },
+            onOpenHotkeySettings: { [weak self] in
+                self?.handleOpenHotkeySettings()
+            },
             onReportIssue: { [weak self] in
                 self?.handleReportIssue()
             },
@@ -173,7 +177,7 @@ class FloatingWindowManager: NSObject {
         )
         
         let popoverWidth: CGFloat = 280
-        let popoverHeight: CGFloat = 300
+        let popoverHeight: CGFloat = 350
         
         let hostingView = NSHostingView(rootView: popoverView)
         hostingView.frame = NSRect(x: 0, y: 0, width: popoverWidth, height: popoverHeight)
@@ -275,6 +279,11 @@ class FloatingWindowManager: NSObject {
         showDictionaryWindow()
     }
     
+    private func handleOpenHotkeySettings() {
+        hidePopover()
+        showHotkeySettingsWindow()
+    }
+    
     private func handleReportIssue() {
         hidePopover()
         NotificationCenter.default.post(name: .openFeedbackReport, object: nil)
@@ -307,6 +316,35 @@ class FloatingWindowManager: NSObject {
         NSApp.activate(ignoringOtherApps: true)
     }
     
+    // MARK: - Hotkey Settings Window
+    
+    private func showHotkeySettingsWindow() {
+        if let existing = hotkeyWindow {
+            existing.close()
+            hotkeyWindow = nil
+        }
+        
+        let hotkeyView = HotkeySettingsView(onHotkeyChanged: {
+            NotificationCenter.default.post(name: .hotkeyChanged, object: nil)
+        })
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 400),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        
+        window.title = "Hotkey Settings"
+        window.contentView = NSHostingView(rootView: hotkeyView)
+        window.center()
+        window.isReleasedWhenClosed = false
+        
+        hotkeyWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
     func cleanup() {
         NotificationCenter.default.removeObserver(self)
         DispatchQueue.main.async { [weak self] in
@@ -314,6 +352,8 @@ class FloatingWindowManager: NSObject {
             self?.popoverWindow = nil
             self?.dictionaryWindow?.close()
             self?.dictionaryWindow = nil
+            self?.hotkeyWindow?.close()
+            self?.hotkeyWindow = nil
             self?.floatingWindow?.orderOut(nil)
             self?.floatingWindow?.close()
             self?.floatingWindow = nil
@@ -419,6 +459,9 @@ struct FloatingIndicatorView: View {
     }
     
     private var iconName: String {
+        if !SetupWindowController.shared.allPermissionsGranted {
+            return "exclamationmark.triangle.fill"
+        }
         if isRecording { return "waveform" }
         if isTranscribing { return "ellipsis" }
         return "waveform"
@@ -429,6 +472,9 @@ struct FloatingIndicatorView: View {
     }
     
     private var iconColor: Color {
+        if !SetupWindowController.shared.allPermissionsGranted {
+            return .orange
+        }
         if isRecording { return .red }
         if isTranscribing { return .orange }
         return .primary.opacity(0.4)

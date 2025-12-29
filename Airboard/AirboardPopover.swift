@@ -5,14 +5,6 @@
 //  Created by Dhruv Mehra on 09/12/25.
 //
 
-
-//
-//  AirboardPopover.swift
-//  Airboard
-//
-//  Elegant Apple-style popover for Airboard controls
-//
-
 import SwiftUI
 
 struct AirboardPopover: View {
@@ -21,14 +13,17 @@ struct AirboardPopover: View {
     let downloadProgress: Double
     let onDownloadModel: () -> Void
     let onRemoveModel: () -> Void
-    let onOpenDictionary: () -> Void  // NEW
+    let onOpenDictionary: () -> Void
+    let onOpenHotkeySettings: () -> Void
     let onReportIssue: () -> Void
     let onDismiss: () -> Void
     
     @State private var isHoveringDownload = false
-    @State private var isHoveringDictionary = false  // NEW
+    @State private var isHoveringDictionary = false
+    @State private var isHoveringHotkey = false
     @State private var isHoveringReport = false
     @State private var isHoveringRemove = false
+    @State private var isHoveringSetup = false
     @State private var showingRemoveConfirm = false
     
     var body: some View {
@@ -67,6 +62,14 @@ struct AirboardPopover: View {
             Divider()
                 .padding(.horizontal, 12)
             
+            // Permission Status Section (if needed)
+            if !SetupWindowController.shared.allPermissionsGranted {
+                permissionStatusView
+                
+                Divider()
+                    .padding(.horizontal, 12)
+            }
+            
             // Model Status Section
             VStack(spacing: 12) {
                 modelStatusView
@@ -79,7 +82,46 @@ struct AirboardPopover: View {
             
             // Actions Section
             VStack(spacing: 8) {
-                // Dictionary Button - NEW
+                // Hotkey Settings Button
+                Button(action: onOpenHotkeySettings) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.purple.opacity(isHoveringHotkey ? 0.15 : 0.1))
+                                .frame(width: 32, height: 32)
+                            
+                            Image(systemName: "command.circle.fill")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Color.purple)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Hotkey")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.primary)
+                            
+                            Text(HotkeyManager.currentHotkeyDisplayName)
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.primary.opacity(isHoveringHotkey ? 0.04 : 0))
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveringHotkey = $0 }
+                
+                // Dictionary Button
                 Button(action: onOpenDictionary) {
                     HStack(spacing: 12) {
                         ZStack {
@@ -195,6 +237,78 @@ struct AirboardPopover: View {
             Text("This will free up 0.5 GB of storage. You can download it again anytime.")
         }
     }
+    
+    // MARK: - Permission Status View
+    
+    @ViewBuilder
+    private var permissionStatusView: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.15))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.orange)
+                }
+                
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Setup Required")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.primary)
+                    
+                    Text(permissionStatusText())
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+            
+            Button(action: {
+                SetupWindowController.shared.showPermissionSetup()
+            }) {
+                HStack {
+                    Image(systemName: "gear")
+                        .font(.system(size: 12, weight: .medium))
+                    Text("Set Up Permissions")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.orange)
+                )
+            }
+            .buttonStyle(.plain)
+            .onHover { isHoveringSetup = $0 }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.orange.opacity(0.08))
+        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+    }
+    
+    private func permissionStatusText() -> String {
+        var missing: [String] = []
+        if !SetupWindowController.shared.isMicrophoneGranted {
+            missing.append("Microphone")
+        }
+        if !SetupWindowController.shared.isAccessibilityGranted {
+            missing.append("Accessibility")
+        }
+        return "Missing: " + missing.joined(separator: ", ")
+    }
+    
+    // MARK: - Model Status View
     
     @ViewBuilder
     private var modelStatusView: some View {
@@ -386,7 +500,8 @@ struct VisualEffectBlur: NSViewRepresentable {
                 downloadProgress: 0.0,
                 onDownloadModel: {},
                 onRemoveModel: {},
-                onOpenDictionary: {},  // NEW
+                onOpenDictionary: {},
+                onOpenHotkeySettings: {},
                 onReportIssue: {},
                 onDismiss: {}
             )
