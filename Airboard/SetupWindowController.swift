@@ -84,6 +84,12 @@ class SetupWindowController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         
         startPermissionCheck()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: NSApplication.didBecomeActiveNotification,
+            object: nil
+        )
     }
     
     private func setupContent(in window: NSWindow) {
@@ -273,6 +279,10 @@ class SetupWindowController: NSObject, NSWindowDelegate {
         }
     }
     
+    @objc private func appDidBecomeActive() {
+        updateUI()
+    }
+    
     private func startPermissionCheck() {
         permissionCheckTimer?.invalidate()
         permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -297,7 +307,7 @@ class SetupWindowController: NSObject, NSWindowDelegate {
         if allPermissionsGranted {
             updateButtonTitle("Get Started")
         } else if isMicrophoneGranted {
-            updateButtonTitle("Enable Accessibility")
+            updateButtonTitle("Enable Access")
         } else {
             updateButtonTitle("Enable Microphone")
         }
@@ -306,6 +316,7 @@ class SetupWindowController: NSObject, NSWindowDelegate {
     private func completeSetup() {
         permissionCheckTimer?.invalidate()
         permissionCheckTimer = nil
+        NotificationCenter.default.removeObserver(self, name: NSApplication.didBecomeActiveNotification, object: nil)
         hasCompletedSetup = true
         window?.close()
         window = nil
@@ -318,6 +329,7 @@ class SetupWindowController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         permissionCheckTimer?.invalidate()
         permissionCheckTimer = nil
+        NotificationCenter.default.removeObserver(self, name: NSApplication.didBecomeActiveNotification, object: nil)
         if !hasCompletedSetup {
             hasCompletedSetup = true
         }

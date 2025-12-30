@@ -77,16 +77,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func startHotkeyMonitoring() {
         hotkeyManager.startMonitoring(
-            onPress: { [weak self] in self?.coordinator.startRecording() },
-            onRelease: { [weak self] in self?.coordinator.stopRecording() }
+            onDictationStart: { [weak self] in
+                self?.coordinator.startRecording()
+            },
+            onCommandStart: { [weak self] in
+                self?.coordinator.startCommandRecording()
+            },
+            onRelease: { [weak self] in
+                guard let self = self else { return }
+                self.coordinator.stopRecording(mode: self.hotkeyManager.currentMode)
+            }
         )
     }
     
     @objc func hotkeyDidChange() {
         print("🔄 Hotkey changed, restarting monitoring")
         hotkeyManager.restartMonitoring(
-            onPress: { [weak self] in self?.coordinator.startRecording() },
-            onRelease: { [weak self] in self?.coordinator.stopRecording() }
+            onDictationStart: { [weak self] in
+                self?.coordinator.startRecording()
+            },
+            onCommandStart: { [weak self] in
+                self?.coordinator.startCommandRecording()
+            },
+            onRelease: { [weak self] in
+                guard let self = self else { return }
+                self.coordinator.stopRecording(mode: self.hotkeyManager.currentMode)
+            }
         )
     }
     

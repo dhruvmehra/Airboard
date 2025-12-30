@@ -20,7 +20,7 @@ class FloatingWindowManager: NSObject {
         
         DispatchQueue.main.async { [weak self] in
             self?.createFloatingWindow()
-            self?.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: false, downloadProgress: 0.0)
+            self?.updateIndicatorState(isRecording: false, isTranscribing: false, isCommandMode: false, isDownloading: false, downloadProgress: 0.0)
         }
         
         // Listen for pulse notification (for onboarding)
@@ -32,25 +32,32 @@ class FloatingWindowManager: NSObject {
         )
     }
     
-    func showFloatingIndicator(isRecording: Bool, isTranscribing: Bool) {
+    func showFloatingIndicator(isRecording: Bool, isTranscribing: Bool, isCommandMode: Bool = false) {
         DispatchQueue.main.async { [weak self] in
-            self?.updateIndicatorState(isRecording: isRecording, isTranscribing: isTranscribing, isDownloading: false, downloadProgress: 0.0)
+            self?.updateIndicatorState(isRecording: isRecording, isTranscribing: isTranscribing, isCommandMode: isCommandMode, isDownloading: false, downloadProgress: 0.0)
         }
     }
     
     func showDownloadProgress(progress: Double) {
         DispatchQueue.main.async { [weak self] in
-            self?.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: true, downloadProgress: progress)
+            self?.updateIndicatorState(isRecording: false, isTranscribing: false, isCommandMode: false, isDownloading: true, downloadProgress: progress)
         }
     }
     
     func hideFloatingIndicator() {
         DispatchQueue.main.async { [weak self] in
-            self?.updateIndicatorState(isRecording: false, isTranscribing: false, isDownloading: false, downloadProgress: 0.0)
+            self?.updateIndicatorState(isRecording: false, isTranscribing: false, isCommandMode: false, isDownloading: false, downloadProgress: 0.0)
         }
     }
     
-    private func updateIndicatorState(isRecording: Bool, isTranscribing: Bool, isDownloading: Bool, downloadProgress: Double) {
+    func showCommandExecuted() {
+        // Brief flash to indicate command was executed
+        DispatchQueue.main.async { [weak self] in
+            self?.flashSuccess()
+        }
+    }
+    
+    private func updateIndicatorState(isRecording: Bool, isTranscribing: Bool, isCommandMode: Bool, isDownloading: Bool, downloadProgress: Double) {
         guard let window = self.floatingWindow else {
             createFloatingWindow()
             return
@@ -60,6 +67,7 @@ class FloatingWindowManager: NSObject {
             rootView: FloatingIndicatorView(
                 isRecording: isRecording,
                 isTranscribing: isTranscribing,
+                isCommandMode: isCommandMode,
                 isDownloading: isDownloading,
                 downloadProgress: downloadProgress,
                 onTap: { [weak self] in
@@ -105,7 +113,7 @@ class FloatingWindowManager: NSObject {
         print("✅ Clickable floating indicator created")
     }
     
-    // MARK: - Pulse Animation (for onboarding)
+    // MARK: - Animations
     
     @objc private func pulseIcon() {
         DispatchQueue.main.async { [weak self] in
@@ -125,6 +133,22 @@ class FloatingWindowManager: NSObject {
             guard let window = self?.floatingWindow else { return }
             NSAnimationContext.runAnimationGroup({ context in
                 context.duration = 0.3
+                window.animator().alphaValue = 1.0
+            })
+        })
+    }
+    
+    private func flashSuccess() {
+        guard let window = floatingWindow else { return }
+        
+        // Quick green flash for success
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.15
+            window.animator().alphaValue = 0.5
+        }, completionHandler: { [weak self] in
+            guard let window = self?.floatingWindow else { return }
+            NSAnimationContext.runAnimationGroup({ context in
+                context.duration = 0.15
                 window.animator().alphaValue = 1.0
             })
         })
@@ -371,6 +395,7 @@ class FloatingWindowManager: NSObject {
 struct FloatingIndicatorView: View {
     let isRecording: Bool
     let isTranscribing: Bool
+    let isCommandMode: Bool
     let isDownloading: Bool
     let downloadProgress: Double
     let onTap: () -> Void
@@ -381,6 +406,7 @@ struct FloatingIndicatorView: View {
     var body: some View {
         Button(action: onTap) {
             ZStack {
+                // Pulsing ring for recording/transcribing
                 if isRecording || isTranscribing {
                     Circle()
                         .stroke(accentColor.opacity(0.2), lineWidth: 2)
@@ -392,13 +418,18 @@ struct FloatingIndicatorView: View {
                                 pulseScale = 1.4
                             }
                         }
+                        .onDisappear {
+                            pulseScale = 1.0
+                        }
                 }
                 
+                // Shadow
                 Circle()
                     .fill(Color.black.opacity(0.08))
                     .frame(width: 44, height: 44)
                     .offset(y: 1)
                 
+                // Main circle
                 Circle()
                     .fill(.ultraThinMaterial)
                     .frame(width: 44, height: 44)
@@ -418,12 +449,14 @@ struct FloatingIndicatorView: View {
                             .stroke(Color.blue.opacity(isHovered ? 0.6 : 0), lineWidth: 2)
                     )
                 
+                // Recording/transcribing ring
                 if isRecording || isTranscribing {
                     Circle()
                         .stroke(accentColor, lineWidth: 2)
                         .frame(width: 44, height: 44)
                 }
                 
+                // Download progress ring
                 if isDownloading {
                     Circle()
                         .trim(from: 0, to: downloadProgress)
@@ -432,6 +465,7 @@ struct FloatingIndicatorView: View {
                         .rotationEffect(.degrees(-90))
                 }
                 
+                // Icon
                 if isDownloading {
                     VStack(spacing: 0) {
                         Image(systemName: "arrow.down")
@@ -455,32 +489,65 @@ struct FloatingIndicatorView: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .help("Airboard")
+        .help(helpText)
     }
     
     private var iconName: String {
+        // Show warning icon if permissions not granted
         if !SetupWindowController.shared.allPermissionsGranted {
             return "exclamationmark.triangle.fill"
         }
+        
+        // Command mode - bolt icon
+        if isCommandMode && (isRecording || isTranscribing) {
+            return "bolt.fill"
+        }
+        
+        // Dictation mode - waveform
         if isRecording { return "waveform" }
         if isTranscribing { return "ellipsis" }
+        
+        // Idle
         return "waveform"
     }
     
     private var iconSize: CGFloat {
-        isRecording ? 16 : 14
+        if isCommandMode && (isRecording || isTranscribing) {
+            return 16
+        }
+        return isRecording ? 16 : 14
     }
     
     private var iconColor: Color {
+        // Show orange warning if permissions not granted
         if !SetupWindowController.shared.allPermissionsGranted {
             return .orange
         }
+        
+        // Command mode - purple
+        if isCommandMode && (isRecording || isTranscribing) {
+            return .purple
+        }
+        
+        // Dictation mode - red when recording
         if isRecording { return .red }
         if isTranscribing { return .orange }
+        
+        // Idle
         return .primary.opacity(0.4)
     }
     
     private var accentColor: Color {
-        isRecording ? .red : .orange
+        if isCommandMode {
+            return .purple
+        }
+        return isRecording ? .red : .orange
+    }
+    
+    private var helpText: String {
+        if isCommandMode {
+            return "Airboard - Command Mode"
+        }
+        return "Airboard"
     }
 }

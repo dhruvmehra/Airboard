@@ -2,19 +2,12 @@
 //  HotkeySettingsView.swift
 //  Airboard
 //
-//  Created by Dhruv Mehra on 25/12/25.
-//
-
-
-//
-//  HotkeySettingsView.swift
-//  Airboard
-//
 
 import SwiftUI
 
 struct HotkeySettingsView: View {
-    @State private var selectedHotkey: HotkeyOption = HotkeyManager.currentHotkey
+    @State private var selectedPrimaryHotkey: HotkeyOption = HotkeyManager.primaryHotkey
+    @State private var selectedCommandModifier: HotkeyOption = HotkeyManager.commandModifierHotkey
     @Environment(\.dismiss) private var dismiss
     var onHotkeyChanged: (() -> Void)?
     
@@ -22,7 +15,7 @@ struct HotkeySettingsView: View {
         VStack(spacing: 0) {
             // Header
             HStack {
-                Text("Choose Hotkey")
+                Text("Hotkey Settings")
                     .font(.system(size: 16, weight: .semibold))
                 
                 Spacer()
@@ -40,31 +33,85 @@ struct HotkeySettingsView: View {
             
             Divider()
             
-            // Description
-            Text("Hold this key and speak to dictate")
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
-                .padding(.top, 16)
-                .padding(.bottom, 12)
-            
-            // Options
-            VStack(spacing: 8) {
-                ForEach(HotkeyOption.allCases, id: \.self) { option in
-                    HotkeyOptionRow(
-                        option: option,
-                        isSelected: selectedHotkey == option,
-                        onSelect: {
-                            selectedHotkey = option
-                            HotkeyManager.currentHotkey = option
-                            onHotkeyChanged?()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    
+                    // Dictation Hotkey Section
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Dictation Hotkey")
+                            .font(.system(size: 14, weight: .semibold))
+                        
+                        Text("Hold this key to dictate text")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        
+                        VStack(spacing: 6) {
+                            ForEach(HotkeyOption.allCases.filter { $0 != selectedCommandModifier }, id: \.self) { option in
+                                HotkeyOptionRow(
+                                    option: option,
+                                    isSelected: selectedPrimaryHotkey == option,
+                                    onSelect: {
+                                        selectedPrimaryHotkey = option
+                                        HotkeyManager.primaryHotkey = option
+                                        onHotkeyChanged?()
+                                    }
+                                )
+                            }
                         }
-                    )
+                    }
+                    
+                    Divider()
+                    
+                    // Command Modifier Section
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Command Modifier")
+                            .font(.system(size: 14, weight: .semibold))
+                        
+                        Text("Hold with dictation key for voice commands")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                        
+                        VStack(spacing: 6) {
+                            ForEach(HotkeyOption.allCases.filter { $0 != selectedPrimaryHotkey }, id: \.self) { option in
+                                HotkeyOptionRow(
+                                    option: option,
+                                    isSelected: selectedCommandModifier == option,
+                                    onSelect: {
+                                        selectedCommandModifier = option
+                                        HotkeyManager.commandModifierHotkey = option
+                                        onHotkeyChanged?()
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    Divider()
+                    
+                    // Instructions
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Dictation", systemImage: "waveform")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.red)
+                        Text("Hold \(selectedPrimaryHotkey.displayName) and speak")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                        
+                        Label("Voice Command", systemImage: "bolt.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.purple)
+                            .padding(.top, 4)
+                        Text("Hold \(selectedPrimaryHotkey.displayName) + \(selectedCommandModifier.displayName) and speak")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 8)
                 }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 20)
         }
-        .frame(width: 300)
+        .frame(width: 300, height: 500)
         .background(Color(NSColor.windowBackgroundColor))
     }
 }
@@ -79,20 +126,18 @@ struct HotkeyOptionRow: View {
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 12) {
-                // Checkmark
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 18))
+                    .font(.system(size: 16))
                     .foregroundColor(isSelected ? .blue : .secondary.opacity(0.4))
                 
-                // Label
                 Text(option.displayName)
-                    .font(.system(size: 14))
+                    .font(.system(size: 13))
                     .foregroundColor(.primary)
                 
                 Spacer()
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(isSelected ? Color.blue.opacity(0.1) : (isHovering ? Color.primary.opacity(0.05) : Color.clear))

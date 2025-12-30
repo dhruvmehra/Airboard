@@ -20,11 +20,12 @@ class TranscriptionCoordinator: ObservableObject {
     
     @Published private(set) var isRecording = false
     @Published private(set) var isTranscribing = false
+    @Published private(set) var currentMode: RecordingMode = .dictation
     
     private var recordingStartTime: Date?
     private var currentContext: AppContext?
     
-    // NEW: Store the target app when recording starts
+    // Store the target app when recording starts
     private var targetApp: NSRunningApplication?
     private var targetAppPID: pid_t?
     
@@ -76,10 +77,8 @@ class TranscriptionCoordinator: ObservableObject {
     }
     
     private func notifyModelReady() {
-        // Buzz the floating icon
         FloatingWindowManager.shared.hideFloatingIndicator()
         
-        // Show macOS notification using modern API
         let content = UNMutableNotificationContent()
         content.title = "Airboard"
         content.body = "AI Enhancements ready"
@@ -88,7 +87,7 @@ class TranscriptionCoordinator: ObservableObject {
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
             content: content,
-            trigger: nil // Deliver immediately
+            trigger: nil
         )
         
         UNUserNotificationCenter.current().add(request) { error in
@@ -97,7 +96,6 @@ class TranscriptionCoordinator: ObservableObject {
             }
         }
         
-        // Load Llama model in background
         Task.detached(priority: .background) {
             try? await LlamaService.shared.loadModel()
         }
@@ -108,7 +106,6 @@ class TranscriptionCoordinator: ObservableObject {
     func initialize() async {
         await transcriptionService.ensureModelReady()
         
-        // Request notification permission (async version)
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
             if granted {
@@ -127,7 +124,21 @@ class TranscriptionCoordinator: ObservableObject {
         }
     }
     
+    // MARK: - Recording (Dictation Mode)
+    
     func startRecording() {
+        startRecordingWithMode(.dictation)
+    }
+    
+    // MARK: - Recording (Command Mode)
+    
+    func startCommandRecording() {
+        startRecordingWithMode(.command)
+    }
+    
+    // MARK: - Unified Recording Start
+    
+    private func startRecordingWithMode(_ mode: RecordingMode) {
         guard !isRecording && !isTranscribing else { return }
         
         if transcriptionService.isDownloadingModel {
@@ -135,8 +146,10 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
         
-        // IMPORTANT: Capture the target app NOW, before recording starts
-        // This is the app where text will be inserted
+        // Set the mode
+        currentMode = mode
+        
+        // Capture the target app NOW, before recording starts
         targetApp = NSWorkspace.shared.frontmostApplication
         targetAppPID = targetApp?.processIdentifier
         
@@ -144,19 +157,33 @@ class TranscriptionCoordinator: ObservableObject {
         currentContext = AppContextDetector.getCurrentAppContext()
         
         print("🎯 Target app captured: \(targetApp?.localizedName ?? "Unknown") (PID: \(targetAppPID ?? 0))")
+        print("📍 Recording mode: \(mode == .command ? "COMMAND ⚡" : "DICTATION 🎤")")
         
         isRecording = true
         recordingStartTime = Date()
         
-        FloatingWindowManager.shared.showFloatingIndicator(isRecording: true, isTranscribing: false)
+        // Show appropriate visual feedback based on mode
+        FloatingWindowManager.shared.showFloatingIndicator(
+            isRecording: true,
+            isTranscribing: false,
+            isCommandMode: mode == .command
+        )
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             self?.audioRecorder.startRecording()
         }
     }
     
-    func stopRecording() {
+    // MARK: - Stop Recording
+
+    func stopRecording(mode: RecordingMode? = nil) {
         guard isRecording else { return }
+        
+        // Use passed mode if available (handles mid-recording mode upgrades)
+        if let mode = mode {
+            self.currentMode = mode
+            print("📍 Final mode: \(mode == .command ? "COMMAND" : "DICTATION")")
+        }
         
         if transcriptionService.isDownloadingModel {
             return
@@ -179,13 +206,16 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
         
-        FloatingWindowManager.shared.showFloatingIndicator(isRecording: false, isTranscribing: true)
-        
-        // NOTE: We already captured currentContext in startRecording()
-        // Don't recapture here as the user may have switched apps
+        FloatingWindowManager.shared.showFloatingIndicator(
+            isRecording: false,
+            isTranscribing: true,
+            isCommandMode: currentMode == .command
+        )
         
         Task { await processTranscription(audioURL: audioURL) }
     }
+    
+    // MARK: - Process Transcription
     
     private func processTranscription(audioURL: URL) async {
         await transcriptionService.transcribe(audioURL: audioURL, context: currentContext)
@@ -204,10 +234,65 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
         
-        lastTranscribedText = text  // Store for feedback
+        lastTranscribedText = text
         lastContext = currentContext
         
-        // IMPORTANT: Insert text into the TARGET app, not the current frontmost app
+        print("📝 Transcription: \"\(text)\"")
+        print("📍 Mode: \(currentMode == .command ? "COMMAND" : "DICTATION")")
+        
+        // Handle based on mode
+        if currentMode == .command {
+            await handleCommandMode(text: text)
+        } else {
+            await handleDictationMode(text: text)
+        }
+        
+        await MainActor.run {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                FloatingWindowManager.shared.hideFloatingIndicator()
+                self.resetState()
+            }
+        }
+    }
+    
+    // MARK: - Command Mode Handler
+    
+    private func handleCommandMode(text: String) async {
+        print("⚡ Processing as COMMAND: \(text)")
+        
+        let parsedCommand = CommandDetector.detect(text)
+        
+        await MainActor.run {
+            if parsedCommand.isValid {
+                print("✅ Valid command detected: \(parsedCommand.type)")
+                let success = CommandExecutor.execute(parsedCommand)
+                
+                if success {
+                    FloatingWindowManager.shared.showCommandExecuted()
+                }
+            } else {
+                print("❓ Could not parse command: \(text)")
+                // Show notification for unknown command
+                let content = UNMutableNotificationContent()
+                content.title = "Unknown Command"
+                content.body = "Couldn't understand: \(text)"
+                content.sound = .default
+                
+                let request = UNNotificationRequest(
+                    identifier: UUID().uuidString,
+                    content: content,
+                    trigger: nil
+                )
+                UNUserNotificationCenter.current().add(request)
+            }
+        }
+    }
+    
+    // MARK: - Dictation Mode Handler
+    
+    private func handleDictationMode(text: String) async {
+        print("🎤 Processing as DICTATION: \(text)")
+        
         await MainActor.run {
             insertTextIntoTargetApp(text)
         }
@@ -221,16 +306,10 @@ class TranscriptionCoordinator: ObservableObject {
                 }
             }
         }
-        
-        await MainActor.run {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                FloatingWindowManager.shared.hideFloatingIndicator()
-                self.resetState()
-            }
-        }
     }
     
-    /// Insert text into the app that was active when recording started
+    // MARK: - Insert Text
+    
     private func insertTextIntoTargetApp(_ text: String) {
         guard let targetPID = targetAppPID else {
             print("⚠️ No target app captured, inserting into frontmost app")
@@ -238,7 +317,6 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
         
-        // Check if target app is still running
         guard let targetApp = targetApp, !targetApp.isTerminated else {
             print("⚠️ Target app is no longer running, inserting into frontmost app")
             TextInserter.insertText(text, context: currentContext)
@@ -250,19 +328,15 @@ class TranscriptionCoordinator: ObservableObject {
         
         if needToSwitch {
             print("🔄 Switching back to target app: \(targetApp.localizedName ?? "Unknown")")
-            
-            // Activate the target app
             targetApp.activate()
-            
-            // Wait a moment for the app to come to front
             usleep(150000) // 0.15 seconds
         }
         
-        // Now insert the text
         TextInserter.insertText(text, context: currentContext)
-        
         print("✅ Text inserted into: \(targetApp.localizedName ?? "Unknown")")
     }
+    
+    // MARK: - Cancel & Reset
     
     private func cancelRecording() {
         isRecording = false
@@ -280,12 +354,15 @@ class TranscriptionCoordinator: ObservableObject {
         currentContext = nil
         targetApp = nil
         targetAppPID = nil
+        currentMode = .dictation
         FloatingWindowManager.shared.hideFloatingIndicator()
     }
     
     private func resetStateAsync() async {
         await MainActor.run { resetState() }
     }
+    
+    // MARK: - Helpers
     
     private func isLikelyHallucination(_ text: String) -> Bool {
         let cleaned = text.replacingOccurrences(of: " ", with: "")

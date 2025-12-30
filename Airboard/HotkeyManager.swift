@@ -1,3 +1,10 @@
+//
+//  HotkeyManager.swift
+//  Airboard
+//
+//  Detects hotkey combinations for dictation and command modes
+//
+
 import Foundation
 import AppKit
 import Carbon
@@ -45,63 +52,155 @@ enum HotkeyOption: String, CaseIterable {
 
 class HotkeyManager: ObservableObject {
     @Published var isHotkeyPressed = false
+    @Published var currentMode: RecordingMode = .dictation
     
     private var eventMonitor: Any?
     private var localMonitor: Any?
+    private var recordingStarted = false
     
-    private static let hotkeyKey = "selectedHotkey"
+    // Store callbacks
+    private var onDictationStart: (() -> Void)?
+    private var onCommandStart: (() -> Void)?
+    private var onRelease: (() -> Void)?
+    private var onModeUpgrade: (() -> Void)?
     
-    static var currentHotkey: HotkeyOption {
+    // Keys for UserDefaults
+    private static let primaryHotkeyKey = "primaryHotkey"
+    private static let commandModifierKey = "commandModifierHotkey"
+    
+    // MARK: - Hotkey Settings
+    
+    static var primaryHotkey: HotkeyOption {
         get {
-            if let saved = UserDefaults.standard.string(forKey: hotkeyKey),
+            if let saved = UserDefaults.standard.string(forKey: primaryHotkeyKey),
                let option = HotkeyOption(rawValue: saved) {
                 return option
             }
-            return .rightOption // Default
+            return .leftOption
         }
         set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: hotkeyKey)
+            UserDefaults.standard.set(newValue.rawValue, forKey: primaryHotkeyKey)
+        }
+    }
+    
+    static var commandModifierHotkey: HotkeyOption {
+        get {
+            if let saved = UserDefaults.standard.string(forKey: commandModifierKey),
+               let option = HotkeyOption(rawValue: saved) {
+                return option
+            }
+            return .leftCommand
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: commandModifierKey)
         }
     }
     
     static var currentHotkeyDisplayName: String {
-        currentHotkey.displayName
+        return primaryHotkey.displayName
     }
     
-    func startMonitoring(onPress: @escaping () -> Void, onRelease: @escaping () -> Void) {
-        print("🎤 Starting hotkey monitoring for: \(HotkeyManager.currentHotkey.displayName)")
+    static var commandModeDisplayName: String {
+        return "\(primaryHotkey.displayName) + \(commandModifierHotkey.displayName)"
+    }
+    
+    // MARK: - Monitoring
+    
+    func startMonitoring(
+        onDictationStart: @escaping () -> Void,
+        onCommandStart: @escaping () -> Void,
+        onRelease: @escaping () -> Void
+    ) {
+        print("🎤 Starting hotkey monitoring")
+        print("   Primary (Dictation): \(HotkeyManager.primaryHotkey.displayName)")
+        print("   Modifier (Command mode): \(HotkeyManager.commandModifierHotkey.displayName)")
         
+        self.onDictationStart = onDictationStart
+        self.onCommandStart = onCommandStart
+        self.onRelease = onRelease
+        
+        // Global monitor
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
-            self?.handleFlagsChanged(event: event, onPress: onPress, onRelease: onRelease)
+            self?.handleFlagsChanged()
         }
         
+        // Local monitor
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
-            self?.handleFlagsChanged(event: event, onPress: onPress, onRelease: onRelease)
+            self?.handleFlagsChanged()
             return event
         }
     }
     
-    private func handleFlagsChanged(event: NSEvent, onPress: @escaping () -> Void, onRelease: @escaping () -> Void) {
-        let hotkey = HotkeyManager.currentHotkey
-        let hotkeyPressed = event.modifierFlags.contains(hotkey.modifierFlag) && event.keyCode == hotkey.keyCode
+    private func handleFlagsChanged() {
+        let primaryFlag = HotkeyManager.primaryHotkey.modifierFlag
+        let commandFlag = HotkeyManager.commandModifierHotkey.modifierFlag
         
-        if hotkeyPressed && !isHotkeyPressed {
-            if !SetupWindowController.shared.allPermissionsGranted {
-                print("⚠️ Hotkey pressed but permissions not granted")
-                DispatchQueue.main.async {
-                    SetupWindowController.shared.showPermissionSetup()
+        // Get CURRENT system modifier state
+        let currentFlags = NSEvent.modifierFlags
+        
+        let primaryHeld = currentFlags.contains(primaryFlag)
+        let commandHeld = currentFlags.contains(commandFlag)
+        let bothHeld = primaryHeld && commandHeld
+        
+        if !recordingStarted {
+            // === NOT RECORDING ===
+            
+            // Start recording when PRIMARY key is pressed
+            if primaryHeld {
+                if !checkPermissions() { return }
+                
+                recordingStarted = true
+                isHotkeyPressed = true
+                
+                if bothHeld {
+                    // Both keys held from the start
+                    currentMode = .command
+                    print("⚡ Command mode activated (both keys)")
+                    onCommandStart?()
+                } else {
+                    // Only primary key
+                    currentMode = .dictation
+                    print("🔴 Dictation mode activated")
+                    onDictationStart?()
                 }
-                return
             }
             
-            isHotkeyPressed = true
-            print("🔴 Hotkey pressed")
-            onPress()
-        } else if !hotkeyPressed && isHotkeyPressed {
-            isHotkeyPressed = false
-            print("⚪️ Hotkey released")
-            onRelease()
+        } else {
+            // === CURRENTLY RECORDING ===
+            
+            // Check if user added the command modifier (upgrade to command mode)
+            if currentMode == .dictation && bothHeld {
+                currentMode = .command
+                print("⚡ Upgraded to Command mode (added modifier)")
+                // Update the UI to show purple icon
+                DispatchQueue.main.async {
+                    FloatingWindowManager.shared.showFloatingIndicator(
+                        isRecording: true,
+                        isTranscribing: false,
+                        isCommandMode: true
+                    )
+                }
+            }
+            
+            // Stop when primary key is released
+            if !primaryHeld {
+                recordingStarted = false
+                isHotkeyPressed = false
+                print("⚪️ Hotkey released (was \(currentMode == .command ? "command" : "dictation") mode)")
+                onRelease?()
+            }
         }
+    }
+    
+    private func checkPermissions() -> Bool {
+        if !SetupWindowController.shared.allPermissionsGranted {
+            print("⚠️ Hotkey pressed but permissions not granted")
+            DispatchQueue.main.async {
+                SetupWindowController.shared.showPermissionSetup()
+            }
+            return false
+        }
+        return true
     }
     
     func stopMonitoring() {
@@ -113,10 +212,24 @@ class HotkeyManager: ObservableObject {
             NSEvent.removeMonitor(monitor)
             localMonitor = nil
         }
+        
+        onDictationStart = nil
+        onCommandStart = nil
+        onRelease = nil
+        
+        print("🛑 Hotkey monitoring stopped")
     }
     
-    func restartMonitoring(onPress: @escaping () -> Void, onRelease: @escaping () -> Void) {
+    func restartMonitoring(
+        onDictationStart: @escaping () -> Void,
+        onCommandStart: @escaping () -> Void,
+        onRelease: @escaping () -> Void
+    ) {
         stopMonitoring()
-        startMonitoring(onPress: onPress, onRelease: onRelease)
+        startMonitoring(
+            onDictationStart: onDictationStart,
+            onCommandStart: onCommandStart,
+            onRelease: onRelease
+        )
     }
 }
