@@ -55,7 +55,14 @@ class MenuBarManager: NSObject {
         menu.addItem(checkItem)
         
         menu.addItem(NSMenuItem.separator())
-        
+
+        // Test Grammar Correction (DEBUG)
+        let testItem = NSMenuItem(title: "🧪 Test Grammar Fix", action: #selector(testGrammarCorrection), keyEquivalent: "")
+        testItem.target = self
+        menu.addItem(testItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Quit
         let quitItem = NSMenuItem(title: "Quit Airboard", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
@@ -90,6 +97,38 @@ class MenuBarManager: NSObject {
         }
     }
     
+    @objc private func testGrammarCorrection() {
+        Task {
+            let testText = "I go to market yesterday."
+            print("🧪 Testing grammar correction with: '\(testText)'")
+
+            do {
+                let corrected = try await GrammarCorrectionService.shared.correctGrammar(testText)
+                print("🧪 Result: '\(corrected)'")
+
+                await MainActor.run {
+                    let alert = NSAlert()
+                    alert.messageText = "Grammar Test Result"
+                    alert.informativeText = "Input: \(testText)\n\nOutput: \(corrected)"
+                    alert.alertStyle = .informational
+                    alert.addButton(withTitle: "OK")
+                    alert.runModal()
+                }
+            } catch {
+                print("🧪 Error: \(error)")
+
+                await MainActor.run {
+                    let alert = NSAlert()
+                    alert.messageText = "Grammar Test Failed"
+                    alert.informativeText = "Error: \(error.localizedDescription)"
+                    alert.alertStyle = .critical
+                    alert.addButton(withTitle: "OK")
+                    alert.runModal()
+                }
+            }
+        }
+    }
+
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
     }

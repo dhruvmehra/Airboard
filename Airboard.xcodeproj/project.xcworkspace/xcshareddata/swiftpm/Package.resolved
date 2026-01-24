@@ -1,13 +1,13 @@
 {
-  "originHash" : "d00c06d61aba87c49b99debbdcf670904d8feb87c989656edf7a250ec55aac58",
+  "originHash" : "c56fa7f7610560a5166287ae451b2102f584b5efc92302c531af92f6cdcc0d46",
   "pins" : [
     {
-      "identity" : "llm.swift",
+      "identity" : "onnxruntime-swift-package-manager",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/eastriverlee/LLM.swift",
+      "location" : "https://github.com/microsoft/onnxruntime-swift-package-manager",
       "state" : {
-        "revision" : "4b2517839f24498bea0695bae8967b359b9a35c4",
-        "version" : "1.8.0"
+        "revision" : "12ce7374c86944e1f68f3a866d10105d8357f074",
+        "version" : "1.20.0"
       }
     },
     {
@@ -38,6 +38,15 @@
       }
     },
     {
+      "identity" : "swift-sentencepiece",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jkrukowski/swift-sentencepiece",
+      "state" : {
+        "revision" : "36a8b2b45733f6adb3092100f16e4c7d38a10a7c",
+        "version" : "0.0.6"
+      }
+    },
+    {
       "identity" : "swift-transformers",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/huggingface/swift-transformers.git",
@@ -52,7 +61,7 @@
       "location" : "https://github.com/argmaxinc/WhisperKit",
       "state" : {
         "branch" : "main",
-        "revision" : "9c673e35193fe4e67593dd2973c157ebe666e598"
+        "revision" : "ba094495e40ff255f30ca4602e2c75994f255df7"
       }
     }
   ],

@@ -44,64 +44,43 @@ class TranscriptionCoordinator: ObservableObject {
     }
     
     private func setupObservers() {
-        // WhisperKit download progress
+        // WhisperKit download progress (represents 50% of total progress)
         transcriptionService.$downloadProgress
-            .sink { FloatingWindowManager.shared.showDownloadProgress(progress: $0) }
+            .sink { progress in
+                FloatingWindowManager.shared.showDownloadProgress(progress: progress * 0.5)
+            }
             .store(in: &cancellables)
-        
+
         transcriptionService.$isDownloadingModel
             .sink { isDownloading in
                 if !isDownloading {
-                    FloatingWindowManager.shared.hideFloatingIndicator()
+                    // Check if grammar is also done
+                    if !GrammarCorrectionService.shared.isDownloadingModel {
+                        FloatingWindowManager.shared.hideFloatingIndicator()
+                    }
                 }
             }
             .store(in: &cancellables)
-        
-        // Llama model download progress -> Show on floating icon
-        ModelDownloadManager.shared.$downloadProgress
+
+        // Grammar service download progress (represents the other 50% of total progress)
+        GrammarCorrectionService.shared.$downloadProgress
             .sink { progress in
-                if ModelDownloadManager.shared.isDownloading {
-                    FloatingWindowManager.shared.showDownloadProgress(progress: progress)
-                }
+                FloatingWindowManager.shared.showDownloadProgress(progress: 0.5 + (progress * 0.5))
             }
             .store(in: &cancellables)
-        
-        // Llama model download completion -> Notify user
-        ModelDownloadManager.shared.$isModelReady
-            .sink { [weak self] isReady in
-                if isReady {
-                    self?.notifyModelReady()
+
+        GrammarCorrectionService.shared.$isDownloadingModel
+            .sink { isDownloading in
+                if !isDownloading {
+                    // Check if WhisperKit is also done
+                    if !self.transcriptionService.isDownloadingModel {
+                        FloatingWindowManager.shared.hideFloatingIndicator()
+                    }
                 }
             }
             .store(in: &cancellables)
     }
     
-    private func notifyModelReady() {
-        FloatingWindowManager.shared.hideFloatingIndicator()
-        
-        let content = UNMutableNotificationContent()
-        content.title = "Airboard"
-        content.body = "AI Enhancements ready"
-        content.sound = .default
-        
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("⚠️ Notification error: \(error.localizedDescription)")
-            }
-        }
-        
-        Task.detached(priority: .background) {
-            try? await LlamaService.shared.loadModel()
-        }
-        
-        print("🎉 LLM is ready - AI enhancements activated")
-    }
     
     func initialize() async {
         await transcriptionService.ensureModelReady()
@@ -117,11 +96,7 @@ class TranscriptionCoordinator: ObservableObject {
             print("⚠️ Notification permission error: \(error.localizedDescription)")
         }
         
-        if ModelDownloadManager.shared.isModelReady {
-            Task.detached(priority: .background) {
-                try? await LlamaService.shared.loadModel()
-            }
-        }
+        // Grammar service initializes automatically
     }
     
     // MARK: - Recording (Dictation Mode)
@@ -141,7 +116,7 @@ class TranscriptionCoordinator: ObservableObject {
     private func startRecordingWithMode(_ mode: RecordingMode) {
         guard !isRecording && !isTranscribing else { return }
         
-        if transcriptionService.isDownloadingModel {
+        if transcriptionService.isDownloadingModel || GrammarCorrectionService.shared.isDownloadingModel {
             showDownloadingAlert()
             return
         }
@@ -185,7 +160,7 @@ class TranscriptionCoordinator: ObservableObject {
             print("📍 Final mode: \(mode == .command ? "COMMAND" : "DICTATION")")
         }
         
-        if transcriptionService.isDownloadingModel {
+        if transcriptionService.isDownloadingModel || GrammarCorrectionService.shared.isDownloadingModel {
             return
         }
         
@@ -297,15 +272,7 @@ class TranscriptionCoordinator: ObservableObject {
             insertTextIntoTargetApp(text)
         }
         
-        // Show ModelDownloadView after first successful transcription (if model not ready)
-        if !hasCompletedFirstTranscription && !ModelDownloadManager.shared.isModelReady {
-            hasCompletedFirstTranscription = true
-            await MainActor.run {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    NotificationCenter.default.post(name: .openModelManager, object: nil)
-                }
-            }
-        }
+        // No model download needed - grammar service is instant
     }
     
     // MARK: - Insert Text
@@ -313,27 +280,86 @@ class TranscriptionCoordinator: ObservableObject {
     private func insertTextIntoTargetApp(_ text: String) {
         guard let targetPID = targetAppPID else {
             print("⚠️ No target app captured, inserting into frontmost app")
-            TextInserter.insertText(text, context: currentContext)
+            handleInsertionResult(TextInserter.insertText(text, context: currentContext))
             return
         }
-        
+
         guard let targetApp = targetApp, !targetApp.isTerminated else {
             print("⚠️ Target app is no longer running, inserting into frontmost app")
-            TextInserter.insertText(text, context: currentContext)
+            handleInsertionResult(TextInserter.insertText(text, context: currentContext))
             return
         }
-        
+
         let currentFrontmost = NSWorkspace.shared.frontmostApplication
         let needToSwitch = currentFrontmost?.processIdentifier != targetPID
-        
+
         if needToSwitch {
             print("🔄 Switching back to target app: \(targetApp.localizedName ?? "Unknown")")
-            targetApp.activate()
-            usleep(150000) // 0.15 seconds
+
+            // Retry app switching up to 3 times
+            var switched = false
+            for attempt in 1...3 {
+                targetApp.activate()
+                usleep(150000) // 0.15 seconds
+
+                if NSWorkspace.shared.frontmostApplication?.processIdentifier == targetPID {
+                    switched = true
+                    break
+                }
+
+                if attempt < 3 {
+                    print("⚠️ App switch attempt \(attempt) failed, retrying...")
+                    usleep(100000) // Additional delay before retry
+                }
+            }
+
+            if !switched {
+                print("❌ Failed to switch to target app after 3 attempts")
+            }
         }
-        
-        TextInserter.insertText(text, context: currentContext)
-        print("✅ Text inserted into: \(targetApp.localizedName ?? "Unknown")")
+
+        let result = TextInserter.insertText(text, context: currentContext)
+        handleInsertionResult(result)
+
+        if case .success = result {
+            print("✅ Text inserted into: \(targetApp.localizedName ?? "Unknown")")
+        }
+    }
+
+    private func handleInsertionResult(_ result: Result<Void, TextInsertionError>) {
+        switch result {
+        case .success:
+            break // Success is handled by caller
+        case .failure(let error):
+            print("❌ Text insertion failed: \(error)")
+
+            switch error {
+            case .accessibilityPermissionDenied:
+                DispatchQueue.main.async {
+                    SetupWindowController.shared.showPermissionSetup()
+                }
+            case .noFrontmostApp:
+                showNotification(title: "Insertion Failed", body: "No app is active to receive text")
+            case .eventCreationFailed:
+                showNotification(title: "Insertion Failed", body: "Failed to create keyboard events")
+            case .insertionFailed(let message):
+                showNotification(title: "Insertion Failed", body: message)
+            }
+        }
+    }
+
+    private func showNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ Failed to show notification: \(error)")
+            }
+        }
     }
     
     // MARK: - Cancel & Reset
@@ -372,11 +398,6 @@ class TranscriptionCoordinator: ObservableObject {
     }
     
     private func showDownloadingAlert() {
-        let alert = NSAlert()
-        alert.messageText = "Whisper Model Downloading"
-        alert.informativeText = "Please wait while the speech recognition model downloads."
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
+        FloatingWindowManager.shared.showDownloadModal()
     }
 }

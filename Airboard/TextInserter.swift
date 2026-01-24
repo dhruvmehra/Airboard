@@ -9,44 +9,55 @@ import Foundation
 import ApplicationServices
 import AppKit
 
+enum TextInsertionError: Error {
+    case accessibilityPermissionDenied
+    case noFrontmostApp
+    case eventCreationFailed
+    case insertionFailed(String)
+}
+
 class TextInserter {
-    
-    static func insertText(_ text: String, context: AppContext? = nil) {
+
+    static func insertText(_ text: String, context: AppContext? = nil) -> Result<Void, TextInsertionError> {
         // Check if we have accessibility permission
         guard AXIsProcessTrusted() else {
             print("❌ Accessibility permission not granted")
-            return
+            return .failure(.accessibilityPermissionDenied)
+        }
+
+        // Verify frontmost app exists
+        guard NSWorkspace.shared.frontmostApplication != nil else {
+            print("❌ No frontmost application")
+            return .failure(.noFrontmostApp)
         }
         
-        print("🔤 Original text: '\(text)'")
-        
-        // Use intelligent formatting with pattern detection
-        var formattedText = text
-        if let context = context {
-            formattedText = IntelligentFormatter.format(text, context: context)
-            print("📝 After formatting: '\(formattedText)'")
-        }
-        
+        print("🔤 Text to insert: '\(text)'")
+
         // Check if we need to add a space before inserting
         let needsLeadingSpace = shouldAddLeadingSpace()
         print("🔍 Needs leading space: \(needsLeadingSpace)")
-        
+
+        var finalText = text
         if needsLeadingSpace {
-            formattedText = " " + formattedText
+            finalText = " " + finalText
             print("➕ Adding leading space")
         }
-        
-        print("✅ Final text to insert: '\(formattedText)'")
-        
+
+        print("✅ Final text to insert: '\(finalText)'")
+
         // Small delay to ensure the app is ready
         usleep(100000) // 0.1 seconds
-        
-        // Type each character
-        for character in formattedText {
-            typeCharacter(character)
+
+        // Type each character with error checking
+        for character in finalText {
+            if let error = typeCharacter(character) {
+                print("❌ Failed to type character '\(character)': \(error)")
+                return .failure(.insertionFailed("Failed to type character '\(character)'"))
+            }
         }
-        
+
         print("✅ Finished inserting text")
+        return .success(())
     }
     
     private static func shouldAddLeadingSpace() -> Bool {
@@ -128,49 +139,59 @@ class TextInserter {
         return false
     }
     
-    private static func typeCharacter(_ character: Character) {
+    private static func typeCharacter(_ character: Character) -> TextInsertionError? {
         // Handle special characters
         if character == "\n" {
             // Press Return key
-            pressKey(keyCode: 36)
-            return
+            return pressKey(keyCode: 36)
         }
-        
+
         // For regular characters, simulate typing
         guard let keyCode = keyCodeForCharacter(character) else {
             print("⚠️ Could not find key code for character: '\(character)'")
-            return
+            return .insertionFailed("No key code for character '\(character)'")
         }
-        
+
         let needsShift = character.isUppercase || "!@#$%^&*()_+{}|:\"<>?".contains(character)
-        
+
+        let result: TextInsertionError?
         if needsShift {
-            pressKeyWithShift(keyCode: keyCode)
+            result = pressKeyWithShift(keyCode: keyCode)
         } else {
-            pressKey(keyCode: keyCode)
+            result = pressKey(keyCode: keyCode)
         }
-        
+
         // Small delay between characters for reliability
         usleep(5000) // 0.005 seconds
+
+        return result
     }
     
-    private static func pressKey(keyCode: CGKeyCode) {
-        let keyDownEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true)
-        let keyUpEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false)
-        
-        keyDownEvent?.post(tap: .cghidEventTap)
-        keyUpEvent?.post(tap: .cghidEventTap)
+    private static func pressKey(keyCode: CGKeyCode) -> TextInsertionError? {
+        guard let keyDownEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true),
+              let keyUpEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false) else {
+            print("❌ Failed to create keyboard events for keyCode: \(keyCode)")
+            return .eventCreationFailed
+        }
+
+        keyDownEvent.post(tap: .cghidEventTap)
+        keyUpEvent.post(tap: .cghidEventTap)
+        return nil
     }
-    
-    private static func pressKeyWithShift(keyCode: CGKeyCode) {
-        let keyDownEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true)
-        let keyUpEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false)
-        
-        keyDownEvent?.flags = .maskShift
-        keyUpEvent?.flags = []
-        
-        keyDownEvent?.post(tap: .cghidEventTap)
-        keyUpEvent?.post(tap: .cghidEventTap)
+
+    private static func pressKeyWithShift(keyCode: CGKeyCode) -> TextInsertionError? {
+        guard let keyDownEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true),
+              let keyUpEvent = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false) else {
+            print("❌ Failed to create keyboard events for keyCode: \(keyCode)")
+            return .eventCreationFailed
+        }
+
+        keyDownEvent.flags = .maskShift
+        keyUpEvent.flags = []
+
+        keyDownEvent.post(tap: .cghidEventTap)
+        keyUpEvent.post(tap: .cghidEventTap)
+        return nil
     }
     
     private static func keyCodeForCharacter(_ character: Character) -> CGKeyCode? {

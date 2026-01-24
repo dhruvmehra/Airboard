@@ -172,9 +172,10 @@ class FloatingWindowManager: NSObject {
         guard let floatingWindow = floatingWindow,
               let screen = NSScreen.main else { return }
         
-        let isModelDownloaded = ModelDownloadManager.shared.isModelReady
-        let isModelDownloading = ModelDownloadManager.shared.isDownloading
-        let downloadProgress = ModelDownloadManager.shared.downloadProgress
+        // Grammar service is always ready - no download needed
+        let isModelDownloaded = true
+        let isModelDownloading = false
+        let downloadProgress = 1.0
         
         let popoverView = AirboardPopover(
             isModelDownloaded: isModelDownloaded,
@@ -290,12 +291,12 @@ class FloatingWindowManager: NSObject {
     
     private func handleDownloadModel() {
         hidePopover()
-        ModelDownloadManager.shared.downloadModel()
+        // Grammar service doesn't need downloading
     }
-    
+
     private func handleRemoveModel() {
         hidePopover()
-        ModelDownloadManager.shared.deleteModel()
+        // Grammar service doesn't need removal
     }
     
     private func handleOpenDictionary() {
@@ -368,7 +369,48 @@ class FloatingWindowManager: NSObject {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
-    
+
+    // MARK: - Download Modal
+
+    private var downloadModalWindow: NSWindow?
+
+    func showDownloadModal() {
+        guard let screen = NSScreen.main else { return }
+
+        let modalWidth: CGFloat = 420
+        let modalHeight: CGFloat = 280
+
+        let screenFrame = screen.visibleFrame
+        let xPos = screenFrame.midX - (modalWidth / 2)
+        let yPos = screenFrame.midY - (modalHeight / 2)
+
+        let window = NSPanel(
+            contentRect: NSRect(x: xPos, y: yPos, width: modalWidth, height: modalHeight),
+            styleMask: [.titled, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+
+        window.level = .modalPanel
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        window.contentView = NSHostingView(
+            rootView: DownloadModalView(onDismiss: { [weak self] in
+                self?.downloadModalWindow?.close()
+                self?.downloadModalWindow = nil
+            })
+        )
+
+        self.downloadModalWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
     func cleanup() {
         NotificationCenter.default.removeObserver(self)
         DispatchQueue.main.async { [weak self] in
@@ -378,6 +420,8 @@ class FloatingWindowManager: NSObject {
             self?.dictionaryWindow = nil
             self?.hotkeyWindow?.close()
             self?.hotkeyWindow = nil
+            self?.downloadModalWindow?.close()
+            self?.downloadModalWindow = nil
             self?.floatingWindow?.orderOut(nil)
             self?.floatingWindow?.close()
             self?.floatingWindow = nil
@@ -549,5 +593,127 @@ struct FloatingIndicatorView: View {
             return "Airboard - Command Mode"
         }
         return "Airboard"
+    }
+}
+
+// MARK: - Download Modal View
+
+struct DownloadModalView: View {
+    let onDismiss: () -> Void
+
+    @State private var animateGradient = false
+
+    var body: some View {
+        ZStack {
+            // Background blur effect
+            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                // Header with animated gradient
+                ZStack {
+                    LinearGradient(
+                        colors: [
+                            Color.blue.opacity(0.8),
+                            Color.purple.opacity(0.6)
+                        ],
+                        startPoint: animateGradient ? .topLeading : .bottomTrailing,
+                        endPoint: animateGradient ? .bottomTrailing : .topLeading
+                    )
+                    .animation(
+                        Animation.easeInOut(duration: 3.0).repeatForever(autoreverses: true),
+                        value: animateGradient
+                    )
+
+                    VStack(spacing: 12) {
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 48, weight: .light))
+                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+
+                        Text("AI Models Downloading")
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.vertical, 28)
+                }
+                .frame(height: 140)
+
+                // Content area
+                VStack(spacing: 20) {
+                    Text("Getting Ready...")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundColor(.primary)
+
+                    Text("Airboard is completely private and works offline. We're downloading the AI models to your Mac so everything runs locally.")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineSpacing(4)
+                        .padding(.horizontal, 24)
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.blue)
+
+                        Text("This usually takes 2-3 minutes")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(20)
+
+                    Button(action: onDismiss) {
+                        Text("OK")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(width: 100)
+                            .padding(.vertical, 8)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color.blue, Color.blue.opacity(0.8)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 24)
+                .padding(.horizontal, 20)
+                .frame(height: 140)
+            }
+        }
+        .frame(width: 420, height: 280)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+        .onAppear {
+            animateGradient = true
+        }
+    }
+}
+
+// MARK: - Visual Effect View
+
+struct VisualEffectView: NSViewRepresentable {
+    let material: NSVisualEffectView.Material
+    let blendingMode: NSVisualEffectView.BlendingMode
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blendingMode
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.material = material
+        nsView.blendingMode = blendingMode
     }
 }

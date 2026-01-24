@@ -25,12 +25,7 @@ class LocalTranscriptionService: ObservableObject {
             await initializeWhisper()
         }
         
-        // Try to load Llama if available
-        Task {
-            if ModelDownloadManager.shared.isModelReady {
-                try? await LlamaService.shared.loadModel()
-            }
-        }
+        // Grammar service initializes automatically
     }
     
     func ensureModelReady() async {
@@ -38,16 +33,27 @@ class LocalTranscriptionService: ObservableObject {
     }
     
     private func initializeWhisper() async {
-        await MainActor.run {
-            isDownloadingModel = true
-            downloadProgress = 0.0
-        }
-        
         do {
             print("🔄 Initializing WhisperKit...")
-            print("📥 Downloading model if needed (first run only)...")
-            
-            let progressTask = Task {
+
+            // Check if model is already cached
+            let modelPath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("whisperkit/models/openai_whisper-small")
+
+            let isCached = FileManager.default.fileExists(atPath: modelPath.path)
+
+            if isCached {
+                print("✅ Model found in cache, loading instantly...")
+            } else {
+                print("📥 Model not cached, downloading (first run only)...")
+                await MainActor.run {
+                    isDownloadingModel = true
+                    downloadProgress = 0.0
+                }
+            }
+
+            // Start progress animation only if downloading
+            let progressTask: Task<Void, Never>? = !isCached ? Task {
                 for i in 1...600 {
                     try? await Task.sleep(nanoseconds: 100_000_000)
                     let progress = min(0.95, Double(i) / 600.0)
@@ -59,27 +65,29 @@ class LocalTranscriptionService: ObservableObject {
                 await MainActor.run {
                     self.downloadProgress = 0.95
                 }
-            }
-            
+            } : nil
+
             // Initialize WhisperKit with config
             let config = WhisperKitConfig(model: "small")
             whisperKit = try await WhisperKit(config)
-            
-            progressTask.cancel()
-            
-            await MainActor.run {
-                self.downloadProgress = 1.0
+
+            progressTask?.cancel()
+
+            if !isCached {
+                await MainActor.run {
+                    self.downloadProgress = 1.0
+                }
+
+                try? await Task.sleep(nanoseconds: 500_000_000)
+
+                await MainActor.run {
+                    self.isDownloadingModel = false
+                }
             }
-            
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            
-            await MainActor.run {
-                self.isDownloadingModel = false
-            }
-            
+
             print("✅ WhisperKit initialized with small model")
             print("📦 Model cached at: ~/Library/Caches/whisperkit/")
-            
+
             await warmUpModel()
             
             await MainActor.run {
@@ -142,21 +150,28 @@ class LocalTranscriptionService: ObservableObject {
             switch context.appType {
             case .email:
                 promptParts.append("Email: Hi, Dear, Thanks, Best regards.")
-                
+
             case .code:
                 promptParts.append("Code: function, variable, const, import, return.")
-                
+
             case .messaging:
                 promptParts.append("Message: hey, lol, btw, gonna.")
-                
+
             case .document, .notes:
                 promptParts.append("Document: However, Therefore, Additionally.")
-                
+
             default:
                 break
             }
         }
-        
+
+        // 3. Add number examples to help with number recognition
+        // Only add if vocabulary doesn't already contain numbers
+        let hasNumbers = vocabularyPrompt.rangeOfCharacter(from: .decimalDigits) != nil
+        if !hasNumbers {
+            promptParts.append("Numbers: 1, 2, 3, 10, 100, 555, 1234, 2024.")
+        }
+
         let promptText = promptParts.joined(separator: " ")
         
         // Whisper prompts should be under 224 tokens (~200 words)
@@ -241,7 +256,8 @@ class LocalTranscriptionService: ObservableObject {
                 temperature: 0.0,
                 wordTimestamps: true,
                 clipTimestamps: [],
-                promptTokens: promptTokens.isEmpty ? nil : promptTokens
+                promptTokens: promptTokens.isEmpty ? nil : promptTokens,
+                supressTokens: []  // Don't suppress any tokens (especially numbers)
             )
 
             let results = try await whisperKit.transcribe(
@@ -261,42 +277,17 @@ class LocalTranscriptionService: ObservableObject {
             }
             
             var transcribedText = result.text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-            
+
             // LOG: Show raw Whisper output
             print("📝 Raw Whisper output: '\(transcribedText)'")
 
-            // Post-process: Basic cleanup first
-            transcribedText = fixCommonIssues(transcribedText)
-            print("🔧 After basic cleanup: '\(transcribedText)'")
-            
-            // Try LLM context-aware formatting if available
-            let llmAvailable = await LlamaService.shared.isAvailable()
-            
-            if llmAvailable {
-                do {
-                    if let context = context {
-                        // Use context-aware formatting
-                        transcribedText = try await LlamaService.shared.formatWithContext(transcribedText, context: context)
-                        print("✨ Context-aware formatting applied")
-                    } else {
-                        // No context, just basic cleanup
-                        transcribedText = try await LlamaService.shared.cleanupText(transcribedText)
-                        print("✨ Basic LLM cleanup applied")
-                    }
-                } catch {
-                    print("⚠️ LLM formatting failed, using basic: \(error.localizedDescription)")
-                    // Already have basic cleanup, continue
-                }
-            }
-            
-            // Apply context-specific formatting (only if LLM didn't handle it)
-            if !llmAvailable {
-                if let context = context {
-                    transcribedText = IntelligentFormatter.format(transcribedText, context: context)
-                } else {
-                    // Apply smart punctuation if no context
-                    transcribedText = addSmartPunctuation(transcribedText)
-                }
+            // Apply ultra-fast grammar correction
+            do {
+                transcribedText = try await GrammarCorrectionService.shared.correctGrammar(transcribedText)
+                print("✨ Grammar correction applied")
+            } catch {
+                print("⚠️ Grammar correction failed: \(error.localizedDescription)")
+                // Continue with raw Whisper output
             }
             
             await MainActor.run {
@@ -324,94 +315,6 @@ class LocalTranscriptionService: ObservableObject {
         }
     }
     
-    
-    /// Fix common Whisper transcription issues
-    private func fixCommonIssues(_ text: String) -> String {
-        var fixed = text
-        
-        // Fix missing spaces after punctuation
-        fixed = fixed.replacingOccurrences(of: "\\.([A-Za-z])", with: ". $1", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: ",([A-Za-z])", with: ", $1", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: "\\?([A-Za-z])", with: "? $1", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: "!([A-Za-z])", with: "! $1", options: .regularExpression)
-        
-        // Fix concatenated words (common Whisper bug)
-        fixed = fixed.replacingOccurrences(of: "([a-z])([A-Z])", with: "$1 $2", options: .regularExpression)
-        
-        // Fix double/triple spaces
-        fixed = fixed.replacingOccurrences(of: " {2,}", with: " ", options: .regularExpression)
-        
-        // Fix spacing around contractions
-        fixed = fixed.replacingOccurrences(of: " n't", with: "n't")
-        fixed = fixed.replacingOccurrences(of: " 's", with: "'s")
-        fixed = fixed.replacingOccurrences(of: " 're", with: "'re")
-        fixed = fixed.replacingOccurrences(of: " 'll", with: "'ll")
-        fixed = fixed.replacingOccurrences(of: " 've", with: "'ve")
-        fixed = fixed.replacingOccurrences(of: " 'd", with: "'d")
-        fixed = fixed.replacingOccurrences(of: " 'm", with: "'m")
-        
-        // Fix spacing before punctuation
-        fixed = fixed.replacingOccurrences(of: " +\\.", with: ".", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: " +,", with: ",", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: " +\\?", with: "?", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: " +!", with: "!", options: .regularExpression)
-        
-        // Fix weird punctuation combinations
-        fixed = fixed.replacingOccurrences(of: "\\.+", with: ".", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: ",+", with: ",", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: "\\?,", with: "?", options: .regularExpression)
-        fixed = fixed.replacingOccurrences(of: ",\\.", with: ".", options: .regularExpression)
-        
-        return fixed
-    }
-    
-    /// Add smart punctuation
-    private func addSmartPunctuation(_ text: String) -> String {
-        var punctuated = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // Don't add punctuation if it already has ending punctuation
-        let hasEndPunctuation = [".", "!", "?", ",", ";", ":"].contains(where: { punctuated.hasSuffix($0) })
-        
-        if !hasEndPunctuation && !punctuated.isEmpty {
-            // Check if it's a question
-            let questionWords = ["who", "what", "when", "where", "why", "how",
-                                "is", "are", "can", "could", "would", "should",
-                                "do", "does", "did", "will", "was", "were"]
-            let firstWord = punctuated.lowercased().components(separatedBy: " ").first ?? ""
-            
-            if questionWords.contains(firstWord) {
-                punctuated += "?"
-            } else {
-                // Check if it looks like a complete sentence (has a verb)
-                let hasVerb = punctuated.lowercased().range(of: "\\b(is|are|was|were|am|be|been|have|has|had|do|does|did|can|could|will|would|should|may|might)\\b", options: .regularExpression) != nil
-                
-                if hasVerb || punctuated.split(separator: " ").count > 3 {
-                    punctuated += "."
-                }
-            }
-        }
-        
-        // Capitalize first letter
-        if let first = punctuated.first, first.isLowercase {
-            punctuated = punctuated.prefix(1).uppercased() + punctuated.dropFirst()
-        }
-        
-        // Capitalize after sentence-ending punctuation
-        if let regex = try? NSRegularExpression(pattern: "([.!?])\\s+([a-z])") {
-            let matches = regex.matches(in: punctuated, range: NSRange(punctuated.startIndex..., in: punctuated))
-            
-            var result = punctuated
-            for match in matches.reversed() {
-                if let range = Range(match.range(at: 2), in: result) {
-                    let letter = result[range].uppercased()
-                    result.replaceSubrange(range, with: letter)
-                }
-            }
-            punctuated = result
-        }
-        
-        return punctuated
-    }
     
     private func deleteAudioFile(at url: URL) {
         do {

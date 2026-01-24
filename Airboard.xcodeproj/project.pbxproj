@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		CC9F704B2EDF830500F2670F /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = CC9F704A2EDF830500F2670F /* WhisperKit */; };
-		CC9F70562EE0652500F2670F /* LLM in Frameworks */ = {isa = PBXBuildFile; productRef = CC9F70552EE0652500F2670F /* LLM */; };
+		CCBDB2C12F20F7F80072430E /* SentencepieceTokenizer in Frameworks */ = {isa = PBXBuildFile; productRef = CCBDB2C02F20F7F80072430E /* SentencepieceTokenizer */; };
+		CCBDB2C42F22DFAD0072430E /* onnxruntime in Frameworks */ = {isa = PBXBuildFile; productRef = CCBDB2C32F22DFAD0072430E /* onnxruntime */; };
+		CCBDB2C62F22DFAD0072430E /* onnxruntime_extensions in Frameworks */ = {isa = PBXBuildFile; productRef = CCBDB2C52F22DFAD0072430E /* onnxruntime_extensions */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,7 +43,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CC9F70562EE0652500F2670F /* LLM in Frameworks */,
+				CCBDB2C62F22DFAD0072430E /* onnxruntime_extensions in Frameworks */,
+				CCBDB2C42F22DFAD0072430E /* onnxruntime in Frameworks */,
+				CCBDB2C12F20F7F80072430E /* SentencepieceTokenizer in Frameworks */,
 				CC9F704B2EDF830500F2670F /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -86,7 +90,9 @@
 			name = Airboard;
 			packageProductDependencies = (
 				CC9F704A2EDF830500F2670F /* WhisperKit */,
-				CC9F70552EE0652500F2670F /* LLM */,
+				CCBDB2C02F20F7F80072430E /* SentencepieceTokenizer */,
+				CCBDB2C32F22DFAD0072430E /* onnxruntime */,
+				CCBDB2C52F22DFAD0072430E /* onnxruntime_extensions */,
 			);
 			productName = murmur;
 			productReference = CC26B7F92EDCD31800B10FA0 /* Airboard.app */;
@@ -118,7 +124,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */,
-				CC9F70542EE0652500F2670F /* XCRemoteSwiftPackageReference "LLM" */,
+				CCBDB2BF2F20F7F80072430E /* XCRemoteSwiftPackageReference "swift-sentencepiece" */,
+				CCBDB2C22F22DFAD0072430E /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CC26B7FA2EDCD31800B10FA0 /* Products */;
@@ -400,12 +407,20 @@
 				kind = branch;
 			};
 		};
-		CC9F70542EE0652500F2670F /* XCRemoteSwiftPackageReference "LLM" */ = {
+		CCBDB2BF2F20F7F80072430E /* XCRemoteSwiftPackageReference "swift-sentencepiece" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/eastriverlee/LLM.swift";
+			repositoryURL = "https://github.com/jkrukowski/swift-sentencepiece";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 1.4.3;
+				minimumVersion = 0.0.3;
+			};
+		};
+		CCBDB2C22F22DFAD0072430E /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/microsoft/onnxruntime-swift-package-manager";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.16.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -416,10 +431,20 @@
 			package = CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */;
 			productName = WhisperKit;
 		};
-		CC9F70552EE0652500F2670F /* LLM */ = {
+		CCBDB2C02F20F7F80072430E /* SentencepieceTokenizer */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = CC9F70542EE0652500F2670F /* XCRemoteSwiftPackageReference "LLM" */;
-			productName = LLM;
+			package = CCBDB2BF2F20F7F80072430E /* XCRemoteSwiftPackageReference "swift-sentencepiece" */;
+			productName = SentencepieceTokenizer;
+		};
+		CCBDB2C32F22DFAD0072430E /* onnxruntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CCBDB2C22F22DFAD0072430E /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */;
+			productName = onnxruntime;
+		};
+		CCBDB2C52F22DFAD0072430E /* onnxruntime_extensions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CCBDB2C22F22DFAD0072430E /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */;
+			productName = onnxruntime_extensions;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
