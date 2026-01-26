@@ -72,7 +72,7 @@ class HotkeyManager: ObservableObject {
     private var lastTapTime: Date?
     private var tapCount: Int = 0
     private let doubleTapWindow: TimeInterval = 0.3 // 0.3 seconds for double-tap
-    private var handsFreeModeActive = false // Tracks if we're in hands-free recording
+    @Published private(set) var isHandsFreeModeActive = false // Tracks if we're in hands-free recording
 
     // Escape hatch: rapid triple-press detection to reset stuck state
     private var lastPressTime: Date?
@@ -187,7 +187,7 @@ class HotkeyManager: ObservableObject {
 
         // Detect key press (transition from not held to held) for hands-free mode
         if primaryHeld && !isHotkeyPressed {
-            if handsFreeModeActive {
+            if isHandsFreeModeActive {
                 // In hands-free mode, any tap stops recording
                 handleSingleTapStop()
                 return
@@ -217,7 +217,7 @@ class HotkeyManager: ObservableObject {
             }
 
             // Start recording when PRIMARY key is pressed (only if not in hands-free mode)
-            if primaryHeld && !handsFreeModeActive {
+            if primaryHeld && !isHandsFreeModeActive {
                 if !checkPermissions() { return }
 
                 recordingStarted = true
@@ -254,7 +254,7 @@ class HotkeyManager: ObservableObject {
             }
 
             // Stop when primary key is released (only if not in hands-free mode)
-            if !primaryHeld && !handsFreeModeActive {
+            if !primaryHeld && !isHandsFreeModeActive {
                 recordingStarted = false
                 isHotkeyPressed = false
                 print("⚪️ Hotkey released (was \(currentMode == .command ? "command" : "dictation") mode)")
@@ -291,11 +291,11 @@ class HotkeyManager: ObservableObject {
         // Schedule check for single tap (if no second tap comes)
         DispatchQueue.main.asyncAfter(deadline: .now() + doubleTapWindow) { [weak self] in
             guard let self = self else { return }
-            if self.tapCount == 1 && !self.handsFreeModeActive {
+            if self.tapCount == 1 && !self.isHandsFreeModeActive {
                 // Single tap detected while not recording - do nothing (normal hold mode)
                 self.tapCount = 0
                 self.lastTapTime = nil
-            } else if self.tapCount == 1 && self.handsFreeModeActive {
+            } else if self.tapCount == 1 && self.isHandsFreeModeActive {
                 // Single tap while in hands-free mode - stop recording
                 self.handleSingleTapStop()
                 self.tapCount = 0
@@ -305,11 +305,11 @@ class HotkeyManager: ObservableObject {
     }
 
     private func handleDoubleTap() {
-        guard !handsFreeModeActive else { return }
+        guard !isHandsFreeModeActive else { return }
         guard checkPermissions() else { return }
 
         print("👆👆 Double-tap detected - starting hands-free recording")
-        handsFreeModeActive = true
+        isHandsFreeModeActive = true
         recordingStarted = true
         currentMode = .dictation
 
@@ -317,10 +317,10 @@ class HotkeyManager: ObservableObject {
     }
 
     private func handleSingleTapStop() {
-        guard handsFreeModeActive else { return }
+        guard isHandsFreeModeActive else { return }
 
         print("👆 Single tap - stopping hands-free recording")
-        handsFreeModeActive = false
+        isHandsFreeModeActive = false
         recordingStarted = false
         isHotkeyPressed = false
 
@@ -330,7 +330,7 @@ class HotkeyManager: ObservableObject {
     private func resetState() {
         recordingStarted = false
         isHotkeyPressed = false
-        handsFreeModeActive = false
+        isHandsFreeModeActive = false
         rapidPressCount = 0
         lastPressTime = nil
         tapCount = 0

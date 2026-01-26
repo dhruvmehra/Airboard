@@ -317,9 +317,17 @@ class LocalTranscriptionService: ObservableObject {
             // Apply ultra-fast grammar correction (if enabled)
             if LocalTranscriptionService.isGrammarCorrectionEnabled {
                 do {
+                    let originalText = transcribedText
                     PerformanceMonitor.shared.startGrammarCorrection()
                     transcribedText = try await GrammarCorrectionService.shared.correctGrammar(transcribedText)
-                    print("✨ Grammar correction applied")
+
+                    // Log if grammar correction changed anything
+                    if transcribedText != originalText {
+                        print("📝 BEFORE grammar: '\(originalText)'")
+                        print("✨ AFTER grammar:  '\(transcribedText)'")
+                    } else {
+                        print("✨ Grammar correction: no changes needed")
+                    }
 
                     // Update with corrected text
                     await MainActor.run {

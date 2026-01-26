@@ -78,14 +78,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func startHotkeyMonitoring() {
         hotkeyManager.startMonitoring(
             onDictationStart: { [weak self] in
-                self?.coordinator.startRecording()
+                guard let self = self else { return }
+                // Check if this is hands-free mode (double-tap)
+                if self.hotkeyManager.isHandsFreeModeActive {
+                    self.coordinator.startHandsFreeRecording()
+                } else {
+                    self.coordinator.startRecording()
+                }
             },
             onCommandStart: { [weak self] in
                 self?.coordinator.startCommandRecording()
             },
             onRelease: { [weak self] in
                 guard let self = self else { return }
-                self.coordinator.stopRecording(mode: self.hotkeyManager.currentMode)
+                // Check if we're stopping hands-free mode
+                if self.coordinator.isHandsFreeMode {
+                    self.coordinator.stopHandsFreeRecording()
+                } else {
+                    self.coordinator.stopRecording(mode: self.hotkeyManager.currentMode)
+                }
             }
         )
     }
@@ -94,14 +105,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("🔄 Hotkey changed, restarting monitoring")
         hotkeyManager.restartMonitoring(
             onDictationStart: { [weak self] in
-                self?.coordinator.startRecording()
+                guard let self = self else { return }
+                // Check if this is hands-free mode (double-tap)
+                if self.hotkeyManager.isHandsFreeModeActive {
+                    self.coordinator.startHandsFreeRecording()
+                } else {
+                    self.coordinator.startRecording()
+                }
             },
             onCommandStart: { [weak self] in
                 self?.coordinator.startCommandRecording()
             },
             onRelease: { [weak self] in
                 guard let self = self else { return }
-                self.coordinator.stopRecording(mode: self.hotkeyManager.currentMode)
+                // Check if we're stopping hands-free mode
+                if self.coordinator.isHandsFreeMode {
+                    self.coordinator.stopHandsFreeRecording()
+                } else {
+                    self.coordinator.stopRecording(mode: self.hotkeyManager.currentMode)
+                }
             }
         )
     }

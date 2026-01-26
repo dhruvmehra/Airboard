@@ -13,34 +13,65 @@ import UserNotifications
 
 class TranscriptionCoordinator: ObservableObject {
     static let shared = TranscriptionCoordinator()
-    
+
     private let audioRecorder = AudioRecorder()
+    private let chunkedRecorder = ChunkedAudioRecorder()
     private let transcriptionService = LocalTranscriptionService()
     private var cancellables = Set<AnyCancellable>()
-    
+
     @Published private(set) var isRecording = false
     @Published private(set) var isTranscribing = false
     @Published private(set) var currentMode: RecordingMode = .dictation
-    
+    @Published private(set) var isHandsFreeMode = false
+
     private var recordingStartTime: Date?
     private var currentContext: AppContext?
-    
+
     // Store the target app when recording starts
     private var targetApp: NSRunningApplication?
     private var targetAppPID: pid_t?
-    
+
     @Published private(set) var lastTranscribedText: String?
     @Published private(set) var lastContext: AppContext?
 
     private var hasCompletedFirstTranscription = false
-    
+
+    // Chunked recording state
+    private var accumulatedText: String = ""
+    private var processingChunks: Set<Int> = []
+
     private let hallucinations = [
         "thank you", "thanks for watching", "bye", "goodbye", "you", ".",
         "", "[blank_audio]", "blank_audio", "[music]", "[silence]", "music", "silence"
     ]
+
+    // Common Whisper hallucinations (phrases that indicate the model is hallucinating)
+    private let hallucinationPhrases = [
+        "subscribe to the channel",
+        "hit the bell icon",
+        "thanks for watching",
+        "please like and subscribe",
+        "don't forget to subscribe",
+        "hope you enjoyed",
+        "see you in the next",
+        "catch you in the next"
+    ]
     
     private init() {
         setupObservers()
+        setupChunkedRecorder()
+    }
+
+    private func setupChunkedRecorder() {
+        // Handle chunk completion - transcribe each chunk as it's ready
+        chunkedRecorder.onChunkComplete = { [weak self] url, chunkNumber in
+            self?.handleChunkCompletion(url: url, chunkNumber: chunkNumber)
+        }
+
+        // Handle full recording completion
+        chunkedRecorder.onRecordingComplete = { [weak self] in
+            self?.handleRecordingCompletion()
+        }
     }
     
     private func setupObservers() {
@@ -196,7 +227,162 @@ class TranscriptionCoordinator: ObservableObject {
 
         Task { await processTranscription(audioURL: audioURL) }
     }
-    
+
+    // MARK: - Hands-Free Mode (Chunked Recording)
+
+    func startHandsFreeRecording() {
+        guard !isRecording && !isTranscribing else { return }
+
+        if transcriptionService.isDownloadingModel || GrammarCorrectionService.shared.isDownloadingModel {
+            showDownloadingAlert()
+            return
+        }
+
+        // Capture target app and context
+        targetApp = NSWorkspace.shared.frontmostApplication
+        targetAppPID = targetApp?.processIdentifier
+        currentContext = AppContextDetector.getCurrentAppContext()
+        currentMode = .dictation // Hands-free is always dictation mode
+
+        print("🆓 Starting hands-free mode (double-tap activated)")
+        print("🎯 Target app: \(targetApp?.localizedName ?? "Unknown")")
+
+        isRecording = true
+        isHandsFreeMode = true
+        recordingStartTime = Date()
+        accumulatedText = ""
+        processingChunks.removeAll()
+
+        // Track performance
+        PerformanceMonitor.shared.startRecording()
+
+        // Show recording indicator
+        FloatingWindowManager.shared.showFloatingIndicator(
+            isRecording: true,
+            isTranscribing: false,
+            isCommandMode: false
+        )
+
+        // Start chunked recording
+        chunkedRecorder.startRecording()
+    }
+
+    func stopHandsFreeRecording() {
+        guard isRecording && isHandsFreeMode else {
+            // If already stopping (isRecording=false but isHandsFreeMode=true),
+            // ignore duplicate stop requests
+            if isHandsFreeMode && !isRecording {
+                print("⚠️ Hands-free mode already stopping, ignoring duplicate request")
+                return
+            }
+            return
+        }
+
+        print("🛑 Stopping hands-free mode")
+
+        isRecording = false
+        isTranscribing = true // Mark as transcribing to prevent new recordings
+        chunkedRecorder.stopRecording()
+
+        // Update UI to show transcribing state
+        FloatingWindowManager.shared.showFloatingIndicator(
+            isRecording: false,
+            isTranscribing: true,
+            isCommandMode: false
+        )
+
+        // Wait for all pending chunks to finish transcribing
+        // The final state reset will happen in handleRecordingCompletion()
+    }
+
+    // MARK: - Chunk Processing
+
+    private func handleChunkCompletion(url: URL, chunkNumber: Int) {
+        print("📥 Processing chunk \(chunkNumber)...")
+
+        processingChunks.insert(chunkNumber)
+
+        // Transcribe chunk in background
+        Task {
+            await transcriptionService.transcribe(audioURL: url, context: currentContext)
+
+            if let error = transcriptionService.error {
+                print("❌ Chunk \(chunkNumber) transcription error: \(error)")
+                processingChunks.remove(chunkNumber)
+                return
+            }
+
+            let text = transcriptionService.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard !isLikelyHallucination(text.lowercased()), !text.isEmpty else {
+                print("⚠️ Chunk \(chunkNumber) is hallucination, skipping")
+                processingChunks.remove(chunkNumber)
+                return
+            }
+
+            print("✅ Chunk \(chunkNumber) FINAL TEXT (after grammar): '\(text)'")
+
+            // Accumulate text
+            await MainActor.run {
+                if !accumulatedText.isEmpty {
+                    accumulatedText += " "
+                }
+                accumulatedText += text
+
+                // Insert text immediately for real-time feedback
+                if isHandsFreeMode {
+                    insertTextIntoTargetApp(text)
+                }
+            }
+
+            processingChunks.remove(chunkNumber)
+        }
+    }
+
+    private func handleRecordingCompletion() {
+        print("🏁 Hands-free recording completed")
+
+        // Wait for ALL pending chunks to finish processing
+        Task {
+            var waitTime = 0.0
+            let checkInterval = 0.5 // Check every 500ms
+            let maxWaitTime = 30.0 // Maximum 30 seconds
+
+            while !processingChunks.isEmpty && waitTime < maxWaitTime {
+                print("⏳ Waiting for \(processingChunks.count) chunks to finish...")
+                try? await Task.sleep(nanoseconds: UInt64(checkInterval * 1_000_000_000))
+                waitTime += checkInterval
+            }
+
+            if !processingChunks.isEmpty {
+                print("⚠️ Timeout: \(processingChunks.count) chunks still processing after \(Int(maxWaitTime))s")
+            }
+
+            await MainActor.run {
+                if let startTime = self.recordingStartTime {
+                    let duration = Date().timeIntervalSince(startTime)
+                    print("⏱️ Total hands-free session: \(String(format: "%.1f", duration))s")
+                    print("📝 Total transcribed: \(self.accumulatedText.count) characters")
+                }
+
+                // Reset state
+                self.isTranscribing = false // Allow new recordings now
+                PerformanceMonitor.shared.stopRecording()
+                self.resetHandsFreeState()
+
+                // Hide indicator
+                FloatingWindowManager.shared.hideFloatingIndicator()
+            }
+        }
+    }
+
+    private func resetHandsFreeState() {
+        isHandsFreeMode = false
+        accumulatedText = ""
+        processingChunks.removeAll()
+        resetState()
+    }
+
     // MARK: - Process Transcription
     
     private func processTranscription(audioURL: URL) async {
@@ -402,9 +588,27 @@ class TranscriptionCoordinator: ObservableObject {
     
     private func isLikelyHallucination(_ text: String) -> Bool {
         let cleaned = text.replacingOccurrences(of: " ", with: "")
-        return hallucinations.contains(cleaned) ||
-               cleaned.contains("blankaudio") ||
-               cleaned.count <= 2
+        let lowercased = text.lowercased()
+
+        // Check exact matches
+        if hallucinations.contains(cleaned) {
+            return true
+        }
+
+        // Check for common hallucination phrases (YouTube outros, etc.)
+        for phrase in hallucinationPhrases {
+            if lowercased.contains(phrase) {
+                print("🚫 Detected hallucination phrase: '\(phrase)'")
+                return true
+            }
+        }
+
+        // Check for other hallucination indicators
+        if cleaned.contains("blankaudio") || cleaned.count <= 2 {
+            return true
+        }
+
+        return false
     }
     
     private func showDownloadingAlert() {

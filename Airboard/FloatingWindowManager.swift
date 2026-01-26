@@ -50,7 +50,13 @@ class FloatingWindowManager: NSObject {
         DispatchQueue.main.async { [weak self] in
             self?.updateIndicatorState(isRecording: isRecording, isTranscribing: isTranscribing, isCommandMode: isCommandMode, isDownloading: false, downloadProgress: 0.0)
             self?.showIcon() // Show icon when there's activity
-            self?.resetAutoHideTimer() // Reset timer
+
+            // Pause auto-hide during recording or transcribing
+            if isRecording || isTranscribing {
+                self?.pauseAutoHide()
+            } else {
+                self?.resetAutoHideTimer()
+            }
         }
     }
     
@@ -63,7 +69,7 @@ class FloatingWindowManager: NSObject {
     func hideFloatingIndicator() {
         DispatchQueue.main.async { [weak self] in
             self?.updateIndicatorState(isRecording: false, isTranscribing: false, isCommandMode: false, isDownloading: false, downloadProgress: 0.0)
-            self?.resetAutoHideTimer() // Reset timer when returning to idle
+            self?.resumeAutoHide() // Resume auto-hide when returning to idle
         }
     }
     
@@ -154,6 +160,17 @@ class FloatingWindowManager: NSObject {
         autoHideTimer = timer
 
         print("🔄 Auto-hide timer reset (will hide in \(Int(autoHideDelay))s)")
+    }
+
+    func pauseAutoHide() {
+        autoHideTimer?.invalidate()
+        autoHideTimer = nil
+        print("⏸️ Auto-hide paused (app is active)")
+    }
+
+    func resumeAutoHide() {
+        resetAutoHideTimer()
+        print("▶️ Auto-hide resumed (app is idle)")
     }
 
     private func hideIconToRight() {
