@@ -58,6 +58,10 @@ class HotkeyManager: ObservableObject {
     private var localMonitor: Any?
     private var recordingStarted = false
 
+    // Track which specific keys are currently pressed
+    private var primaryKeyPressed = false
+    private var commandKeyPressed = false
+
     // Store callbacks
     private var onDictationStart: (() -> Void)?
     private var onCommandStart: (() -> Void)?
@@ -117,7 +121,36 @@ class HotkeyManager: ObservableObject {
     }
     
     // MARK: - Monitoring
-    
+
+    // Helper to update key state based on event
+    private func updateKeyState(event: NSEvent) {
+        let primaryHotkey = HotkeyManager.primaryHotkey
+        let commandHotkey = HotkeyManager.commandModifierHotkey
+        let currentFlags = NSEvent.modifierFlags
+
+        // Check if the event is about our specific keys
+        let keyCode = event.keyCode
+
+        if keyCode == primaryHotkey.keyCode {
+            // This event is about the primary key
+            primaryKeyPressed = currentFlags.contains(primaryHotkey.modifierFlag)
+        }
+
+        if keyCode == commandHotkey.keyCode {
+            // This event is about the command key
+            commandKeyPressed = currentFlags.contains(commandHotkey.modifierFlag)
+        }
+
+        // Also check if modifier flags changed (for keys we weren't tracking the specific key code)
+        if !currentFlags.contains(primaryHotkey.modifierFlag) {
+            primaryKeyPressed = false
+        }
+
+        if !currentFlags.contains(commandHotkey.modifierFlag) {
+            commandKeyPressed = false
+        }
+    }
+
     func startMonitoring(
         onDictationStart: @escaping () -> Void,
         onCommandStart: @escaping () -> Void,
@@ -126,32 +159,30 @@ class HotkeyManager: ObservableObject {
         print("🎤 Starting hotkey monitoring")
         print("   Primary (Dictation): \(HotkeyManager.primaryHotkey.displayName)")
         print("   Modifier (Command mode): \(HotkeyManager.commandModifierHotkey.displayName)")
-        
+
         self.onDictationStart = onDictationStart
         self.onCommandStart = onCommandStart
         self.onRelease = onRelease
-        
+
         // Global monitor
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
-            self?.handleFlagsChanged()
+            self?.handleFlagsChanged(event: event)
         }
-        
+
         // Local monitor
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.flagsChanged]) { [weak self] event in
-            self?.handleFlagsChanged()
+            self?.handleFlagsChanged(event: event)
             return event
         }
     }
     
-    private func handleFlagsChanged() {
-        let primaryFlag = HotkeyManager.primaryHotkey.modifierFlag
-        let commandFlag = HotkeyManager.commandModifierHotkey.modifierFlag
+    private func handleFlagsChanged(event: NSEvent) {
+        // Update our tracked key states based on this event
+        updateKeyState(event: event)
 
-        // Get CURRENT system modifier state
-        let currentFlags = NSEvent.modifierFlags
-
-        let primaryHeld = currentFlags.contains(primaryFlag)
-        let commandHeld = currentFlags.contains(commandFlag)
+        // Use our tracked states instead of just checking modifier flags
+        let primaryHeld = primaryKeyPressed
+        let commandHeld = commandKeyPressed
         let bothHeld = primaryHeld && commandHeld
 
         // Detect key press (transition from not held to held) for hands-free mode
@@ -304,6 +335,8 @@ class HotkeyManager: ObservableObject {
         lastPressTime = nil
         tapCount = 0
         lastTapTime = nil
+        primaryKeyPressed = false
+        commandKeyPressed = false
 
         print("🔄 State reset via escape hatch")
     }

@@ -15,16 +15,19 @@ struct AirboardPopover: View {
     let onRemoveModel: () -> Void
     let onOpenDictionary: () -> Void
     let onOpenHotkeySettings: () -> Void
+    let onOpenPerformance: () -> Void
     let onReportIssue: () -> Void
     let onDismiss: () -> Void
-    
+
     @State private var isHoveringDownload = false
     @State private var isHoveringDictionary = false
     @State private var isHoveringHotkey = false
+    @State private var isHoveringPerformance = false
     @State private var isHoveringReport = false
     @State private var isHoveringRemove = false
     @State private var isHoveringSetup = false
     @State private var showingRemoveConfirm = false
+    @State private var isGrammarEnabled = LocalTranscriptionService.isGrammarCorrectionEnabled
     
     var body: some View {
         VStack(spacing: 0) {
@@ -159,7 +162,46 @@ struct AirboardPopover: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { isHoveringDictionary = $0 }
-                
+
+                // Performance Button
+                Button(action: onOpenPerformance) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.green.opacity(isHoveringPerformance ? 0.15 : 0.1))
+                                .frame(width: 32, height: 32)
+
+                            Image(systemName: "gauge.with.dots.needle.67percent")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Color.green)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Performance")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.primary)
+
+                            Text("View real-time metrics")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.primary.opacity(isHoveringPerformance ? 0.04 : 0))
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveringPerformance = $0 }
+
                 // Report Issue Button
                 Button(action: onReportIssue) {
                     HStack(spacing: 12) {
@@ -375,49 +417,43 @@ struct AirboardPopover: View {
             )
             
         } else if isModelDownloaded {
-            // Downloaded state - Show remove option
+            // Grammar correction toggle
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.green.opacity(0.15))
+                        .fill((isGrammarEnabled ? Color.green : Color.gray).opacity(isGrammarEnabled ? 0.15 : 0.12))
                         .frame(width: 32, height: 32)
-                    
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(Color.green)
+
+                    Image(systemName: isGrammarEnabled ? "sparkles" : "text.badge.xmark")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(isGrammarEnabled ? Color.green : Color.gray)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("AI Active")
+                    Text("Auto Grammar")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.primary)
-                    
-                    Text("Better formatting & spacing")
+
+                    Text(isGrammarEnabled ? "High accuracy" : "Fast transcription")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
-                Button(action: { showingRemoveConfirm = true }) {
-                    Text("Remove")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.red)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.red.opacity(isHoveringRemove ? 0.15 : 0.1))
-                        )
-                }
-                .buttonStyle(.plain)
-                .onHover { isHoveringRemove = $0 }
+
+                Toggle("", isOn: $isGrammarEnabled)
+                    .toggleStyle(.switch)
+                    .labelsHidden()
+                    .onChange(of: isGrammarEnabled) { _, newValue in
+                        LocalTranscriptionService.isGrammarCorrectionEnabled = newValue
+                        print("⚙️ Auto Grammar: \(newValue ? "enabled" : "disabled")")
+                    }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.green.opacity(0.06))
+                    .fill((isGrammarEnabled ? Color.green : Color.gray).opacity(0.06))
             )
             
         } else {
@@ -502,6 +538,7 @@ struct VisualEffectBlur: NSViewRepresentable {
                 onRemoveModel: {},
                 onOpenDictionary: {},
                 onOpenHotkeySettings: {},
+                onOpenPerformance: {},
                 onReportIssue: {},
                 onDismiss: {}
             )

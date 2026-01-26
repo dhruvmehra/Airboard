@@ -136,7 +136,10 @@ class TranscriptionCoordinator: ObservableObject {
         
         isRecording = true
         recordingStartTime = Date()
-        
+
+        // Track performance
+        PerformanceMonitor.shared.startRecording()
+
         // Show appropriate visual feedback based on mode
         FloatingWindowManager.shared.showFloatingIndicator(
             isRecording: true,
@@ -175,18 +178,22 @@ class TranscriptionCoordinator: ObservableObject {
         isRecording = false
         isTranscribing = true
         audioRecorder.stopRecording()
-        
+
+        // Stop recording timer, start transcription timer
+        PerformanceMonitor.shared.stopRecording()
+        PerformanceMonitor.shared.startTranscription()
+
         guard let audioURL = audioRecorder.recordingURL else {
             resetState()
             return
         }
-        
+
         FloatingWindowManager.shared.showFloatingIndicator(
             isRecording: false,
             isTranscribing: true,
             isCommandMode: currentMode == .command
         )
-        
+
         Task { await processTranscription(audioURL: audioURL) }
     }
     
@@ -211,10 +218,13 @@ class TranscriptionCoordinator: ObservableObject {
         
         lastTranscribedText = text
         lastContext = currentContext
-        
+
+        // End transcription timing
+        PerformanceMonitor.shared.endTranscription(inputText: text)
+
         print("📝 Transcription: \"\(text)\"")
         print("📍 Mode: \(currentMode == .command ? "COMMAND" : "DICTATION")")
-        
+
         // Handle based on mode
         if currentMode == .command {
             await handleCommandMode(text: text)

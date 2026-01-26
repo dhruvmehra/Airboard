@@ -63,8 +63,13 @@ class AudioRecorder: ObservableObject {
     
     func stopRecording() {
         audioRecorder?.stop()
+
+        // CRITICAL: Give AVAudioRecorder time to finalize the file
+        // Without this, the file may not be fully written when Whisper tries to read it
+        Thread.sleep(forTimeInterval: 0.1)
+
         isRecording = false
-        
+
         let duration: TimeInterval
         if let startTime = recordingStartTime {
             duration = Date().timeIntervalSince(startTime)
@@ -72,14 +77,14 @@ class AudioRecorder: ObservableObject {
         } else {
             duration = 0
         }
-        
+
         if let url = recordingURL {
             do {
                 let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
                 if let fileSize = attributes[.size] as? Int64 {
                     let sizeKB = Double(fileSize) / 1024.0
                     print("📊 Recording size: \(String(format: "%.1f", sizeKB))KB")
-                    
+
                     if fileSize >= 1000 {
                         // Apply audio processing on macOS (post-processing)
                         processAudioForWhisper(url: url)
@@ -90,14 +95,14 @@ class AudioRecorder: ObservableObject {
             } catch {
                 print("⚠️ Could not verify recording file: \(error.localizedDescription)")
             }
-            
+
             print("🎙️ Recording stopped: \(url.path)")
         } else {
             print("⚠️ No recording URL available")
         }
-        
+
         recordingStartTime = nil
-        
+
         #if !os(macOS)
         do {
             try AVAudioSession.sharedInstance().setActive(false)

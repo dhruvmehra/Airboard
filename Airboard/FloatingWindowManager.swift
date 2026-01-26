@@ -14,15 +14,21 @@ class FloatingWindowManager: NSObject {
     private var popoverWindow: NSWindow?
     private var dictionaryWindow: NSWindow?
     private var hotkeyWindow: NSWindow?
+    private var performanceWindow: NSWindow?
+
+    // Auto-hide state
+    private var autoHideTimer: Timer?
+    private var isHidden = false
+    private let autoHideDelay: TimeInterval = 15.0
     
     override init() {
         super.init()
-        
+
         DispatchQueue.main.async { [weak self] in
             self?.createFloatingWindow()
             self?.updateIndicatorState(isRecording: false, isTranscribing: false, isCommandMode: false, isDownloading: false, downloadProgress: 0.0)
         }
-        
+
         // Listen for pulse notification (for onboarding)
         NotificationCenter.default.addObserver(
             self,
@@ -30,11 +36,21 @@ class FloatingWindowManager: NSObject {
             name: .pulseFloatingIcon,
             object: nil
         )
+
+        // Listen for screen configuration changes (resolution, display arrangement, etc.)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(screenConfigurationChanged),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
     }
     
     func showFloatingIndicator(isRecording: Bool, isTranscribing: Bool, isCommandMode: Bool = false) {
         DispatchQueue.main.async { [weak self] in
             self?.updateIndicatorState(isRecording: isRecording, isTranscribing: isTranscribing, isCommandMode: isCommandMode, isDownloading: false, downloadProgress: 0.0)
+            self?.showIcon() // Show icon when there's activity
+            self?.resetAutoHideTimer() // Reset timer
         }
     }
     
@@ -47,6 +63,7 @@ class FloatingWindowManager: NSObject {
     func hideFloatingIndicator() {
         DispatchQueue.main.async { [weak self] in
             self?.updateIndicatorState(isRecording: false, isTranscribing: false, isCommandMode: false, isDownloading: false, downloadProgress: 0.0)
+            self?.resetAutoHideTimer() // Reset timer when returning to idle
         }
     }
     
@@ -62,7 +79,7 @@ class FloatingWindowManager: NSObject {
             createFloatingWindow()
             return
         }
-        
+
         window.contentView = NSHostingView(
             rootView: FloatingIndicatorView(
                 isRecording: isRecording,
@@ -71,13 +88,19 @@ class FloatingWindowManager: NSObject {
                 isDownloading: isDownloading,
                 downloadProgress: downloadProgress,
                 onTap: { [weak self] in
+                    self?.showIcon() // Show icon when tapped
+                    self?.resetAutoHideTimer() // Reset timer
                     self?.handleTap(isRecording: isRecording, isTranscribing: isTranscribing)
                 }
             )
         )
-        
+
         window.alphaValue = 1.0
-        window.orderFrontRegardless()
+
+        // DON'T call orderFrontRegardless when hidden - it resets the position
+        if !isHidden {
+            window.orderFrontRegardless()
+        }
     }
     
     private func createFloatingWindow() {
@@ -109,10 +132,122 @@ class FloatingWindowManager: NSObject {
         floatingWindow = window
         window.alphaValue = 1.0
         window.orderFrontRegardless()
-        
+
+        // Start auto-hide timer
+        resetAutoHideTimer()
+
         print("✅ Clickable floating indicator created")
     }
-    
+
+    // MARK: - Auto-hide
+
+    private func resetAutoHideTimer() {
+        autoHideTimer?.invalidate()
+
+        let timer = Timer(timeInterval: autoHideDelay, repeats: false) { [weak self] _ in
+            print("⏰ Auto-hide timer fired")
+            self?.hideIconToRight()
+        }
+
+        // Add to main run loop with common modes so it fires even when UI is active
+        RunLoop.main.add(timer, forMode: .common)
+        autoHideTimer = timer
+
+        print("🔄 Auto-hide timer reset (will hide in \(Int(autoHideDelay))s)")
+    }
+
+    private func hideIconToRight() {
+        guard let window = floatingWindow, !isHidden else {
+            print("⚠️ Cannot hide icon - window: \(floatingWindow != nil), isHidden: \(isHidden)")
+            return
+        }
+
+        // Get the screen where the window currently is
+        let screen = window.screen ?? NSScreen.main
+        guard let screen = screen else {
+            print("⚠️ Cannot hide icon - no screen")
+            return
+        }
+
+        let currentFrame = window.frame
+        print("👉 Hiding icon to the right... Current frame: \(currentFrame)")
+        print("   Screen frame: \(screen.visibleFrame)")
+        isHidden = true
+
+        let screenFrame = screen.visibleFrame
+        let margin: CGFloat = 20
+        let hiddenX = screenFrame.maxX + 10 // Completely off-screen to the right
+        let y = screenFrame.minY + margin
+        let targetFrame = NSRect(x: hiddenX, y: y, width: currentFrame.width, height: currentFrame.height)
+
+        print("   Moving from x=\(currentFrame.origin.x) to x=\(hiddenX)")
+
+        // Use setFrame with animation instead of animator proxy
+        window.setFrame(targetFrame, display: true, animate: true)
+
+        print("✅ Icon hidden off-screen. Final frame: \(window.frame)")
+    }
+
+    private func showIcon() {
+        guard let window = floatingWindow else { return }
+
+        // Get the screen where the window currently is
+        let screen = window.screen ?? NSScreen.main
+        guard let screen = screen else { return }
+
+        // Only animate if currently hidden
+        if isHidden {
+            print("👈 Showing icon from the right...")
+            isHidden = false
+
+            let screenFrame = screen.visibleFrame
+            let windowSize: CGFloat = 52
+            let margin: CGFloat = 20
+            let visibleX = screenFrame.maxX - windowSize - margin
+            let y = screenFrame.minY + margin
+            let targetFrame = NSRect(x: visibleX, y: y, width: windowSize, height: windowSize)
+
+            print("   Moving from x=\(window.frame.origin.x) to x=\(visibleX)")
+
+            // Use setFrame with animation (same as hideIconToRight)
+            window.setFrame(targetFrame, display: true, animate: true)
+
+            print("✅ Icon shown on screen. Final frame: \(window.frame)")
+        } else {
+            print("ℹ️ Icon already visible, no animation needed")
+        }
+    }
+
+    @objc private func screenConfigurationChanged() {
+        // Screen resolution, arrangement, or display settings changed
+        // Reposition the window to stay in the correct location
+        print("🖥️ Screen configuration changed, repositioning icon...")
+
+        guard let window = floatingWindow else { return }
+
+        // Get the screen where the window is (or main screen if none)
+        let screen = window.screen ?? NSScreen.main
+        guard let screen = screen else { return }
+
+        let screenFrame = screen.visibleFrame
+        let windowSize: CGFloat = 52
+        let margin: CGFloat = 20
+
+        if isHidden {
+            // Keep it hidden off-screen at the new screen position
+            let hiddenX = screenFrame.maxX + 10
+            let y = screenFrame.minY + margin
+            window.setFrameOrigin(NSPoint(x: hiddenX, y: y))
+            print("   Repositioned (hidden): x=\(hiddenX), y=\(y)")
+        } else {
+            // Keep it visible at the new screen position
+            let visibleX = screenFrame.maxX - windowSize - margin
+            let y = screenFrame.minY + margin
+            window.setFrameOrigin(NSPoint(x: visibleX, y: y))
+            print("   Repositioned (visible): x=\(visibleX), y=\(y)")
+        }
+    }
+
     // MARK: - Animations
     
     @objc private func pulseIcon() {
@@ -192,6 +327,9 @@ class FloatingWindowManager: NSObject {
             },
             onOpenHotkeySettings: { [weak self] in
                 self?.handleOpenHotkeySettings()
+            },
+            onOpenPerformance: { [weak self] in
+                self?.handleOpenPerformance()
             },
             onReportIssue: { [weak self] in
                 self?.handleReportIssue()
@@ -308,7 +446,12 @@ class FloatingWindowManager: NSObject {
         hidePopover()
         showHotkeySettingsWindow()
     }
-    
+
+    private func handleOpenPerformance() {
+        hidePopover()
+        showPerformanceWindow()
+    }
+
     private func handleReportIssue() {
         hidePopover()
         NotificationCenter.default.post(name: .openFeedbackReport, object: nil)
@@ -342,30 +485,57 @@ class FloatingWindowManager: NSObject {
     }
     
     // MARK: - Hotkey Settings Window
-    
+
     private func showHotkeySettingsWindow() {
         if let existing = hotkeyWindow {
             existing.close()
             hotkeyWindow = nil
         }
-        
+
         let hotkeyView = HotkeySettingsView(onHotkeyChanged: {
             NotificationCenter.default.post(name: .hotkeyChanged, object: nil)
         })
-        
+
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 300, height: 400),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        
+
         window.title = "Hotkey Settings"
         window.contentView = NSHostingView(rootView: hotkeyView)
         window.center()
         window.isReleasedWhenClosed = false
-        
+
         hotkeyWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Performance Window
+
+    private func showPerformanceWindow() {
+        if let existing = performanceWindow {
+            existing.close()
+            performanceWindow = nil
+        }
+
+        let performanceView = PerformanceView()
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 480),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+
+        window.title = "Performance"
+        window.contentView = NSHostingView(rootView: performanceView)
+        window.center()
+        window.isReleasedWhenClosed = false
+
+        performanceWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -412,6 +582,8 @@ class FloatingWindowManager: NSObject {
     }
 
     func cleanup() {
+        autoHideTimer?.invalidate()
+        autoHideTimer = nil
         NotificationCenter.default.removeObserver(self)
         DispatchQueue.main.async { [weak self] in
             self?.popoverWindow?.close()
@@ -420,6 +592,8 @@ class FloatingWindowManager: NSObject {
             self?.dictionaryWindow = nil
             self?.hotkeyWindow?.close()
             self?.hotkeyWindow = nil
+            self?.performanceWindow?.close()
+            self?.performanceWindow = nil
             self?.downloadModalWindow?.close()
             self?.downloadModalWindow = nil
             self?.floatingWindow?.orderOut(nil)

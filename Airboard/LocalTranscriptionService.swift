@@ -15,10 +15,28 @@ class LocalTranscriptionService: ObservableObject {
     @Published var error: String?
     @Published var isDownloadingModel: Bool = false
     @Published var downloadProgress: Double = 0.0
-    
+
     private var whisperKit: WhisperKit?
     private var isInitialized = false
     private var initializationTask: Task<Void, Never>?
+
+    // Keys for UserDefaults
+    private static let grammarCorrectionEnabledKey = "grammarCorrectionEnabled"
+
+    // MARK: - Grammar Correction Setting
+
+    static var isGrammarCorrectionEnabled: Bool {
+        get {
+            // Default to true if not set
+            if UserDefaults.standard.object(forKey: grammarCorrectionEnabledKey) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: grammarCorrectionEnabledKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: grammarCorrectionEnabledKey)
+        }
+    }
     
     init() {
         initializationTask = Task {
@@ -281,17 +299,44 @@ class LocalTranscriptionService: ObservableObject {
             // LOG: Show raw Whisper output
             print("📝 Raw Whisper output: '\(transcribedText)'")
 
-            // Apply ultra-fast grammar correction
-            do {
-                transcribedText = try await GrammarCorrectionService.shared.correctGrammar(transcribedText)
-                print("✨ Grammar correction applied")
-            } catch {
-                print("⚠️ Grammar correction failed: \(error.localizedDescription)")
-                // Continue with raw Whisper output
+            // Check if transcription is empty
+            if transcribedText.isEmpty {
+                await MainActor.run {
+                    self.error = "No speech detected"
+                    self.isTranscribing = false
+                }
+                deleteAudioFile(at: audioURL)
+                return
             }
-            
+
+            // IMMEDIATELY show raw Whisper output for instant feedback
             await MainActor.run {
                 self.transcription = transcribedText
+            }
+
+            // Apply ultra-fast grammar correction (if enabled)
+            if LocalTranscriptionService.isGrammarCorrectionEnabled {
+                do {
+                    PerformanceMonitor.shared.startGrammarCorrection()
+                    transcribedText = try await GrammarCorrectionService.shared.correctGrammar(transcribedText)
+                    print("✨ Grammar correction applied")
+
+                    // Update with corrected text
+                    await MainActor.run {
+                        self.transcription = transcribedText
+                    }
+                } catch {
+                    print("⚠️ Grammar correction failed: \(error.localizedDescription)")
+                    // Keep the raw Whisper output that's already showing
+                    PerformanceMonitor.shared.finalizeWithoutGrammar()
+                }
+            } else {
+                print("⏭️ Grammar correction disabled - using raw Whisper output")
+                PerformanceMonitor.shared.finalizeWithoutGrammar()
+            }
+
+            // Mark transcription as complete
+            await MainActor.run {
                 self.isTranscribing = false
             }
             

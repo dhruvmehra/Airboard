@@ -246,7 +246,20 @@ class GrammarCorrectionService: ObservableObject {
         if let encoderSession = encoderSession, let decoderSession = decoderSession, let sp = sentencePieceProcessor {
             print("✅ Using ONNX Runtime model for grammar correction")
             do {
-                let corrected = try await correctWithONNX(text, encoderSession: encoderSession, decoderSession: decoderSession, sp: sp)
+                // Check if text needs chunking
+                let tokenCount = sp.encode(text).count
+                print("📊 Input token count: \(tokenCount)")
+
+                let corrected: String
+                if tokenCount > 100 {
+                    // Split into chunks for long text
+                    print("✂️ Text is long (\(tokenCount) tokens), splitting into chunks...")
+                    corrected = try await correctWithChunks(text, encoderSession: encoderSession, decoderSession: decoderSession, sp: sp)
+                } else {
+                    // Process normally for short text
+                    corrected = try await correctWithONNX(text, encoderSession: encoderSession, decoderSession: decoderSession, sp: sp)
+                }
+
                 let duration = Date().timeIntervalSince(startTime) * 1000
                 print("📤 ONNX Output: '\(corrected)'")
                 print("⏱️ ONNX Duration: \(Int(duration))ms")
@@ -267,6 +280,87 @@ class GrammarCorrectionService: ObservableObject {
         print("⏱️ Rule-based Duration: \(Int(duration))ms")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         return corrected
+    }
+
+    /// Split long text into chunks and correct each chunk separately
+    private func correctWithChunks(_ text: String, encoderSession: ORTSession, decoderSession: ORTSession, sp: SentencePieceProcessor) async throws -> String {
+        // Split by sentence endings while preserving punctuation
+        let pattern = "(?<=[.!?])\\s+"
+        let regex = try NSRegularExpression(pattern: pattern, options: [])
+        let range = NSRange(text.startIndex..., in: text)
+        let matches = regex.matches(in: text, options: [], range: range)
+
+        var sentences: [String] = []
+        var lastIndex = text.startIndex
+
+        for match in matches {
+            if let matchRange = Range(match.range, in: text) {
+                let sentence = String(text[lastIndex..<matchRange.lowerBound])
+                if !sentence.isEmpty {
+                    sentences.append(sentence)
+                }
+                lastIndex = matchRange.upperBound
+            }
+        }
+
+        // Add the last sentence
+        if lastIndex < text.endIndex {
+            let lastSentence = String(text[lastIndex...])
+            if !lastSentence.isEmpty {
+                sentences.append(lastSentence)
+            }
+        }
+
+        // If regex failed or no sentences found, split by approximation
+        if sentences.isEmpty {
+            sentences = [text]
+        }
+
+        print("📝 Split into \(sentences.count) sentence(s)")
+
+        // Group sentences into chunks of ~80 tokens
+        var chunks: [String] = []
+        var currentChunk: [String] = []
+        var currentTokenCount = 0
+
+        for sentence in sentences {
+            let sentenceTokens = sp.encode(sentence)
+
+            // If adding this sentence would exceed 80 tokens, start new chunk
+            if currentTokenCount + sentenceTokens.count > 80 && !currentChunk.isEmpty {
+                chunks.append(currentChunk.joined(separator: " "))
+                currentChunk = [sentence]
+                currentTokenCount = sentenceTokens.count
+            } else {
+                currentChunk.append(sentence)
+                currentTokenCount += sentenceTokens.count
+            }
+        }
+
+        // Add the last chunk
+        if !currentChunk.isEmpty {
+            chunks.append(currentChunk.joined(separator: " "))
+        }
+
+        print("✂️ Created \(chunks.count) chunk(s):")
+        for (i, chunk) in chunks.enumerated() {
+            let tokenCount = sp.encode(chunk).count
+            print("   Chunk \(i + 1): \(tokenCount) tokens - '\(chunk.prefix(60))...'")
+        }
+
+        // Correct each chunk
+        var correctedChunks: [String] = []
+        for (i, chunk) in chunks.enumerated() {
+            print("🔄 Correcting chunk \(i + 1)/\(chunks.count)...")
+            let corrected = try await correctWithONNX(chunk, encoderSession: encoderSession, decoderSession: decoderSession, sp: sp)
+            correctedChunks.append(corrected)
+        }
+
+        // Combine chunks back together
+        let result = correctedChunks.joined(separator: " ")
+        print("✅ Combined \(correctedChunks.count) corrected chunk(s)")
+
+        return result
     }
 
     /// Use ONNX T5 model for grammar correction with autoregressive decoding
@@ -575,6 +669,14 @@ class GrammarCorrectionService: ObservableObject {
         print("   Output: '\(correctedText)'")
         print("   Same: \(text == correctedText)")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+        // Track performance metrics
+        PerformanceMonitor.shared.endGrammarCorrection(
+            outputText: correctedText,
+            inputTokens: inputTokens.count,
+            outputTokens: generatedTokens.count
+        )
+
         return correctedText
     }
 
