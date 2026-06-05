@@ -1,4 +1,4 @@
-# Murmur 🎤
+# Airboard 🎤
 
 A lightweight macOS voice transcription app that converts speech to text using OpenAI's Whisper API. Press a hotkey, speak, and watch your words appear instantly in any application.
 
