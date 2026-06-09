@@ -1,186 +1,93 @@
 # Airboard 🎤
 
-A lightweight macOS voice transcription app that converts speech to text using OpenAI's Whisper API. Press a hotkey, speak, and watch your words appear instantly in any application.
+A lightweight macOS voice transcription app. Press a hotkey, speak, and your words are inserted into whatever app you're using. **All speech recognition runs locally on your Mac — no audio ever leaves your machine and no API key is required.**
 
 ## Features
 
-- **🎯 Hotkey Activated**: Hold Right Option key to record, release to transcribe
-- **🤖 AI-Powered**: Uses OpenAI Whisper API for accurate transcription
-- **📱 Context-Aware**: Adjusts formatting based on active app (email, messaging, code, etc.)
-- **⚡️ Fast & Lightweight**: Minimal UI with floating indicator
-- **✨ Auto-Insert**: Transcribed text appears directly where you're typing
-- **🔒 Privacy-Focused**: Runs locally, only sends audio to OpenAI for transcription
-
-## Demo
-
-https://github.com/user-attachments/assets/your-demo-video.mov
+- **🎯 Hotkey activated**: Hold your hotkey (default: Right Option) to record, release to transcribe
+- **🔒 Fully local & private**: Transcription runs on-device via [WhisperKit](https://github.com/argmaxinc/WhisperKit) (Apple Neural Engine / CoreML). No cloud, no API key.
+- **🧠 Grammar cleanup**: Optional on-device grammar correction (Flan-T5 via ONNX Runtime), toggleable
+- **🗣️ Voice commands**: Open apps/websites, web search, system controls, timers (hold hotkey + ⌘)
+- **🙌 Hands-free mode**: Double-tap the hotkey for continuous dictation
+- **📱 Context-aware**: Adapts to the active app (email, code, messaging, docs)
+- **✨ Auto-insert**: Text appears directly where your cursor is, via the Accessibility API
+- **📖 Custom vocabulary**: Teach it names and jargon for better accuracy
 
 ## Requirements
 
-- macOS 13.0 or later
-- OpenAI API key
-- Microphone access
-- Accessibility permissions
+- macOS 14.0 or later (Apple Silicon recommended)
+- Xcode 16+ to build
+- Microphone + Accessibility permissions (prompted on first launch)
 
-## Installation
+## First run — heads up ⚠️
 
-### From Source
+On first launch Airboard **downloads its ML models (~1.5 GB total)** and caches them locally:
 
-1. Clone the repository:
+| Model | Purpose | Size | Cached at |
+|-------|---------|------|-----------|
+| Whisper `small` (WhisperKit) | Speech → text | ~0.5 GB | `~/.cache/whisperkit/models/` |
+| Flan-T5 (ONNX) | Grammar cleanup | ~1.1 GB | `~/.cache/airboard/models/vennify/` |
+
+The download happens in the background and needs an internet connection **once**; everything is offline after that. If you start dictating before the download finishes, the first transcription will wait for the model.
+
+## Build & Run
+
+1. Clone and open:
+   ```bash
+   git clone https://github.com/dhruvmehra/Airboard.git
+   cd Airboard
+   open Airboard.xcodeproj
+   ```
+2. Build and run (⌘R). No configuration or API keys needed.
+3. Grant permissions when prompted:
+   - **Microphone** — click Allow
+   - **Accessibility** — open System Settings → Privacy & Security → Accessibility and enable Airboard (required to insert text)
+
+### Release build
+
 ```bash
-git clone https://github.com/YOUR_USERNAME/murmur.git
-cd murmur
+./build_release.sh   # builds, signs, notarizes, and creates a DMG
+./create_dmg.sh      # DMG only (no signing/notarization)
 ```
-
-2. Create `murmur/Config.swift` with your OpenAI API key:
-```swift
-import Foundation
-
-struct Config {
-    static let openAIAPIKey = "your-openai-api-key-here"
-}
-```
-
-3. Open `murmur.xcodeproj` in Xcode
-
-4. Build and run (Cmd+R)
-
-5. Grant permissions when prompted:
-   - **Microphone**: Click "OK"
-   - **Accessibility**: Open System Settings and enable
 
 ## Usage
 
-1. Press and hold **Right Option** (⌥) key
-2. Speak your message
-3. Release the key
-4. Watch the text appear!
+1. Hold your hotkey (default **Right Option ⌥**)
+2. Speak
+3. Release — the text inserts where your cursor is
 
-### Visual Feedback
+Visual feedback (floating indicator): 🔴 recording · 🟠 transcribing · 🟣 command mode · 🔵 downloading models.
 
-- 🔴 **Red microphone**: Recording
-- 🟠 **Orange waveform**: Transcribing
-- Text automatically inserts into your active app
+**Modes:** hold = dictate · hold + ⌘ = voice command · double-tap = hands-free.
 
-## Context-Aware Formatting
+Hotkey, vocabulary, and grammar correction are all configurable from the menu-bar popover.
 
-Murmur detects your active application and adjusts formatting:
-
-- **Email clients**: Professional format with proper structure
-- **Messaging apps**: Casual, conversational tone
-- **Code editors**: Code-friendly formatting
-- **Documents**: Professional prose with proper grammar
-- **Browsers**: Adapts to context (search vs. forms)
-
-## Configuration
-
-### Change Hotkey
-
-Edit `HotkeyManager.swift`:
-
-```swift
-private let targetKeyCode: UInt16 = 58 // Right Option
-// Options: 58 = Right Option, 61 = Left Option, 59 = Right Control
-```
-
-### Adjust Audio Quality
-
-Edit `AudioRecorder.swift`:
-
-```swift
-let settings = [
-    AVSampleRateKey: 16000,  // Increase for better quality (e.g., 44100)
-    AVNumberOfChannelsKey: 1,
-    // ... other settings
-]
-```
-
-## Project Structure
+## Architecture (high level)
 
 ```
-murmur/
-├── murmur/
-│   ├── murmurApp.swift           # Main app and permission handling
-│   ├── HotkeyManager.swift       # Hotkey detection
-│   ├── AudioRecorder.swift       # Audio recording
-│   ├── TranscriptionService.swift # Whisper API integration
-│   ├── TextInserter.swift        # Text insertion via accessibility
-│   ├── FloatingWindowManager.swift # Visual indicator
-│   ├── AppContextDetector.swift  # Active app detection
-│   ├── Config.swift              # API key (gitignored)
-│   ├── Info.plist               # Permissions
-│   └── murmur.entitlements      # Security entitlements
-├── README.md
-├── PERMISSION_SETUP.md
-└── UPDATES_SUMMARY.md
+HotkeyManager → TranscriptionCoordinator
+  → AudioRecorder / ChunkedAudioRecorder   (capture)
+  → LocalTranscriptionService              (WhisperKit, local)
+  → GrammarCorrectionService               (ONNX Flan-T5, optional)
+  → CommandDetector / CommandExecutor      (voice commands)
+  → TextInserter                           (Accessibility API)
+  → FloatingWindowManager                  (UI feedback)
 ```
 
-## Permissions
+See `CLAUDE.md` for a fuller breakdown of the source layout.
 
-### Microphone
-Required to record audio for transcription.
+## Privacy
 
-### Accessibility
-Required to insert transcribed text into other applications.
-
-Both permissions are requested automatically on first launch.
-
-## Troubleshooting
-
-### Hotkey not working
-- Check Console for "🎤 Starting hotkey monitoring"
-- Ensure app is running (check Activity Monitor)
-
-### No indicator appears
-- Grant Accessibility permission in System Settings
-- Check Console for error messages
-
-### Text not inserting
-- Enable Accessibility in System Settings > Privacy & Security > Accessibility
-- Click into a text field before recording
-
-### Poor transcription quality
-- Speak clearly near microphone
-- Reduce background noise
-- Consider increasing sample rate in AudioRecorder.swift
-
-## Privacy & Security
-
-- Audio is sent to OpenAI's servers for transcription
-- No audio is stored permanently
-- API key is stored locally (not in git repo)
-- Temporary audio files are saved to Documents directory
-
-## Roadmap
-
-- [ ] Custom vocabulary/glossary support
-- [ ] Multiple language support
-- [ ] Offline transcription option
-- [ ] Recording history
-- [ ] Edit-before-insert mode
-- [ ] Customizable hotkeys via UI
-- [ ] Menu bar settings panel
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a PR.
+- Audio is processed entirely on-device; nothing is sent to any transcription server.
+- Models are downloaded once from Hugging Face, then run fully offline.
+- Optional, opt-in feedback reports (when you tap "Report issue") send only the text/metadata you choose to submit.
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License — see LICENSE file.
 
 ## Acknowledgments
 
-- Built with [OpenAI Whisper API](https://platform.openai.com/docs/guides/speech-to-text)
+- [WhisperKit](https://github.com/argmaxinc/WhisperKit) by Argmax for on-device Whisper
+- OpenAI Whisper and ONNX Runtime
 - Inspired by Wispr Flow
-
-## Support
-
-Having issues? Check out:
-- [Permission Setup Guide](PERMISSION_SETUP.md)
-- [Updates Summary](UPDATES_SUMMARY.md)
-- [GitHub Issues](https://github.com/YOUR_USERNAME/murmur/issues)
-
----
-
-Made with ❤️ by [Your Name]
