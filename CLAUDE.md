@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Airboard (formerly "Murmur") is a macOS voice transcription app. Users press a hotkey, speak, and transcribed text is inserted into the active application. All ML inference runs locally using WhisperKit (speech-to-text) and Flan-T5 via ONNX Runtime (grammar correction).
+Airboard (formerly "Murmur") is a macOS voice transcription app. Users press a hotkey, speak, and transcribed text is inserted into the active application. All ML inference runs locally using WhisperKit (Whisper large-v3-turbo, speech-to-text).
 
 ## Build & Run
 
@@ -24,13 +24,10 @@ Airboard (formerly "Murmur") is a macOS voice transcription app. Users press a h
 
 | Package | Purpose |
 |---------|---------|
-| WhisperKit | Local speech-to-text (Whisper model) |
-| swift-sentencepiece | Tokenization for Flan-T5 |
-| onnxruntime-swift-package-manager | ONNX Runtime + extensions for grammar correction |
+| WhisperKit (pinned to a fixed revision) | Local speech-to-text (Whisper model) |
 
-Models auto-download on first run:
-- Whisper: `~/.cache/whisperkit/models/openai_whisper-small`
-- Flan-T5: `~/.cache/airboard/models/vennify`
+Model auto-downloads on first run:
+- Whisper: `~/.cache/whisperkit/models/openai_whisper-large-v3-v20240930_turbo_632MB` (~630 MB; name defined in `LocalTranscriptionService.whisperModelName`)
 
 ## Architecture
 
@@ -41,7 +38,6 @@ HotkeyManager (detects key press)
   → TranscriptionCoordinator (orchestrator singleton)
     → AudioRecorder / ChunkedAudioRecorder (captures audio)
     → LocalTranscriptionService (WhisperKit transcription)
-    → GrammarCorrectionService (optional ONNX Flan-T5 fix)
     → CommandDetector (checks for voice commands)
     → TextInserter (inserts via Accessibility API) or CommandExecutor
     → FloatingWindowManager (visual feedback)
@@ -67,7 +63,7 @@ HotkeyManager (detects key press)
 |------|-----------|
 | Entry point | `AirboardApp.swift` (AppDelegate-based) |
 | Audio capture | `AudioRecorder.swift`, `ChunkedAudioRecorder.swift` |
-| ML inference | `LocalTranscriptionService.swift`, `GrammarCorrectionService.swift`, `SentencePieceProcessor.swift` |
+| ML inference | `LocalTranscriptionService.swift` |
 | Orchestration | `TranscriptionCoordinator.swift` |
 | Input handling | `HotkeyManager.swift` |
 | Text output | `TextInserter.swift` (Accessibility API) |
@@ -92,14 +88,9 @@ HotkeyManager (detects key press)
 
 ## Testing
 
-No XCTest target exists. Manual testing via debug menu items in `MenuBarManager` (e.g., "Test Grammar Fix"). Standalone test scripts exist at the project root (e.g., `test_grammar_simple.swift`).
+No XCTest target exists. Testing is manual: build, grant permissions, and dictate into a real app.
 
 ## UserDefaults Keys
 
 - `primaryHotkey`, `commandModifierHotkey` — hotkey configuration
-- `grammarCorrectionEnabled` — toggle grammar correction (default: true)
 - `hasCompletedSetup` — first-run setup completion flag
-
-## Sidecar Service
-
-A Node.js sidecar (`Sidecar/sidecar.mjs`) provides integration with Clawdbot CLI for extended voice command processing. Runs on localhost:18790.

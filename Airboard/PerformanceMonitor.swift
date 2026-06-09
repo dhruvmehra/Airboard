@@ -2,7 +2,7 @@
 //  PerformanceMonitor.swift
 //  Airboard
 //
-//  Tracks real-time performance metrics for transcription and grammar correction
+//  Tracks real-time performance metrics for transcription
 //
 
 import Foundation
@@ -23,14 +23,10 @@ class PerformanceMonitor: ObservableObject {
     struct SessionMetrics {
         var recordingDuration: TimeInterval = 0
         var transcriptionTime: TimeInterval = 0
-        var grammarCorrectionTime: TimeInterval = 0
         var totalProcessingTime: TimeInterval = 0
 
         var inputText: String = ""
         var outputText: String = ""
-
-        var inputTokenCount: Int = 0
-        var outputTokenCount: Int = 0
 
         var timestamp: Date = Date()
     }
@@ -38,10 +34,6 @@ class PerformanceMonitor: ObservableObject {
     struct TimingBreakdown {
         var audioRecording: TimeInterval = 0
         var whisperTranscription: TimeInterval = 0
-        var t5Tokenization: TimeInterval = 0
-        var t5Encoding: TimeInterval = 0
-        var t5Decoding: TimeInterval = 0
-        var sentencePieceDecode: TimeInterval = 0
     }
 
     // MARK: - Private State
@@ -49,7 +41,6 @@ class PerformanceMonitor: ObservableObject {
     private var recordingStartTime: Date?
     private var processingStartTime: Date? // When recording stops and processing begins
     private var transcriptionStartTime: Date?
-    private var grammarStartTime: Date?
 
     private var memoryUpdateTimer: Timer?
 
@@ -97,45 +88,14 @@ class PerformanceMonitor: ObservableObject {
         transcriptionStartTime = nil
     }
 
-    func startGrammarCorrection() {
-        grammarStartTime = Date()
-    }
-
-    func endGrammarCorrection(outputText: String, inputTokens: Int, outputTokens: Int) {
-        if let start = grammarStartTime {
-            let duration = Date().timeIntervalSince(start)
-            currentSession?.grammarCorrectionTime = duration
-            currentSession?.outputText = outputText
-            currentSession?.inputTokenCount = inputTokens
-            currentSession?.outputTokenCount = outputTokens
-        }
-        grammarStartTime = nil
-
-        // Calculate ACTUAL end-to-end total processing time
-        // From when recording stopped to when final corrected text is ready
+    func finalizeSession() {
+        // Calculate total time from processing start to now
         if let processingStart = processingStartTime {
             let actualTotal = Date().timeIntervalSince(processingStart)
             currentSession?.totalProcessingTime = actualTotal
 
             print("📊 PerformanceMonitor: End-to-end latency")
             print("   Transcription: \(Int((currentSession?.transcriptionTime ?? 0) * 1000))ms")
-            print("   Grammar: \(Int((currentSession?.grammarCorrectionTime ?? 0) * 1000))ms")
-            print("   TOTAL (wall-clock): \(Int(actualTotal * 1000))ms")
-
-            processingStartTime = nil
-        }
-    }
-
-    func finalizeWithoutGrammar() {
-        // Called when grammar correction is skipped
-        // Calculate total time from processing start to now
-        if let processingStart = processingStartTime {
-            let actualTotal = Date().timeIntervalSince(processingStart)
-            currentSession?.totalProcessingTime = actualTotal
-
-            print("📊 PerformanceMonitor: End-to-end latency (no grammar)")
-            print("   Transcription: \(Int((currentSession?.transcriptionTime ?? 0) * 1000))ms")
-            print("   Grammar: SKIPPED")
             print("   TOTAL (wall-clock): \(Int(actualTotal * 1000))ms")
 
             processingStartTime = nil

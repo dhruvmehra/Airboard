@@ -27,7 +27,6 @@ struct AirboardPopover: View {
     @State private var isHoveringRemove = false
     @State private var isHoveringSetup = false
     @State private var showingRemoveConfirm = false
-    @State private var isGrammarEnabled = LocalTranscriptionService.isGrammarCorrectionEnabled
     
     var body: some View {
         VStack(spacing: 0) {
@@ -417,45 +416,37 @@ struct AirboardPopover: View {
             )
             
         } else if isModelDownloaded {
-            // Grammar correction toggle
+            // Model ready status
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill((isGrammarEnabled ? Color.green : Color.gray).opacity(isGrammarEnabled ? 0.15 : 0.12))
+                        .fill(Color.green.opacity(0.15))
                         .frame(width: 32, height: 32)
 
-                    Image(systemName: isGrammarEnabled ? "sparkles" : "text.badge.xmark")
+                    Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(isGrammarEnabled ? Color.green : Color.gray)
+                        .foregroundStyle(Color.green)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Auto Grammar")
+                    Text("Model Ready")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.primary)
 
-                    Text(isGrammarEnabled ? "High accuracy" : "Fast transcription")
+                    Text("On-device transcription active")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
-
-                Toggle("", isOn: $isGrammarEnabled)
-                    .toggleStyle(.switch)
-                    .labelsHidden()
-                    .onChange(of: isGrammarEnabled) { _, newValue in
-                        LocalTranscriptionService.isGrammarCorrectionEnabled = newValue
-                        print("⚙️ Auto Grammar: \(newValue ? "enabled" : "disabled")")
-                    }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill((isGrammarEnabled ? Color.green : Color.gray).opacity(0.06))
+                    .fill(Color.green.opacity(0.06))
             )
-            
+
         } else {
             // Not downloaded - Show download option
             Button(action: onDownloadModel) {

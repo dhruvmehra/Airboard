@@ -75,38 +75,17 @@ class TranscriptionCoordinator: ObservableObject {
     }
     
     private func setupObservers() {
-        // WhisperKit download progress (represents 50% of total progress)
+        // WhisperKit download progress
         transcriptionService.$downloadProgress
             .sink { progress in
-                FloatingWindowManager.shared.showDownloadProgress(progress: progress * 0.5)
+                FloatingWindowManager.shared.showDownloadProgress(progress: progress)
             }
             .store(in: &cancellables)
 
         transcriptionService.$isDownloadingModel
             .sink { isDownloading in
                 if !isDownloading {
-                    // Check if grammar is also done
-                    if !GrammarCorrectionService.shared.isDownloadingModel {
-                        FloatingWindowManager.shared.hideFloatingIndicator()
-                    }
-                }
-            }
-            .store(in: &cancellables)
-
-        // Grammar service download progress (represents the other 50% of total progress)
-        GrammarCorrectionService.shared.$downloadProgress
-            .sink { progress in
-                FloatingWindowManager.shared.showDownloadProgress(progress: 0.5 + (progress * 0.5))
-            }
-            .store(in: &cancellables)
-
-        GrammarCorrectionService.shared.$isDownloadingModel
-            .sink { isDownloading in
-                if !isDownloading {
-                    // Check if WhisperKit is also done
-                    if !self.transcriptionService.isDownloadingModel {
-                        FloatingWindowManager.shared.hideFloatingIndicator()
-                    }
+                    FloatingWindowManager.shared.hideFloatingIndicator()
                 }
             }
             .store(in: &cancellables)
@@ -126,8 +105,6 @@ class TranscriptionCoordinator: ObservableObject {
         } catch {
             print("⚠️ Notification permission error: \(error.localizedDescription)")
         }
-        
-        // Grammar service initializes automatically
     }
     
     // MARK: - Recording (Dictation Mode)
@@ -147,7 +124,7 @@ class TranscriptionCoordinator: ObservableObject {
     private func startRecordingWithMode(_ mode: RecordingMode) {
         guard !isRecording && !isTranscribing else { return }
         
-        if transcriptionService.isDownloadingModel || GrammarCorrectionService.shared.isDownloadingModel {
+        if transcriptionService.isDownloadingModel {
             showDownloadingAlert()
             return
         }
@@ -194,7 +171,7 @@ class TranscriptionCoordinator: ObservableObject {
             print("📍 Final mode: \(mode == .command ? "COMMAND" : "DICTATION")")
         }
         
-        if transcriptionService.isDownloadingModel || GrammarCorrectionService.shared.isDownloadingModel {
+        if transcriptionService.isDownloadingModel {
             return
         }
         
@@ -233,7 +210,7 @@ class TranscriptionCoordinator: ObservableObject {
     func startHandsFreeRecording() {
         guard !isRecording && !isTranscribing else { return }
 
-        if transcriptionService.isDownloadingModel || GrammarCorrectionService.shared.isDownloadingModel {
+        if transcriptionService.isDownloadingModel {
             showDownloadingAlert()
             return
         }
@@ -320,7 +297,7 @@ class TranscriptionCoordinator: ObservableObject {
                 return
             }
 
-            print("✅ Chunk \(chunkNumber) FINAL TEXT (after grammar): '\(text)'")
+            print("✅ Chunk \(chunkNumber) FINAL TEXT: '\(text)'")
 
             // Accumulate text
             await MainActor.run {
@@ -467,8 +444,6 @@ class TranscriptionCoordinator: ObservableObject {
         await MainActor.run {
             insertTextIntoTargetApp(text)
         }
-        
-        // No model download needed - grammar service is instant
     }
     
     // MARK: - Insert Text

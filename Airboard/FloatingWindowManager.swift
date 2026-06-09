@@ -324,7 +324,6 @@ class FloatingWindowManager: NSObject {
         guard let floatingWindow = floatingWindow,
               let screen = NSScreen.main else { return }
         
-        // Grammar service is always ready - no download needed
         let isModelDownloaded = true
         let isModelDownloading = false
         let downloadProgress = 1.0
@@ -446,12 +445,10 @@ class FloatingWindowManager: NSObject {
     
     private func handleDownloadModel() {
         hidePopover()
-        // Grammar service doesn't need downloading
     }
 
     private func handleRemoveModel() {
         hidePopover()
-        // Grammar service doesn't need removal
     }
     
     private func handleOpenDictionary() {

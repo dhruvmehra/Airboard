@@ -174,13 +174,6 @@ struct PerformanceView: View {
                     color: .purple
                 )
 
-                compactTimingRow(
-                    icon: "sparkles",
-                    label: "Grammar",
-                    time: session.grammarCorrectionTime,
-                    color: .green
-                )
-
                 Divider()
 
                 compactTimingRow(
@@ -190,35 +183,6 @@ struct PerformanceView: View {
                     color: .blue,
                     isBold: true
                 )
-            }
-
-            // Token counts in a compact row
-            if session.inputTokenCount > 0 {
-                Divider()
-
-                HStack(spacing: 6) {
-                    Image(systemName: "number.circle")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-
-                    Text("Tokens:")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    Spacer()
-
-                    compactTokenBadge(
-                        label: "In",
-                        count: session.inputTokenCount,
-                        color: .orange
-                    )
-
-                    compactTokenBadge(
-                        label: "Out",
-                        count: session.outputTokenCount,
-                        color: .green
-                    )
-                }
             }
 
             // Compact text preview
@@ -268,24 +232,6 @@ struct PerformanceView: View {
                 .font(.system(size: 12, weight: isBold ? .semibold : .medium, design: .monospaced))
                 .foregroundColor(color)
         }
-    }
-
-    private func compactTokenBadge(label: String, count: Int, color: Color) -> some View {
-        HStack(spacing: 4) {
-            Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.secondary)
-
-            Text("\(count)")
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundColor(color)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(color.opacity(0.12))
-        )
     }
 
     private func compactTextRow(label: String, text: String) -> some View {

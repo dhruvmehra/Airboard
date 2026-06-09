@@ -20,43 +20,27 @@ class LocalTranscriptionService: ObservableObject {
     private var isInitialized = false
     private var initializationTask: Task<Void, Never>?
 
-    // Keys for UserDefaults
-    private static let grammarCorrectionEnabledKey = "grammarCorrectionEnabled"
-
-    // MARK: - Grammar Correction Setting
-
-    static var isGrammarCorrectionEnabled: Bool {
-        get {
-            // Default to true if not set
-            if UserDefaults.standard.object(forKey: grammarCorrectionEnabledKey) == nil {
-                return true
-            }
-            return UserDefaults.standard.bool(forKey: grammarCorrectionEnabledKey)
-        }
-        set {
-            UserDefaults.standard.set(newValue, forKey: grammarCorrectionEnabledKey)
-        }
-    }
-    
     init() {
         initializationTask = Task {
             await initializeWhisper()
         }
-        
-        // Grammar service initializes automatically
     }
     
     func ensureModelReady() async {
         await initializationTask?.value
     }
     
+    /// Whisper variant to load. large-v3 turbo (Sept 2024 weights, quantized ~632MB):
+    /// large accuracy jump over `small`, still real-time on Apple Silicon.
+    static let whisperModelName = "openai_whisper-large-v3-v20240930_turbo_632MB"
+
     private func initializeWhisper() async {
         do {
             print("🔄 Initializing WhisperKit...")
 
             // Check if model is already cached
             let modelPath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("whisperkit/models/openai_whisper-small")
+                .appendingPathComponent("whisperkit/models/\(Self.whisperModelName)")
 
             let isCached = FileManager.default.fileExists(atPath: modelPath.path)
 
@@ -86,7 +70,7 @@ class LocalTranscriptionService: ObservableObject {
             } : nil
 
             // Initialize WhisperKit with config
-            let config = WhisperKitConfig(model: "small")
+            let config = WhisperKitConfig(model: Self.whisperModelName)
             whisperKit = try await WhisperKit(config)
 
             progressTask?.cancel()
@@ -103,7 +87,7 @@ class LocalTranscriptionService: ObservableObject {
                 }
             }
 
-            print("✅ WhisperKit initialized with small model")
+            print("✅ WhisperKit initialized with \(Self.whisperModelName)")
             print("📦 Model cached at: ~/Library/Caches/whisperkit/")
 
             await warmUpModel()
@@ -314,34 +298,7 @@ class LocalTranscriptionService: ObservableObject {
                 self.transcription = transcribedText
             }
 
-            // Apply ultra-fast grammar correction (if enabled)
-            if LocalTranscriptionService.isGrammarCorrectionEnabled {
-                do {
-                    let originalText = transcribedText
-                    PerformanceMonitor.shared.startGrammarCorrection()
-                    transcribedText = try await GrammarCorrectionService.shared.correctGrammar(transcribedText)
-
-                    // Log if grammar correction changed anything
-                    if transcribedText != originalText {
-                        print("📝 BEFORE grammar: '\(originalText)'")
-                        print("✨ AFTER grammar:  '\(transcribedText)'")
-                    } else {
-                        print("✨ Grammar correction: no changes needed")
-                    }
-
-                    // Update with corrected text
-                    await MainActor.run {
-                        self.transcription = transcribedText
-                    }
-                } catch {
-                    print("⚠️ Grammar correction failed: \(error.localizedDescription)")
-                    // Keep the raw Whisper output that's already showing
-                    PerformanceMonitor.shared.finalizeWithoutGrammar()
-                }
-            } else {
-                print("⏭️ Grammar correction disabled - using raw Whisper output")
-                PerformanceMonitor.shared.finalizeWithoutGrammar()
-            }
+            PerformanceMonitor.shared.finalizeSession()
 
             // Mark transcription as complete
             await MainActor.run {

@@ -1,15 +1,6 @@
 {
-  "originHash" : "96a651f5349ff086b075f81d969c27df1d000820ee14392af6af040e17fcedfb",
+  "originHash" : "e843284a09b9d7fb8d0032fe1a3fd1fbd38f28ea54d42a39ccbe396af16d225d",
   "pins" : [
-    {
-      "identity" : "onnxruntime-swift-package-manager",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/microsoft/onnxruntime-swift-package-manager",
-      "state" : {
-        "revision" : "b7fb7f7dea8a2469e6335d95a61b8f36d0dc83b2",
-        "version" : "1.24.2"
-      }
-    },
     {
       "identity" : "swift-argument-parser",
       "kind" : "remoteSourceControl",
@@ -53,15 +44,6 @@
       "state" : {
         "revision" : "0b67ecb79139f6addef8699eff3622808aa6c7dc",
         "version" : "2.3.6"
-      }
-    },
-    {
-      "identity" : "swift-sentencepiece",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/jkrukowski/swift-sentencepiece",
-      "state" : {
-        "revision" : "36a8b2b45733f6adb3092100f16e4c7d38a10a7c",
-        "version" : "0.0.6"
       }
     },
     {
