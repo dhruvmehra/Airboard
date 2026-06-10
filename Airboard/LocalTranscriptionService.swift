@@ -15,6 +15,8 @@ class LocalTranscriptionService: ObservableObject {
     @Published var error: String?
     @Published var isDownloadingModel: Bool = false
     @Published var downloadProgress: Double = 0.0
+    /// True only once the model is downloaded, loaded AND warmed up — safe to transcribe.
+    @Published var isModelReady: Bool = false
 
     private var whisperKit: WhisperKit?
     private var isInitialized = false
@@ -38,9 +40,10 @@ class LocalTranscriptionService: ObservableObject {
         do {
             print("🔄 Initializing WhisperKit...")
 
-            // Check if model is already cached
-            let modelPath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("whisperkit/models/\(Self.whisperModelName)")
+            // Check if model is already cached (WhisperKit stores models under
+            // ~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/)
+            let modelPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("huggingface/models/argmaxinc/whisperkit-coreml/\(Self.whisperModelName)")
 
             let isCached = FileManager.default.fileExists(atPath: modelPath.path)
 
@@ -79,23 +82,22 @@ class LocalTranscriptionService: ObservableObject {
                 await MainActor.run {
                     self.downloadProgress = 1.0
                 }
-
-                try? await Task.sleep(nanoseconds: 500_000_000)
-
-                await MainActor.run {
-                    self.isDownloadingModel = false
-                }
             }
 
             print("✅ WhisperKit initialized with \(Self.whisperModelName)")
-            print("📦 Model cached at: ~/Library/Caches/whisperkit/")
+            print("📦 Model cached at: ~/Documents/huggingface/models/argmaxinc/whisperkit-coreml/")
 
+            // Keep the "getting ready" state visible through warm-up — the first
+            // CoreML load of a large model can take a while, and transcribing
+            // before it finishes would silently block (stuck-orange bug).
             await warmUpModel()
-            
+
             await MainActor.run {
                 self.isInitialized = true
+                self.isModelReady = true
+                self.isDownloadingModel = false
             }
-            
+
             print("🎉 Ready to transcribe!")
             
         } catch {

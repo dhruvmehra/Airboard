@@ -17,15 +17,24 @@ class ChunkedAudioRecorder: ObservableObject {
 
     private var audioRecorder: AVAudioRecorder?
     private var chunkTimer: Timer?
+    private var meterTimer: Timer?
     private var recordingStartTime: Date?
+    private var chunkStartTime: Date?
     private var currentChunkURL: URL?
+
+    // Finished chunks are normalized off the main thread so the next chunk can
+    // start recording immediately — no dead air at rotation boundaries.
+    private let processingQueue = DispatchQueue(label: "airboard.chunk-processing", qos: .userInitiated)
 
     // Callbacks for chunk completion
     var onChunkComplete: ((URL, Int) -> Void)?
     var onRecordingComplete: (() -> Void)?
 
-    // Configuration
-    private let chunkDuration: TimeInterval = 30.0 // 30 seconds per chunk
+    // Configuration: rotate at a *pause in speech* after minChunkDuration so we
+    // never cut a word in half; hard-cap at maxChunkDuration regardless.
+    private let minChunkDuration: TimeInterval = 25.0
+    private let maxChunkDuration: TimeInterval = 40.0
+    private let silenceThresholdDb: Float = -38.0
     private let audioFormat: [String: Any] = [
         AVFormatIDKey: Int(kAudioFormatLinearPCM),
         AVSampleRateKey: 16000.0,
@@ -75,14 +84,16 @@ class ChunkedAudioRecorder: ObservableObject {
 
         do {
             audioRecorder = try AVAudioRecorder(url: chunkFilename, settings: audioFormat)
+            audioRecorder?.isMeteringEnabled = true
             audioRecorder?.prepareToRecord()
 
             let success = audioRecorder?.record() ?? false
             if success {
                 currentChunkURL = chunkFilename
+                chunkStartTime = Date()
                 print("📼 Chunk \(currentChunkNumber) started: \(chunkFilename.lastPathComponent)")
 
-                // Schedule chunk rotation after 30 seconds
+                // After the minimum duration, start watching for a pause in speech
                 scheduleChunkRotation()
             } else {
                 print("❌ Failed to start chunk \(currentChunkNumber)")
@@ -93,53 +104,77 @@ class ChunkedAudioRecorder: ObservableObject {
     }
 
     private func scheduleChunkRotation() {
-        chunkTimer = Timer.scheduledTimer(withTimeInterval: chunkDuration, repeats: false) { [weak self] _ in
-            self?.rotateChunk()
+        chunkTimer = Timer.scheduledTimer(withTimeInterval: minChunkDuration, repeats: false) { [weak self] _ in
+            self?.beginSilenceWatch()
         }
 
         // Add to common run loop mode so it fires even when UI is active
         RunLoop.main.add(chunkTimer!, forMode: .common)
     }
 
+    /// Poll the mic level and rotate at the first pause in speech, so words are
+    /// never sliced in half at a chunk boundary. Hard-cap at maxChunkDuration.
+    private func beginSilenceWatch() {
+        guard isRecording else { return }
+
+        meterTimer?.invalidate()
+        meterTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self = self, self.isRecording, let recorder = self.audioRecorder else { return }
+
+            recorder.updateMeters()
+            let power = recorder.averagePower(forChannel: 0)
+            let elapsed = Date().timeIntervalSince(self.chunkStartTime ?? Date())
+
+            if power < self.silenceThresholdDb || elapsed >= self.maxChunkDuration {
+                self.meterTimer?.invalidate()
+                self.meterTimer = nil
+                let reason = power < self.silenceThresholdDb ? "pause detected" : "max duration"
+                print("🔄 Rotating chunk (\(reason), \(String(format: "%.1f", elapsed))s)")
+                self.rotateChunk()
+            }
+        }
+        RunLoop.main.add(meterTimer!, forMode: .common)
+    }
+
     private func rotateChunk() {
         guard isRecording else { return }
 
-        print("🔄 Rotating to next chunk...")
+        // Stop the old chunk and start the next one IMMEDIATELY — the finished
+        // file is normalized in the background so there's no recording gap.
+        let finishedURL = currentChunkURL
+        let finishedNumber = currentChunkNumber
+        audioRecorder?.stop()
+        currentChunkURL = nil
 
-        // Stop current chunk
-        finalizeCurrentChunk()
-
-        // Update metrics
         currentChunkNumber += 1
         if let startTime = recordingStartTime {
             totalDuration = Date().timeIntervalSince(startTime)
         }
-
-        // Start next chunk immediately
         startNextChunk()
+
+        if let url = finishedURL {
+            processingQueue.async { [weak self] in
+                self?.finalizeChunkFile(url: url, chunkNumber: finishedNumber)
+            }
+        }
     }
 
-    private func finalizeCurrentChunk() {
-        guard let url = currentChunkURL else { return }
-
-        audioRecorder?.stop()
-
-        // Give recorder time to finalize file
+    /// Runs on processingQueue. Finalizes, normalizes, and hands off a finished chunk.
+    private func finalizeChunkFile(url: URL, chunkNumber: Int) {
+        // Give AVAudioRecorder time to finish writing the file
         Thread.sleep(forTimeInterval: 0.1)
 
-        // Process the chunk
         do {
             let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
             if let fileSize = attributes[.size] as? Int64 {
                 let sizeKB = Double(fileSize) / 1024.0
-                print("✅ Chunk \(currentChunkNumber) finalized: \(String(format: "%.1f", sizeKB))KB")
+                print("✅ Chunk \(chunkNumber) finalized: \(String(format: "%.1f", sizeKB))KB")
 
                 if fileSize >= 1000 {
-                    // Process audio for Whisper
                     processAudioForWhisper(url: url)
-
-                    // Notify that chunk is ready for transcription
-                    onChunkComplete?(url, currentChunkNumber)
+                    DispatchQueue.main.async { [weak self] in
+                        self?.onChunkComplete?(url, chunkNumber)
+                    }
                 } else {
                     print("⚠️ Chunk too small, skipping")
                     try? FileManager.default.removeItem(at: url)
@@ -148,8 +183,6 @@ class ChunkedAudioRecorder: ObservableObject {
         } catch {
             print("❌ Failed to finalize chunk: \(error.localizedDescription)")
         }
-
-        currentChunkURL = nil
     }
 
     // MARK: - Stop Recording
@@ -159,12 +192,16 @@ class ChunkedAudioRecorder: ObservableObject {
 
         print("🛑 Stopping chunked recording...")
 
-        // Cancel pending chunk rotation
+        // Cancel pending rotation + silence watch
         chunkTimer?.invalidate()
         chunkTimer = nil
+        meterTimer?.invalidate()
+        meterTimer = nil
 
-        // Finalize the last chunk
-        finalizeCurrentChunk()
+        let lastURL = currentChunkURL
+        let lastNumber = currentChunkNumber
+        audioRecorder?.stop()
+        currentChunkURL = nil
 
         isRecording = false
 
@@ -174,7 +211,17 @@ class ChunkedAudioRecorder: ObservableObject {
         }
 
         recordingStartTime = nil
-        onRecordingComplete?()
+
+        // Finalize the last chunk off the main thread, then signal completion —
+        // ordering is preserved because both callbacks hop back to main in order.
+        processingQueue.async { [weak self] in
+            if let url = lastURL {
+                self?.finalizeChunkFile(url: url, chunkNumber: lastNumber)
+            }
+            DispatchQueue.main.async {
+                self?.onRecordingComplete?()
+            }
+        }
 
         #if !os(macOS)
         do {

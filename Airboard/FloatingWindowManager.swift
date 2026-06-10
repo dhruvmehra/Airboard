@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import Combine
 
 class FloatingWindowManager: NSObject {
     static let shared = FloatingWindowManager()
@@ -17,9 +18,7 @@ class FloatingWindowManager: NSObject {
     private var performanceWindow: NSWindow?
 
     // Auto-hide state
-    private var autoHideTimer: Timer?
     private var isHidden = false
-    private let autoHideDelay: TimeInterval = 15.0
     
     override init() {
         super.init()
@@ -50,18 +49,12 @@ class FloatingWindowManager: NSObject {
         DispatchQueue.main.async { [weak self] in
             self?.updateIndicatorState(isRecording: isRecording, isTranscribing: isTranscribing, isCommandMode: isCommandMode, isDownloading: false, downloadProgress: 0.0)
             self?.showIcon() // Show icon when there's activity
-
-            // Pause auto-hide during recording or transcribing
-            if isRecording || isTranscribing {
-                self?.pauseAutoHide()
-            } else {
-                self?.resetAutoHideTimer()
-            }
         }
     }
     
     func showDownloadProgress(progress: Double) {
         DispatchQueue.main.async { [weak self] in
+            DownloadState.shared.progress = progress
             self?.updateIndicatorState(isRecording: false, isTranscribing: false, isCommandMode: false, isDownloading: true, downloadProgress: progress)
         }
     }
@@ -69,7 +62,9 @@ class FloatingWindowManager: NSObject {
     func hideFloatingIndicator() {
         DispatchQueue.main.async { [weak self] in
             self?.updateIndicatorState(isRecording: false, isTranscribing: false, isCommandMode: false, isDownloading: false, downloadProgress: 0.0)
-            self?.resumeAutoHide() // Resume auto-hide when returning to idle
+            // If the download modal is still up, the model is ready now — close it.
+            self?.downloadModalWindow?.close()
+            self?.downloadModalWindow = nil
         }
     }
     
@@ -95,7 +90,6 @@ class FloatingWindowManager: NSObject {
                 downloadProgress: downloadProgress,
                 onTap: { [weak self] in
                     self?.showIcon() // Show icon when tapped
-                    self?.resetAutoHideTimer() // Reset timer
                     self?.handleTap(isRecording: isRecording, isTranscribing: isTranscribing)
                 }
             )
@@ -139,70 +133,7 @@ class FloatingWindowManager: NSObject {
         window.alphaValue = 1.0
         window.orderFrontRegardless()
 
-        // Start auto-hide timer
-        resetAutoHideTimer()
-
         print("✅ Clickable floating indicator created")
-    }
-
-    // MARK: - Auto-hide
-
-    private func resetAutoHideTimer() {
-        autoHideTimer?.invalidate()
-
-        let timer = Timer(timeInterval: autoHideDelay, repeats: false) { [weak self] _ in
-            print("⏰ Auto-hide timer fired")
-            self?.hideIconToRight()
-        }
-
-        // Add to main run loop with common modes so it fires even when UI is active
-        RunLoop.main.add(timer, forMode: .common)
-        autoHideTimer = timer
-
-        print("🔄 Auto-hide timer reset (will hide in \(Int(autoHideDelay))s)")
-    }
-
-    func pauseAutoHide() {
-        autoHideTimer?.invalidate()
-        autoHideTimer = nil
-        print("⏸️ Auto-hide paused (app is active)")
-    }
-
-    func resumeAutoHide() {
-        resetAutoHideTimer()
-        print("▶️ Auto-hide resumed (app is idle)")
-    }
-
-    private func hideIconToRight() {
-        guard let window = floatingWindow, !isHidden else {
-            print("⚠️ Cannot hide icon - window: \(floatingWindow != nil), isHidden: \(isHidden)")
-            return
-        }
-
-        // Get the screen where the window currently is
-        let screen = window.screen ?? NSScreen.main
-        guard let screen = screen else {
-            print("⚠️ Cannot hide icon - no screen")
-            return
-        }
-
-        let currentFrame = window.frame
-        print("👉 Hiding icon to the right... Current frame: \(currentFrame)")
-        print("   Screen frame: \(screen.visibleFrame)")
-        isHidden = true
-
-        let screenFrame = screen.visibleFrame
-        let margin: CGFloat = 20
-        let hiddenX = screenFrame.maxX + 10 // Completely off-screen to the right
-        let y = screenFrame.minY + margin
-        let targetFrame = NSRect(x: hiddenX, y: y, width: currentFrame.width, height: currentFrame.height)
-
-        print("   Moving from x=\(currentFrame.origin.x) to x=\(hiddenX)")
-
-        // Use setFrame with animation instead of animator proxy
-        window.setFrame(targetFrame, display: true, animate: true)
-
-        print("✅ Icon hidden off-screen. Final frame: \(window.frame)")
     }
 
     private func showIcon() {
@@ -596,8 +527,6 @@ class FloatingWindowManager: NSObject {
     }
 
     func cleanup() {
-        autoHideTimer?.invalidate()
-        autoHideTimer = nil
         NotificationCenter.default.removeObserver(self)
         DispatchQueue.main.async { [weak self] in
             self?.popoverWindow?.close()
@@ -786,10 +715,20 @@ struct FloatingIndicatorView: View {
 
 // MARK: - Download Modal View
 
+/// Shared download progress so the modal and the floating indicator stay in sync.
+final class DownloadState: ObservableObject {
+    static let shared = DownloadState()
+    @Published var progress: Double = 0.0
+    private init() {}
+}
+
 struct DownloadModalView: View {
     let onDismiss: () -> Void
 
+    @ObservedObject private var downloadState = DownloadState.shared
     @State private var animateGradient = false
+
+    private var isWarmingUp: Bool { downloadState.progress >= 0.999 }
 
     var body: some View {
         ZStack {
@@ -798,7 +737,7 @@ struct DownloadModalView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Header with animated gradient
+                // Header with animated gradient — sized by its content, no clipping
                 ZStack {
                     LinearGradient(
                         colors: [
@@ -813,27 +752,23 @@ struct DownloadModalView: View {
                         value: animateGradient
                     )
 
-                    VStack(spacing: 12) {
-                        Image(systemName: "brain.head.profile")
-                            .font(.system(size: 48, weight: .light))
+                    VStack(spacing: 10) {
+                        Image(systemName: "waveform.circle.fill")
+                            .font(.system(size: 36, weight: .light))
                             .foregroundStyle(.white)
                             .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
 
-                        Text("AI Models Downloading")
-                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                        Text(isWarmingUp ? "Almost Ready" : "Downloading Speech Model")
+                            .font(.system(size: 20, weight: .semibold, design: .rounded))
                             .foregroundColor(.white)
                     }
-                    .padding(.vertical, 28)
+                    .padding(.vertical, 20)
                 }
-                .frame(height: 140)
+                .fixedSize(horizontal: false, vertical: true)
 
                 // Content area
-                VStack(spacing: 20) {
-                    Text("Getting Ready...")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundColor(.primary)
-
-                    Text("Airboard is completely private and works offline. We're downloading the AI models to your Mac so everything runs locally.")
+                VStack(spacing: 16) {
+                    Text("Airboard is completely private and works offline. The speech model is downloaded once to your Mac — after that, everything runs locally.")
                         .font(.system(size: 13, weight: .regular))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -841,19 +776,19 @@ struct DownloadModalView: View {
                         .lineSpacing(4)
                         .padding(.horizontal, 24)
 
-                    HStack(spacing: 8) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.blue)
+                    // Live progress
+                    VStack(spacing: 6) {
+                        ProgressView(value: downloadState.progress)
+                            .progressViewStyle(.linear)
+                            .tint(.blue)
+                            .padding(.horizontal, 32)
 
-                        Text("This usually takes 2-3 minutes")
+                        Text(isWarmingUp
+                             ? "Preparing the model — the logo will pulse when ready"
+                             : "\(Int(downloadState.progress * 100))% · ~630 MB, one-time download")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.secondary)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.blue.opacity(0.1))
-                    .cornerRadius(20)
 
                     Button(action: onDismiss) {
                         Text("OK")
@@ -872,12 +807,12 @@ struct DownloadModalView: View {
                     }
                     .buttonStyle(.plain)
                 }
-                .padding(.vertical, 24)
+                .padding(.vertical, 20)
                 .padding(.horizontal, 20)
-                .frame(height: 140)
             }
         }
-        .frame(width: 420, height: 280)
+        .frame(width: 420)
+        .fixedSize(horizontal: false, vertical: true)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
         .onAppear {

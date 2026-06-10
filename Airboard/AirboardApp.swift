@@ -55,6 +55,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             SetupWindowController.shared.startSetupIfNeeded {
                 self?.startHotkeyMonitoring()
                 MenuBarManager.shared.rebuildMenu()
+                // Nudge the user toward dictation after long typing stretches
+                TypingActivityMonitor.shared.start()
             }
         }
         

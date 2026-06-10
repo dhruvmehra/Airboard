@@ -82,11 +82,14 @@ class TranscriptionCoordinator: ObservableObject {
             }
             .store(in: &cancellables)
 
-        transcriptionService.$isDownloadingModel
-            .sink { isDownloading in
-                if !isDownloading {
-                    FloatingWindowManager.shared.hideFloatingIndicator()
-                }
+        // When the model becomes fully ready (downloaded + warmed up), clear the
+        // download state and pulse the floating icon so the user knows it's usable.
+        transcriptionService.$isModelReady
+            .removeDuplicates()
+            .filter { $0 }
+            .sink { _ in
+                FloatingWindowManager.shared.hideFloatingIndicator()
+                NotificationCenter.default.post(name: .pulseFloatingIcon, object: nil)
             }
             .store(in: &cancellables)
     }
@@ -123,8 +126,10 @@ class TranscriptionCoordinator: ObservableObject {
     
     private func startRecordingWithMode(_ mode: RecordingMode) {
         guard !isRecording && !isTranscribing else { return }
-        
-        if transcriptionService.isDownloadingModel {
+
+        // Covers both downloading AND warm-up — transcribing before the model is
+        // fully ready would block for minutes with the icon stuck on orange.
+        if !transcriptionService.isModelReady {
             showDownloadingAlert()
             return
         }
@@ -145,6 +150,10 @@ class TranscriptionCoordinator: ObservableObject {
         isRecording = true
         recordingStartTime = Date()
 
+        // Start the mic FIRST — users speak the moment they press the key, and
+        // any delay here clips the first word. UI feedback comes second.
+        audioRecorder.startRecording()
+
         // Track performance
         PerformanceMonitor.shared.startRecording()
 
@@ -154,10 +163,6 @@ class TranscriptionCoordinator: ObservableObject {
             isTranscribing: false,
             isCommandMode: mode == .command
         )
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.audioRecorder.startRecording()
-        }
     }
     
     // MARK: - Stop Recording
@@ -171,10 +176,14 @@ class TranscriptionCoordinator: ObservableObject {
             print("📍 Final mode: \(mode == .command ? "COMMAND" : "DICTATION")")
         }
         
-        if transcriptionService.isDownloadingModel {
+        // Model became unavailable mid-recording — cancel cleanly instead of
+        // returning with isRecording still true (which left the mic running
+        // and the indicator stuck).
+        if !transcriptionService.isModelReady {
+            cancelRecording()
             return
         }
-        
+
         if let startTime = recordingStartTime {
             let duration = Date().timeIntervalSince(startTime)
             if duration < 0.3 {
@@ -185,16 +194,6 @@ class TranscriptionCoordinator: ObservableObject {
         
         isRecording = false
         isTranscribing = true
-        audioRecorder.stopRecording()
-
-        // Stop recording timer, start transcription timer
-        PerformanceMonitor.shared.stopRecording()
-        PerformanceMonitor.shared.startTranscription()
-
-        guard let audioURL = audioRecorder.recordingURL else {
-            resetState()
-            return
-        }
 
         FloatingWindowManager.shared.showFloatingIndicator(
             isRecording: false,
@@ -202,7 +201,24 @@ class TranscriptionCoordinator: ObservableObject {
             isCommandMode: currentMode == .command
         )
 
-        Task { await processTranscription(audioURL: audioURL) }
+        // Capture a short tail after key release — users release the key as they
+        // finish speaking, and stopping instantly clips the last syllable.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            guard let self = self else { return }
+
+            self.audioRecorder.stopRecording()
+
+            // Stop recording timer, start transcription timer
+            PerformanceMonitor.shared.stopRecording()
+            PerformanceMonitor.shared.startTranscription()
+
+            guard let audioURL = self.audioRecorder.recordingURL else {
+                self.resetState()
+                return
+            }
+
+            Task { await self.processTranscription(audioURL: audioURL) }
+        }
     }
 
     // MARK: - Hands-Free Mode (Chunked Recording)
@@ -210,7 +226,7 @@ class TranscriptionCoordinator: ObservableObject {
     func startHandsFreeRecording() {
         guard !isRecording && !isTranscribing else { return }
 
-        if transcriptionService.isDownloadingModel {
+        if !transcriptionService.isModelReady {
             showDownloadingAlert()
             return
         }

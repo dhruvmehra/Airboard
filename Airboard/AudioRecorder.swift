@@ -5,12 +5,44 @@ import Combine
 class AudioRecorder: ObservableObject {
     private var audioRecorder: AVAudioRecorder?
     private var recordingStartTime: Date?
-    
+
+    // A recorder primed ahead of time so record() starts with minimal latency.
+    // Creating + preparing an AVAudioRecorder on demand costs 100-300ms of mic
+    // spin-up, which clipped the first word of speech.
+    private var preparedRecorder: AVAudioRecorder?
+    private var preparedURL: URL?
+
+    private static let recordingSettings: [String: Any] = [
+        AVFormatIDKey: Int(kAudioFormatLinearPCM),
+        AVSampleRateKey: 16000.0,
+        AVNumberOfChannelsKey: 1,  // Mono
+        AVLinearPCMBitDepthKey: 16,
+        AVLinearPCMIsFloatKey: false,
+        AVLinearPCMIsBigEndianKey: false,
+        AVLinearPCMIsNonInterleaved: false
+    ]
+
     @Published var isRecording = false
     @Published var recordingURL: URL?
-    
+
     init() {
         setupAudioSession()
+        prepareNextRecorder()
+    }
+
+    private func prepareNextRecorder() {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("recording_\(Date().timeIntervalSince1970).wav")
+        do {
+            let recorder = try AVAudioRecorder(url: url, settings: Self.recordingSettings)
+            recorder.prepareToRecord()
+            preparedRecorder = recorder
+            preparedURL = url
+        } catch {
+            print("⚠️ Failed to pre-prepare recorder: \(error.localizedDescription)")
+            preparedRecorder = nil
+            preparedURL = nil
+        }
     }
     
     private func setupAudioSession() {
@@ -30,34 +62,26 @@ class AudioRecorder: ObservableObject {
     }
     
     func startRecording() {
-        let audioFilename = FileManager.default.temporaryDirectory
-            .appendingPathComponent("recording_\(Date().timeIntervalSince1970).wav")
-        
-        let settings: [String: Any] = [
-            AVFormatIDKey: Int(kAudioFormatLinearPCM),
-            AVSampleRateKey: 16000.0,
-            AVNumberOfChannelsKey: 1,  // Mono
-            AVLinearPCMBitDepthKey: 16,
-            AVLinearPCMIsFloatKey: false,
-            AVLinearPCMIsBigEndianKey: false,
-            AVLinearPCMIsNonInterleaved: false
-        ]
-        
-        do {
-            audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
-            audioRecorder?.prepareToRecord()
-            
-            let success = audioRecorder?.record() ?? false
-            if success {
-                isRecording = true
-                recordingURL = audioFilename
-                recordingStartTime = Date()
-                print("🎙️ Recording started: \(audioFilename)")
-            } else {
-                print("❌ Recording failed to start")
-            }
-        } catch {
-            print("❌ Failed to start recording: \(error.localizedDescription)")
+        // Use the pre-prepared recorder for instant start; fall back to inline creation
+        if preparedRecorder == nil {
+            prepareNextRecorder()
+        }
+        guard let recorder = preparedRecorder, let url = preparedURL else {
+            print("❌ No recorder available")
+            return
+        }
+        preparedRecorder = nil
+        preparedURL = nil
+
+        audioRecorder = recorder
+        let success = recorder.record()
+        if success {
+            isRecording = true
+            recordingURL = url
+            recordingStartTime = Date()
+            print("🎙️ Recording started: \(url)")
+        } else {
+            print("❌ Recording failed to start")
         }
     }
     
@@ -110,8 +134,11 @@ class AudioRecorder: ObservableObject {
             print("⚠️ Failed to deactivate audio session: \(error.localizedDescription)")
         }
         #endif
+
+        // Prime the next recorder so the next dictation starts instantly
+        prepareNextRecorder()
     }
-    
+
     /// Process audio for better Whisper recognition
     /// Only normalizes volume - Whisper handles noise well on its own
     private func processAudioForWhisper(url: URL) {
