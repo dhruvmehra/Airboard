@@ -14,3 +14,4 @@ release/
 # macOS
 .DS_Store
 .claude/
+.superpowers/

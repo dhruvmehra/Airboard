@@ -75,7 +75,7 @@ class TranscriptionCoordinator: ObservableObject {
     }
     
     private func setupObservers() {
-        // WhisperKit download progress
+        // Transcription service download progress
         transcriptionService.$downloadProgress
             .sink { progress in
                 FloatingWindowManager.shared.showDownloadProgress(progress: progress)
