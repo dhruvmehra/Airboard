@@ -21,7 +21,7 @@ promotes that section to the released version automatically.
 ### Removed
 - Experimental Flan-T5 grammar correction (quality didn't justify the complexity)
 - Unused self-correction detector code
-- Custom vocabulary feature (its mechanism was Whisper-specific; superseded by a future LLM cleanup stage)
+- Custom vocabulary feature (its mechanism was Whisper-specific; superseded by the AI cleanup stage above)
 
 ## [1.0.2] - 2025-12-30
 
