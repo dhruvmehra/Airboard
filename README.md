@@ -5,26 +5,25 @@ A lightweight macOS voice transcription app. Press a hotkey, speak, and your wor
 ## Features
 
 - **🎯 Hotkey activated**: Hold your hotkey (default: Right Option) to record, release to transcribe
-- **🔒 Fully local & private**: Transcription runs on-device via [WhisperKit](https://github.com/argmaxinc/WhisperKit) (Apple Neural Engine / CoreML). No cloud, no API key.
+- **🔒 Fully local & private**: Transcription runs on-device via [FluidAudio](https://github.com/FluidInference/FluidAudio) / NVIDIA Parakeet (Apple Neural Engine / CoreML). No cloud, no API key.
 - **🗣️ Voice commands**: Open apps/websites, web search, system controls, timers (hold hotkey + ⌘)
 - **🙌 Hands-free mode**: Double-tap the hotkey for continuous dictation
 - **📱 Context-aware**: Adapts to the active app (email, code, messaging, docs)
 - **✨ Auto-insert**: Text appears directly where your cursor is, via the Accessibility API
-- **📖 Custom vocabulary**: Teach it names and jargon for better accuracy
 
 ## Requirements
 
-- macOS 14.0 or later (Apple Silicon recommended)
+- macOS 14.0 or later with Apple Silicon (required for the speech model)
 - Xcode 16+ to build
 - Microphone + Accessibility permissions (prompted on first launch)
 
 ## First run — heads up ⚠️
 
-On first launch Airboard **downloads its speech model (~630 MB)** and caches it locally:
+On first launch Airboard **downloads its speech model (~1 GB)** and caches it locally:
 
 | Model | Purpose | Size | Cached at |
 |-------|---------|------|-----------|
-| Whisper `large-v3-turbo` (WhisperKit) | Speech → text | ~630 MB | `~/.cache/whisperkit/models/` |
+| Parakeet TDT 0.6B v3 (FluidAudio) | Speech → text | ~1 GB | printed at launch |
 
 The download happens in the background and needs an internet connection **once**; everything is offline after that. If you start dictating before the download finishes, the first transcription will wait for the model.
 
@@ -58,14 +57,14 @@ Visual feedback (floating indicator): 🔴 recording · 🟠 transcribing · �
 
 **Modes:** hold = dictate · hold + ⌘ = voice command · double-tap = hands-free.
 
-Hotkey and custom vocabulary are configurable from the menu-bar popover.
+The hotkey is configurable from the menu-bar popover.
 
 ## Architecture (high level)
 
 ```
 HotkeyManager → TranscriptionCoordinator
   → AudioRecorder / ChunkedAudioRecorder   (capture)
-  → LocalTranscriptionService              (WhisperKit, local)
+  → ParakeetTranscriptionService           (FluidAudio/Parakeet, local)
   → CommandDetector / CommandExecutor      (voice commands)
   → TextInserter                           (Accessibility API)
   → FloatingWindowManager                  (UI feedback)
@@ -85,6 +84,6 @@ MIT License — see LICENSE file.
 
 ## Acknowledgments
 
-- [WhisperKit](https://github.com/argmaxinc/WhisperKit) by Argmax for on-device Whisper
-- OpenAI Whisper
+- [FluidAudio](https://github.com/FluidInference/FluidAudio) by Fluid Inference for on-device Parakeet
+- NVIDIA Parakeet
 - Inspired by Wispr Flow

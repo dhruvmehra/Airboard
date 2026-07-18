@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Airboard (formerly "Murmur") is a macOS voice transcription app. Users press a hotkey, speak, and transcribed text is inserted into the active application. All ML inference runs locally using WhisperKit (Whisper large-v3-turbo, speech-to-text).
+Airboard (formerly "Murmur") is a macOS voice transcription app. Users press a hotkey, speak, and transcribed text is inserted into the active application. All ML inference runs locally using FluidAudio (NVIDIA Parakeet TDT 0.6B v3, speech-to-text, CoreML/ANE — requires Apple Silicon).
 
 ## Build & Run
 
@@ -39,10 +39,9 @@ builds/signs/notarizes the DMG, then commits and tags `vX.Y.Z`. Afterwards:
 
 | Package | Purpose |
 |---------|---------|
-| WhisperKit (pinned to a fixed revision) | Local speech-to-text (Whisper model) |
+| FluidAudio (pinned to 0.15.5) | Local speech-to-text (Parakeet TDT 0.6B v3, CoreML) |
 
-Model auto-downloads on first run:
-- Whisper: `~/.cache/whisperkit/models/openai_whisper-large-v3-v20240930_turbo_632MB` (~630 MB; name defined in `LocalTranscriptionService.whisperModelName`)
+Model auto-downloads on first run (version defined in `ParakeetTranscriptionService.modelVersion`); cache path is printed at launch (`AsrModels.defaultCacheDirectory`).
 
 ## Architecture
 
@@ -52,7 +51,8 @@ Model auto-downloads on first run:
 HotkeyManager (detects key press)
   → TranscriptionCoordinator (orchestrator singleton)
     → AudioRecorder / ChunkedAudioRecorder (captures audio)
-    → LocalTranscriptionService (WhisperKit transcription)
+    → ParakeetTranscriptionService (FluidAudio/Parakeet transcription)
+    → TranscriptPostProcessor (pass-through seam for future LLM cleanup)
     → CommandDetector (checks for voice commands)
     → TextInserter (inserts via Accessibility API) or CommandExecutor
     → FloatingWindowManager (visual feedback)
@@ -78,14 +78,15 @@ HotkeyManager (detects key press)
 |------|-----------|
 | Entry point | `AirboardApp.swift` (AppDelegate-based) |
 | Audio capture | `AudioRecorder.swift`, `ChunkedAudioRecorder.swift` |
-| ML inference | `LocalTranscriptionService.swift` |
+| ML inference | `ParakeetTranscriptionService.swift` |
 | Orchestration | `TranscriptionCoordinator.swift` |
 | Input handling | `HotkeyManager.swift` |
 | Text output | `TextInserter.swift` (Accessibility API) |
 | Commands | `CommandDetector.swift`, `CommandExecutor.swift`, `CommandTypes.swift` |
 | Context | `AppContextDetector.swift` (detects active app type: email, code, messaging, etc.) |
 | UI | `FloatingWindowManager.swift`, `AirboardPopover.swift`, `SetupWindowController.swift` |
-| Settings | `MenuBarManager.swift`, `HotkeySettingsView.swift`, `VocabularyManager.swift` |
+| Settings | `MenuBarManager.swift`, `HotkeySettingsView.swift` |
+| Post-processing | `TranscriptPostProcessor.swift` (identity; future LLM stage) |
 | Diagnostics | `PerformanceMonitor.swift`, `PerformanceView.swift`, `FeedbackManager.swift` |
 
 ### Key Enums/Types
