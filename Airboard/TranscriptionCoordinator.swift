@@ -313,7 +313,7 @@ class TranscriptionCoordinator: ObservableObject {
                 return
             }
 
-            let cleanedText = TranscriptPostProcessor.process(text, context: currentContext)
+            let cleanedText = await TranscriptPostProcessor.process(text, context: currentContext, mode: .handsFreeChunk)
             print("✅ Chunk \(chunkNumber) FINAL TEXT: '\(cleanedText)'")
 
             // Accumulate text
@@ -396,8 +396,14 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
         
-        let cleanedText = TranscriptPostProcessor.process(text, context: currentContext)
-        lastTranscribedText = cleanedText
+        let cleanedText = await TranscriptPostProcessor.process(
+            text,
+            context: currentContext,
+            mode: currentMode == .command ? .command : .dictation
+        )
+        // Keep the RAW transcript for the report-issue flow so cleanup bugs
+        // are diagnosable (what the ASR heard vs what was inserted).
+        lastTranscribedText = text
         lastContext = currentContext
 
         // End transcription timing
