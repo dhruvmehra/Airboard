@@ -257,7 +257,6 @@ class ChunkedAudioRecorder: ObservableObject {
 
             // Analyze audio levels
             let peakLevel = findPeakLevel(samples: samples, count: sampleCount)
-            let rmsLevel = findRMSLevel(samples: samples, count: sampleCount)
 
             // Normalize if needed
             if peakLevel < 0.5 && peakLevel > 0.001 {
@@ -283,14 +282,6 @@ class ChunkedAudioRecorder: ObservableObject {
             }
         }
         return peak
-    }
-
-    private func findRMSLevel(samples: UnsafeMutablePointer<Float>, count: Int) -> Float {
-        var sumSquares: Float = 0.0
-        for i in 0..<count {
-            sumSquares += samples[i] * samples[i]
-        }
-        return sqrt(sumSquares / Float(count))
     }
 
     private func normalizeAudio(samples: UnsafeMutablePointer<Float>, count: Int, currentPeak: Float, targetPeak: Float = 0.8) {
