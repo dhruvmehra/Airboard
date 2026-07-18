@@ -13,14 +13,12 @@ struct AirboardPopover: View {
     let downloadProgress: Double
     let onDownloadModel: () -> Void
     let onRemoveModel: () -> Void
-    let onOpenDictionary: () -> Void
     let onOpenHotkeySettings: () -> Void
     let onOpenPerformance: () -> Void
     let onReportIssue: () -> Void
     let onDismiss: () -> Void
 
     @State private var isHoveringDownload = false
-    @State private var isHoveringDictionary = false
     @State private var isHoveringHotkey = false
     @State private var isHoveringPerformance = false
     @State private var isHoveringReport = false
@@ -123,45 +121,6 @@ struct AirboardPopover: View {
                 .buttonStyle(.plain)
                 .onHover { isHoveringHotkey = $0 }
                 
-                // Dictionary Button
-                Button(action: onOpenDictionary) {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.blue.opacity(isHoveringDictionary ? 0.15 : 0.1))
-                                .frame(width: 32, height: 32)
-                            
-                            Image(systemName: "book.fill")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color.blue)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Dictionary")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.primary)
-                            
-                            Text("Manage custom vocabulary")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.primary.opacity(isHoveringDictionary ? 0.04 : 0))
-                    )
-                }
-                .buttonStyle(.plain)
-                .onHover { isHoveringDictionary = $0 }
-
                 // Performance Button
                 Button(action: onOpenPerformance) {
                     HStack(spacing: 12) {
@@ -527,7 +486,6 @@ struct VisualEffectBlur: NSViewRepresentable {
                 downloadProgress: 0.0,
                 onDownloadModel: {},
                 onRemoveModel: {},
-                onOpenDictionary: {},
                 onOpenHotkeySettings: {},
                 onOpenPerformance: {},
                 onReportIssue: {},

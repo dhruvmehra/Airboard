@@ -13,7 +13,6 @@ class FloatingWindowManager: NSObject {
     static let shared = FloatingWindowManager()
     private var floatingWindow: NSWindow?
     private var popoverWindow: NSWindow?
-    private var dictionaryWindow: NSWindow?
     private var hotkeyWindow: NSWindow?
     private var performanceWindow: NSWindow?
 
@@ -269,9 +268,6 @@ class FloatingWindowManager: NSObject {
             onRemoveModel: { [weak self] in
                 self?.handleRemoveModel()
             },
-            onOpenDictionary: { [weak self] in
-                self?.handleOpenDictionary()
-            },
             onOpenHotkeySettings: { [weak self] in
                 self?.handleOpenHotkeySettings()
             },
@@ -382,11 +378,6 @@ class FloatingWindowManager: NSObject {
         hidePopover()
     }
     
-    private func handleOpenDictionary() {
-        hidePopover()
-        showDictionaryWindow()
-    }
-    
     private func handleOpenHotkeySettings() {
         hidePopover()
         showHotkeySettingsWindow()
@@ -400,33 +391,6 @@ class FloatingWindowManager: NSObject {
     private func handleReportIssue() {
         hidePopover()
         NotificationCenter.default.post(name: .openFeedbackReport, object: nil)
-    }
-    
-    // MARK: - Dictionary Window
-    
-    private func showDictionaryWindow() {
-        if let existing = dictionaryWindow {
-            existing.close()
-            dictionaryWindow = nil
-        }
-        
-        let dictionaryView = DictionaryView()
-        
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 450),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        
-        window.title = "Dictionary"
-        window.contentView = NSHostingView(rootView: dictionaryView)
-        window.center()
-        window.isReleasedWhenClosed = false
-        
-        dictionaryWindow = window
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
     }
     
     // MARK: - Hotkey Settings Window
@@ -531,8 +495,6 @@ class FloatingWindowManager: NSObject {
         DispatchQueue.main.async { [weak self] in
             self?.popoverWindow?.close()
             self?.popoverWindow = nil
-            self?.dictionaryWindow?.close()
-            self?.dictionaryWindow = nil
             self?.hotkeyWindow?.close()
             self?.hotkeyWindow = nil
             self?.performanceWindow?.close()
