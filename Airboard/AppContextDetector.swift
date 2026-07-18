@@ -12,7 +12,7 @@ class AppContextDetector {
     
     static func getCurrentAppContext() -> AppContext {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
-            return AppContext(appName: "Unknown", appType: .general, prompt: "")
+            return AppContext(appName: "Unknown", appType: .general)
         }
         
         let bundleIdentifier = frontmostApp.bundleIdentifier ?? ""
@@ -38,9 +38,7 @@ class AppContextDetector {
             appType = detectAppType(bundleIdentifier: bundleIdentifier, appName: appName)
         }
         
-        let prompt = generatePrompt(for: appType, appName: appName)
-        
-        return AppContext(appName: appName, appType: appType, prompt: prompt)
+        return AppContext(appName: appName, appType: appType)
     }
     
     private static func detectIfBrowser(bundleIdentifier: String, appName: String) -> Bool {
@@ -214,31 +212,6 @@ class AppContextDetector {
         return .general
     }
     
-    private static func generatePrompt(for appType: AppType, appName: String) -> String {
-        // Whisper's "prompt" parameter is for vocabulary/context hints
-        switch appType {
-        case .email:
-            return "Email message with professional vocabulary."
-            
-        case .messaging:
-            return "Casual conversation message."
-            
-        case .code:
-            return "Code, programming terms, variable names, function names, technical vocabulary."
-            
-        case .document, .notes:
-            return "Professional document with proper grammar and punctuation."
-            
-        case .browser:
-            return "Web search or form input."
-            
-        case .social:
-            return "Social media post."
-            
-        case .general:
-            return ""
-        }
-    }
 }
 
 enum AppType {
@@ -255,5 +228,4 @@ enum AppType {
 struct AppContext {
     let appName: String
     let appType: AppType
-    let prompt: String
 }

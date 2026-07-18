@@ -45,7 +45,7 @@ class TranscriptionCoordinator: ObservableObject {
         "", "[blank_audio]", "blank_audio", "[music]", "[silence]", "music", "silence"
     ]
 
-    // Common Whisper hallucinations (phrases that indicate the model is hallucinating)
+    // Common speech-model hallucinations (phrases that indicate the model is hallucinating)
     private let hallucinationPhrases = [
         "subscribe to the channel",
         "hit the bell icon",

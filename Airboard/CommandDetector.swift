@@ -60,7 +60,7 @@ class CommandDetector {
             cleaned = String(cleaned.dropLast())
         }
         
-        // Fix common Whisper transcription issues
+        // Fix common transcription issues
         cleaned = fixCommonTranscriptionIssues(cleaned)
         
         // Remove filler words at the start
@@ -102,7 +102,7 @@ class CommandDetector {
     private static func fixCommonTranscriptionIssues(_ text: String) -> String {
         var result = text
         
-        // Fix split words that Whisper commonly produces
+        // Fix split words that speech-to-text commonly produces
         let fixes = [
             "you tube": "youtube",
             "g mail": "gmail",

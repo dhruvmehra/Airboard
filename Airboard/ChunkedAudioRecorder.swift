@@ -171,7 +171,7 @@ class ChunkedAudioRecorder: ObservableObject {
                 print("✅ Chunk \(chunkNumber) finalized: \(String(format: "%.1f", sizeKB))KB")
 
                 if fileSize >= 1000 {
-                    processAudioForWhisper(url: url)
+                    normalizeRecordedAudio(url: url)
                     DispatchQueue.main.async { [weak self] in
                         self?.onChunkComplete?(url, chunkNumber)
                     }
@@ -234,7 +234,7 @@ class ChunkedAudioRecorder: ObservableObject {
 
     // MARK: - Audio Processing
 
-    private func processAudioForWhisper(url: URL) {
+    private func normalizeRecordedAudio(url: URL) {
         do {
             let audioFile = try AVAudioFile(forReading: url)
             let format = audioFile.processingFormat

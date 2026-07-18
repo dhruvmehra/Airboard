@@ -33,7 +33,7 @@ class PerformanceMonitor: ObservableObject {
 
     struct TimingBreakdown {
         var audioRecording: TimeInterval = 0
-        var whisperTranscription: TimeInterval = 0
+        var transcription: TimeInterval = 0
     }
 
     // MARK: - Private State

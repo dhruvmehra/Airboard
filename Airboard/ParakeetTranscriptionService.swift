@@ -19,6 +19,7 @@ class ParakeetTranscriptionService: ObservableObject {
 
     private var asrManager: AsrManager?
     private var initializationTask: Task<Void, Never>?
+    private var isRetrying = false
 
     /// Parakeet variant to load. v3 = multilingual (25 languages); switch to .v2
     /// for the English-only bundle (marginally better English recall).
@@ -33,13 +34,25 @@ class ParakeetTranscriptionService: ObservableObject {
     /// Waits for initialization; retries once if a previous attempt failed
     /// (e.g. no internet on first run), so a failed init doesn't require an
     /// app restart.
+    ///
+    /// Single-flight: if multiple callers race in here after a failed init
+    /// (e.g. the hands-free chunk path spawns one Task per chunk), only the
+    /// first spawns a retry; the rest await that same in-flight task instead
+    /// of each kicking off their own ~1GB download into the same cache dir.
     func ensureModelReady() async {
         await initializationTask?.value
         if !isModelReady {
-            initializationTask = Task {
+            if let existing = initializationTask, !existing.isCancelled, isRetrying {
+                await existing.value
+                return
+            }
+            isRetrying = true
+            let retry = Task {
                 await initializeParakeet()
             }
-            await initializationTask?.value
+            initializationTask = retry
+            await retry.value
+            isRetrying = false
         }
     }
 

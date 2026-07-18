@@ -185,7 +185,7 @@ struct FeedbackView_Previews: PreviewProvider {
     static var previews: some View {
         FeedbackView(
             transcribedText: "This is a really long transcription that goes on and on and on to test the scrolling behavior of the view. It should wrap properly and not cause any overflow issues.",
-            context: AppContext(appName: "Claude", appType: .general, prompt: ""),
+            context: AppContext(appName: "Claude", appType: .general),
             onSubmit: { _ in },
             onClose: { }
         )

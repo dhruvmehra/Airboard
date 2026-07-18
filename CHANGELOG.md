@@ -9,7 +9,6 @@ promotes that section to the released version automatically.
 ## [Unreleased]
 
 ### Changed
-- Upgraded speech model from Whisper small to large-v3-turbo for better accuracy
 - Rebranded from Murmur to Airboard
 - Fixed dropped words and a stuck-transcribing bug
 - Debug builds are now clearly separated from the released app (own name and bundle ID in macOS permission settings)

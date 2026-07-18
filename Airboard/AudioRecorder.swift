@@ -89,7 +89,7 @@ class AudioRecorder: ObservableObject {
         audioRecorder?.stop()
 
         // CRITICAL: Give AVAudioRecorder time to finalize the file
-        // Without this, the file may not be fully written when Whisper tries to read it
+        // Without this, the file may not be fully written when the speech model tries to read it
         Thread.sleep(forTimeInterval: 0.1)
 
         isRecording = false
@@ -111,7 +111,7 @@ class AudioRecorder: ObservableObject {
 
                     if fileSize >= 1000 {
                         // Apply audio processing on macOS (post-processing)
-                        processAudioForWhisper(url: url)
+                        normalizeRecordedAudio(url: url)
                     } else {
                         print("⚠️ Recording too small - likely invalid")
                     }
@@ -139,9 +139,9 @@ class AudioRecorder: ObservableObject {
         prepareNextRecorder()
     }
 
-    /// Process audio for better Whisper recognition
-    /// Only normalizes volume - Whisper handles noise well on its own
-    private func processAudioForWhisper(url: URL) {
+    /// Process audio for better speech recognition
+    /// Only normalizes volume - the speech model handles noise well on its own
+    private func normalizeRecordedAudio(url: URL) {
         do {
             let audioFile = try AVAudioFile(forReading: url)
             let format = audioFile.processingFormat
@@ -168,7 +168,7 @@ class AudioRecorder: ObservableObject {
             print("📊 Audio levels - Peak: \(String(format: "%.4f", peakLevel)), RMS: \(String(format: "%.4f", rmsLevel))")
             
             // ONLY normalize - no filtering, no noise gate
-            // Whisper handles noise well, we just need adequate volume
+            // The speech model handles noise well, we just need adequate volume
             normalizeAudio(samples: samples, count: sampleCount, currentPeak: peakLevel)
             
             // Write back
@@ -202,7 +202,7 @@ class AudioRecorder: ObservableObject {
         return sqrt(sumSquares / Float(count))
     }
     
-    /// Normalize audio to boost quiet recordings so Whisper can hear them
+    /// Normalize audio to boost quiet recordings so the speech model can hear them
     private func normalizeAudio(samples: UnsafeMutablePointer<Float>, count: Int, currentPeak: Float, targetPeak: Float = 0.8) {
         // Skip if audio is already loud enough or too quiet (likely silence)
         guard currentPeak < 0.5 && currentPeak > 0.001 else {
