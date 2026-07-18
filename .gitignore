@@ -6,6 +6,7 @@ xcuserdata/
 # Build artifacts
 build/
 DerivedData/
+release/
 
 # Config files (not needed anymore with local Whisper)
 # Config.swift

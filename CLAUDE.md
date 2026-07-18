@@ -16,9 +16,24 @@ Airboard (formerly "Murmur") is a macOS voice transcription app. Users press a h
 ### Release Build
 
 ```bash
-./build_release.sh   # Builds, signs, notarizes, and creates DMG
-./create_dmg.sh      # Creates DMG only
+./build_release.sh              # patch release: auto-bumps from last git tag
+./build_release.sh minor        # 1.0.x -> 1.1.0
+./build_release.sh major        # 1.x.y -> 2.0.0
+./build_release.sh 1.2.0        # explicit version
+./create_dmg.sh path/to/App.app # DMG only (version read from the app)
 ```
+
+`build_release.sh` requires a clean git tree and a `## [Unreleased]` section in
+`CHANGELOG.md`. It stamps `MARKETING_VERSION`, promotes the changelog section,
+builds/signs/notarizes the DMG, then commits and tags `vX.Y.Z`. Afterwards:
+`git push origin main --tags`.
+
+## Versioning & Changelog
+
+- Version source of truth: git tags (`vX.Y.Z`). The release script derives the
+  next version from the latest tag.
+- User-facing changes go under `## [Unreleased]` in `CHANGELOG.md` as they are
+  made; the release script moves them under the released version.
 
 ## Dependencies (SPM)
 
