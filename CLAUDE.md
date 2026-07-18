@@ -52,7 +52,7 @@ HotkeyManager (detects key press)
   → TranscriptionCoordinator (orchestrator singleton)
     → AudioRecorder / ChunkedAudioRecorder (captures audio)
     → ParakeetTranscriptionService (FluidAudio/Parakeet transcription)
-    → TranscriptPostProcessor (pass-through seam for future LLM cleanup)
+    → TranscriptPostProcessor (FillerRules always; optional remote LLM via TranscriptRefiner)
     → CommandDetector (checks for voice commands)
     → TextInserter (inserts via Accessibility API) or CommandExecutor
     → FloatingWindowManager (visual feedback)
@@ -86,7 +86,7 @@ HotkeyManager (detects key press)
 | Context | `AppContextDetector.swift` (detects active app type: email, code, messaging, etc.) |
 | UI | `FloatingWindowManager.swift`, `AirboardPopover.swift`, `SetupWindowController.swift` |
 | Settings | `MenuBarManager.swift`, `HotkeySettingsView.swift` |
-| Post-processing | `TranscriptPostProcessor.swift` (identity; future LLM stage) |
+| Post-processing | `TranscriptPostProcessor.swift` (orchestrator), `FillerRules.swift`, `TranscriptRefiner.swift` (OpenAI-compatible HTTP client), `CleanupSettingsView.swift`, `KeychainHelper.swift` |
 | Diagnostics | `PerformanceMonitor.swift`, `PerformanceView.swift`, `FeedbackManager.swift` |
 
 ### Key Enums/Types
@@ -110,3 +110,5 @@ No XCTest target exists. Testing is manual: build, grant permissions, and dictat
 
 - `primaryHotkey`, `commandModifierHotkey` — hotkey configuration
 - `hasCompletedSetup` — first-run setup completion flag
+- `aiCleanupEnabled` — AI cleanup toggle (default true; no effect until a server is configured)
+- `cleanupServerURL`, `cleanupModelName` — cleanup endpoint config (API key lives in the Keychain, service `com.pype.airboard.cleanup`)

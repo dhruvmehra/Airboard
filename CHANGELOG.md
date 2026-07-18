@@ -8,6 +8,10 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+### Added
+- Filler-word removal ("um", "uh", "ah") in all dictation modes — local, always on
+- Optional AI cleanup via any OpenAI-compatible endpoint (OpenRouter, AWS Bedrock, Ollama, vLLM): grammar and punctuation fixes, paragraph breaks, spoken enumerations formatted as bullet or numbered lists. Configured in the menu popover; API key stored in the Keychain; falls back to local rules within 6s if the server is slow or unreachable
+
 ### Changed
 - Rebranded from Murmur to Airboard
 - Fixed dropped words and a stuck-transcribing bug
