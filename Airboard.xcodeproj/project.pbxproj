@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		CC9F704B2EDF830500F2670F /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = CC9F704A2EDF830500F2670F /* WhisperKit */; };
+		FA1DA0D10000000000000003 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = FA1DA0D10000000000000002 /* FluidAudio */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				CC9F704B2EDF830500F2670F /* WhisperKit in Frameworks */,
+				FA1DA0D10000000000000003 /* FluidAudio in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +86,7 @@
 			name = Airboard;
 			packageProductDependencies = (
 				CC9F704A2EDF830500F2670F /* WhisperKit */,
+				FA1DA0D10000000000000002 /* FluidAudio */,
 			);
 			productName = murmur;
 			productReference = CC26B7F92EDCD31800B10FA0 /* Airboard.app */;
@@ -115,6 +118,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				FA1DA0D10000000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CC26B7FA2EDCD31800B10FA0 /* Products */;
@@ -396,6 +400,14 @@
 				revision = ba094495e40ff255f30ca4602e2c75994f255df7;
 			};
 		};
+		FA1DA0D10000000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio.git";
+			requirement = {
+				kind = exactVersion;
+				version = 0.15.5;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -403,6 +415,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CC26B8282EDE2D8A00B10FA0 /* XCRemoteSwiftPackageReference "WhisperKit" */;
 			productName = WhisperKit;
+		};
+		FA1DA0D10000000000000002 /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA1DA0D10000000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
