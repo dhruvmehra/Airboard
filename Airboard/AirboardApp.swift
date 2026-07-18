@@ -28,11 +28,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             close(devNull)
         }
     }
-    
+
+    /// The Whisper-based versions of Airboard cached a ~630MB model under
+    /// ~/Documents/huggingface/. Nothing reads it after the Parakeet swap, so
+    /// remove it. Cheap existence check → no-op on machines that never had it.
+    private func cleanupLegacyWhisperModels() {
+        let legacyDir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("huggingface/models/argmaxinc/whisperkit-coreml")
+        guard FileManager.default.fileExists(atPath: legacyDir.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: legacyDir)
+            print("🧹 Removed legacy Whisper model cache at \(legacyDir.path)")
+        } catch {
+            print("⚠️ Could not remove legacy Whisper cache: \(error.localizedDescription)")
+        }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("🚀 Airboard launched")
         suppressLibraryLogs()
-        
+        cleanupLegacyWhisperModels()
+
         // Prevent multiple instances
         let runningInstances = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")
         if runningInstances.count > 1 {
