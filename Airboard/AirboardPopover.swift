@@ -14,10 +14,12 @@ struct AirboardPopover: View {
     let onDownloadModel: () -> Void
     let onRemoveModel: () -> Void
     let onOpenHotkeySettings: () -> Void
+    let onOpenCleanupSettings: () -> Void
     let onOpenPerformance: () -> Void
     let onReportIssue: () -> Void
     let onDismiss: () -> Void
 
+    @AppStorage("aiCleanupEnabled") private var aiCleanupEnabled = true
     @State private var isHoveringDownload = false
     @State private var isHoveringHotkey = false
     @State private var isHoveringPerformance = false
@@ -82,6 +84,33 @@ struct AirboardPopover: View {
             
             // Actions Section
             VStack(spacing: 8) {
+                // AI cleanup toggle + settings
+                HStack(spacing: 8) {
+                    Image(systemName: "wand.and.stars")
+                        .foregroundColor(.purple)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("AI cleanup")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("Grammar, paragraphs, lists")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $aiCleanupEnabled)
+                        .toggleStyle(.switch)
+                        .controlSize(.small)
+                        .labelsHidden()
+                    Button(action: onOpenCleanupSettings) {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Cleanup server settings")
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+
                 // Hotkey Settings Button
                 Button(action: onOpenHotkeySettings) {
                     HStack(spacing: 12) {
@@ -487,6 +516,7 @@ struct VisualEffectBlur: NSViewRepresentable {
                 onDownloadModel: {},
                 onRemoveModel: {},
                 onOpenHotkeySettings: {},
+                onOpenCleanupSettings: {},
                 onOpenPerformance: {},
                 onReportIssue: {},
                 onDismiss: {}

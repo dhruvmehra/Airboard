@@ -14,6 +14,7 @@ class FloatingWindowManager: NSObject {
     private var floatingWindow: NSWindow?
     private var popoverWindow: NSWindow?
     private var hotkeyWindow: NSWindow?
+    private var cleanupSettingsWindow: NSWindow?
     private var performanceWindow: NSWindow?
 
     // Auto-hide state
@@ -271,6 +272,9 @@ class FloatingWindowManager: NSObject {
             onOpenHotkeySettings: { [weak self] in
                 self?.handleOpenHotkeySettings()
             },
+            onOpenCleanupSettings: { [weak self] in
+                self?.handleOpenCleanupSettings()
+            },
             onOpenPerformance: { [weak self] in
                 self?.handleOpenPerformance()
             },
@@ -283,7 +287,7 @@ class FloatingWindowManager: NSObject {
         )
         
         let popoverWidth: CGFloat = 280
-        let popoverHeight: CGFloat = 350
+        let popoverHeight: CGFloat = 392
         
         let hostingView = NSHostingView(rootView: popoverView)
         hostingView.frame = NSRect(x: 0, y: 0, width: popoverWidth, height: popoverHeight)
@@ -383,6 +387,11 @@ class FloatingWindowManager: NSObject {
         showHotkeySettingsWindow()
     }
 
+    private func handleOpenCleanupSettings() {
+        hidePopover()
+        showCleanupSettingsWindow()
+    }
+
     private func handleOpenPerformance() {
         hidePopover()
         showPerformanceWindow()
@@ -418,6 +427,31 @@ class FloatingWindowManager: NSObject {
         window.isReleasedWhenClosed = false
 
         hotkeyWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Cleanup Settings Window
+
+    private func showCleanupSettingsWindow() {
+        if let existing = cleanupSettingsWindow {
+            existing.close()
+            cleanupSettingsWindow = nil
+        }
+
+        let view = CleanupSettingsView()
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 320),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "AI Cleanup Settings"
+        window.contentView = NSHostingView(rootView: view)
+        window.center()
+        window.isReleasedWhenClosed = false
+
+        cleanupSettingsWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -497,6 +531,8 @@ class FloatingWindowManager: NSObject {
             self?.popoverWindow = nil
             self?.hotkeyWindow?.close()
             self?.hotkeyWindow = nil
+            self?.cleanupSettingsWindow?.close()
+            self?.cleanupSettingsWindow = nil
             self?.performanceWindow?.close()
             self?.performanceWindow = nil
             self?.downloadModalWindow?.close()
