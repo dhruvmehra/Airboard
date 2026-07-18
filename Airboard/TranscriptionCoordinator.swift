@@ -16,7 +16,7 @@ class TranscriptionCoordinator: ObservableObject {
 
     private let audioRecorder = AudioRecorder()
     private let chunkedRecorder = ChunkedAudioRecorder()
-    private let transcriptionService = LocalTranscriptionService()
+    private let transcriptionService = ParakeetTranscriptionService()
     private var cancellables = Set<AnyCancellable>()
 
     @Published private(set) var isRecording = false
@@ -297,7 +297,7 @@ class TranscriptionCoordinator: ObservableObject {
 
         // Transcribe chunk in background
         Task {
-            await transcriptionService.transcribe(audioURL: url, context: currentContext)
+            await transcriptionService.transcribe(audioURL: url)
 
             if let error = transcriptionService.error {
                 print("❌ Chunk \(chunkNumber) transcription error: \(error)")
@@ -313,18 +313,19 @@ class TranscriptionCoordinator: ObservableObject {
                 return
             }
 
-            print("✅ Chunk \(chunkNumber) FINAL TEXT: '\(text)'")
+            let cleanedText = TranscriptPostProcessor.process(text, context: currentContext)
+            print("✅ Chunk \(chunkNumber) FINAL TEXT: '\(cleanedText)'")
 
             // Accumulate text
             await MainActor.run {
                 if !accumulatedText.isEmpty {
                     accumulatedText += " "
                 }
-                accumulatedText += text
+                accumulatedText += cleanedText
 
                 // Insert text immediately for real-time feedback
                 if isHandsFreeMode {
-                    insertTextIntoTargetApp(text)
+                    insertTextIntoTargetApp(cleanedText)
                 }
             }
 
@@ -379,7 +380,7 @@ class TranscriptionCoordinator: ObservableObject {
     // MARK: - Process Transcription
     
     private func processTranscription(audioURL: URL) async {
-        await transcriptionService.transcribe(audioURL: audioURL, context: currentContext)
+        await transcriptionService.transcribe(audioURL: audioURL)
         
         if let error = transcriptionService.error {
             print("❌ Transcription error: \(error)")
@@ -395,20 +396,21 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
         
-        lastTranscribedText = text
+        let cleanedText = TranscriptPostProcessor.process(text, context: currentContext)
+        lastTranscribedText = cleanedText
         lastContext = currentContext
 
         // End transcription timing
-        PerformanceMonitor.shared.endTranscription(inputText: text)
+        PerformanceMonitor.shared.endTranscription(inputText: cleanedText)
 
-        print("📝 Transcription: \"\(text)\"")
+        print("📝 Transcription: \"\(cleanedText)\"")
         print("📍 Mode: \(currentMode == .command ? "COMMAND" : "DICTATION")")
 
         // Handle based on mode
         if currentMode == .command {
-            await handleCommandMode(text: text)
+            await handleCommandMode(text: cleanedText)
         } else {
-            await handleDictationMode(text: text)
+            await handleDictationMode(text: cleanedText)
         }
         
         await MainActor.run {
