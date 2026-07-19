@@ -8,6 +8,13 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+### Added
+- MIT LICENSE file (the README already claimed MIT; now it's true)
+
+### Changed
+- AI cleanup now runs on dictations of 6+ words (was 12) — fast providers like Cerebras made the round-trip imperceptible
+- Performance metrics measure transcription time only, no longer including the AI cleanup round-trip
+
 ## [1.0.3] - 2026-07-19
 
 ### Added

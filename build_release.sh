@@ -122,6 +122,10 @@ hdiutil create -volname "${APP_NAME}" \
 mv "${DMG_STAGE}/${DMG_NAME}" "${RELEASE_DIR}/${DMG_NAME}"
 rm -rf "${DMG_STAGE}"
 
+# Sign the DMG itself (not just the app inside) so Gatekeeper reports
+# "Notarized Developer ID" on the disk image too.
+codesign --force --sign "${DEVELOPER_ID}" "${RELEASE_DIR}/${DMG_NAME}"
+
 echo -e "${BLUE}📤 Step 6: Notarize${NC}"
 xcrun notarytool submit "${RELEASE_DIR}/${DMG_NAME}" \
     --keychain-profile "${KEYCHAIN_PROFILE}" \
@@ -137,11 +141,23 @@ git add "$PBXPROJ" "$CHANGELOG"
 git commit -m "Release ${VERSION}"
 git tag "v${VERSION}"
 
+# --- Publish -------------------------------------------------------------
+echo -e "${BLUE}🌐 Step 9: Push and publish GitHub release${NC}"
+# Extract this version's section from the changelog as the release notes
+NOTES=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" "$CHANGELOG")
+
+git push origin main --tags
+
+if command -v gh >/dev/null 2>&1; then
+    gh release create "v${VERSION}" "${RELEASE_DIR}/${DMG_NAME}" \
+        --title "${APP_NAME} ${VERSION}" \
+        --notes "${NOTES}"
+else
+    echo "gh CLI not found — create the release manually:"
+    echo "  gh release create v${VERSION} ${RELEASE_DIR}/${DMG_NAME} --title \"${APP_NAME} ${VERSION}\""
+fi
+
 DMG_SIZE=$(du -h "${RELEASE_DIR}/${DMG_NAME}" | cut -f1)
 echo ""
-echo -e "${GREEN}✅ ${APP_NAME} ${VERSION} released!${NC}"
+echo -e "${GREEN}✅ ${APP_NAME} ${VERSION} released and published!${NC}"
 echo -e "${GREEN}📦 ${RELEASE_DIR}/${DMG_NAME} (${DMG_SIZE})${NC}"
-echo ""
-echo "Next steps:"
-echo "  git push origin main --tags"
-echo "  gh release create v${VERSION} ${RELEASE_DIR}/${DMG_NAME} --title \"${APP_NAME} ${VERSION}\""

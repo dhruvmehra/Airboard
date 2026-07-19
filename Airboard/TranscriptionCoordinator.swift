@@ -396,6 +396,10 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
         
+        // End transcription timing BEFORE the cleanup await — the metric
+        // measures ASR, not LLM round-trip time.
+        PerformanceMonitor.shared.endTranscription(inputText: text)
+
         let mode = currentMode
         let cleanedText = await TranscriptPostProcessor.process(
             text,
@@ -406,9 +410,6 @@ class TranscriptionCoordinator: ObservableObject {
         // are diagnosable (what the ASR heard vs what was inserted).
         lastTranscribedText = text
         lastContext = currentContext
-
-        // End transcription timing
-        PerformanceMonitor.shared.endTranscription(inputText: cleanedText)
 
         print("📝 Transcription: \"\(cleanedText)\"")
         print("📍 Mode: \(mode == .command ? "COMMAND" : "DICTATION")")

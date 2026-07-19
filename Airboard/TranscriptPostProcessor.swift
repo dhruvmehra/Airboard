@@ -21,10 +21,12 @@ enum TranscriptPostProcessor {
 
     static let llmTimeoutSeconds: Double = 4
 
-    /// Short dictations (quick replies, search queries) don't need grammar,
-    /// paragraphs, or lists — the 1–3s LLM round-trip would be pure perceived
-    /// lag on the snippets people dictate most. Rules-only below this.
-    static let llmMinimumWords = 12
+    /// Very short dictations (quick replies, search queries) don't need
+    /// grammar, paragraphs, or lists — the LLM round-trip would be pure
+    /// perceived lag on the snippets people dictate most. Rules-only below
+    /// this. (Lowered from 12 once fast providers like Cerebras made the
+    /// round-trip ~0.5s.)
+    static let llmMinimumWords = 6
 
     /// Absent key = enabled (default on).
     static var aiCleanupEnabled: Bool {
