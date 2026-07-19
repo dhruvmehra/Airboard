@@ -15,7 +15,9 @@ while the AI cleanup toggle is on.
 1. Create an API key at https://openrouter.ai/keys (or platform.openai.com).
 2. In Airboard's cleanup settings:
    - Server URL: `https://openrouter.ai/api` (or `https://api.openai.com`)
-   - Model: `qwen/qwen3-30b-a3b-instruct` (or any small fast model)
+   - Model: `qwen/qwen3-30b-a3b-instruct-2507` (or any small fast model —
+     prefer "instruct" variants; "thinking" models emit reasoning text and
+     respond slower)
    - API key: your key
 3. Test connection.
 

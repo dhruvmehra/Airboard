@@ -67,7 +67,12 @@ class TranscriptRefiner {
 
     func refine(_ text: String) async throws -> String {
         let output = try await chatCompletion(userMessage: text)
-        let cleaned = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Strip reasoning blocks defensively: if the user picked a "thinking"
+        // model variant, its chain-of-thought must never reach the document.
+        let deThought = output.replacingOccurrences(
+            of: "<think>[\\s\\S]*?</think>", with: "",
+            options: .regularExpression)
+        let cleaned = deThought.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !cleaned.isEmpty else { throw RefineError.emptyOutput }
         // Hallucination guard — only meaningful on non-trivial inputs
@@ -79,13 +84,39 @@ class TranscriptRefiner {
     }
 
     /// Canned round-trip for the settings UI's Test button.
+    static let testPhrase = "um so this is uh a test"
+
     func testConnection() async -> Result<String, Error> {
         do {
-            let reply = try await chatCompletion(userMessage: "um so this is uh a test")
+            let reply = try await refine(Self.testPhrase)
             return .success(reply)
         } catch {
             return .failure(error)
         }
+    }
+
+    /// Plain-language error text for the settings UI — users should never
+    /// see raw JSON error bodies or URLSession codes.
+    static func friendlyMessage(for error: Error) -> String {
+        if let refineError = error as? RefineError {
+            switch refineError {
+            case .httpError(let code, let body):
+                if code == 401 || code == 403 { return "Invalid API key" }
+                if body.lowercased().contains("model") {
+                    return "Model not found — check the model name"
+                }
+                return "Server error (\(code))"
+            case .notConfigured: return "Enter a server URL and model first"
+            case .badURL: return "That server URL doesn't look valid"
+            case .emptyOutput, .degenerateOutput:
+                return "Server responded, but not with usable text — check the model name"
+            case .timeout: return "Cleanup timed out"
+            }
+        }
+        if error is URLError {
+            return "Can't reach the server — check the URL and your connection"
+        }
+        return error.localizedDescription
     }
 
     private func chatCompletion(userMessage: String) async throws -> String {

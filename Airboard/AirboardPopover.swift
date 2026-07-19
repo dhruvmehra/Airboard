@@ -100,6 +100,15 @@ struct AirboardPopover: View {
                         .toggleStyle(.switch)
                         .controlSize(.small)
                         .labelsHidden()
+                        .tint(.green)
+                        .onChange(of: aiCleanupEnabled) { _, enabled in
+                            // Turning cleanup on with no server configured
+                            // can't do anything yet — take the user straight
+                            // to the setup screen.
+                            if enabled && !TranscriptRefiner.shared.isConfigured {
+                                onOpenCleanupSettings()
+                            }
+                        }
                     Button(action: onOpenCleanupSettings) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 11))

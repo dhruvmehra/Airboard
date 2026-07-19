@@ -25,9 +25,28 @@ struct CleanupSettingsView: View {
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            HStack(spacing: 8) {
+                Text("Quick setup:")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Button("OpenRouter") {
+                    serverURL = "https://openrouter.ai/api"
+                    modelName = "qwen/qwen3-30b-a3b-instruct-2507"
+                    testResult = nil
+                }
+                .controlSize(.small)
+                Button("Ollama (local)") {
+                    serverURL = "http://127.0.0.1:11434"
+                    modelName = "qwen3:8b"
+                    testResult = nil
+                }
+                .controlSize(.small)
+                Spacer()
+            }
+
             TextField("Server URL  (e.g. https://openrouter.ai/api)", text: $serverURL)
                 .textFieldStyle(.roundedBorder)
-            TextField("Model  (e.g. qwen/qwen3-30b-a3b-instruct)", text: $modelName)
+            TextField("Model  (e.g. qwen/qwen3-30b-a3b-instruct-2507)", text: $modelName)
                 .textFieldStyle(.roundedBorder)
 
             HStack(spacing: 8) {
@@ -56,10 +75,10 @@ struct CleanupSettingsView: View {
                     testResult = nil
                     Task {
                         switch await TranscriptRefiner.shared.testConnection() {
-                        case .success:
-                            testResult = "✅ Connected — cleanup is working"
+                        case .success(let reply):
+                            testResult = "✅ Working — \"\(TranscriptRefiner.testPhrase)\" came back as: \"\(reply.prefix(80))\""
                         case .failure(let error):
-                            testResult = "❌ \(error.localizedDescription)"
+                            testResult = "❌ \(TranscriptRefiner.friendlyMessage(for: error))"
                         }
                         isTesting = false
                     }
@@ -68,7 +87,8 @@ struct CleanupSettingsView: View {
                 if let testResult {
                     Text(testResult)
                         .font(.caption)
-                        .lineLimit(2)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
             }
