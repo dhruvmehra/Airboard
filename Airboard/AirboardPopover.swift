@@ -72,35 +72,36 @@ struct AirboardPopover: View {
                     .padding(.horizontal, 12)
             }
             
-            // Model Status Section
-            VStack(spacing: 12) {
-                modelStatusView
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
-            
-            Divider()
-                .padding(.horizontal, 12)
-            
             // Actions Section
             VStack(spacing: 8) {
                 // AI cleanup toggle + settings
-                HStack(spacing: 8) {
-                    Image(systemName: "wand.and.stars")
-                        .foregroundColor(.purple)
-                    VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.purple.opacity(0.1))
+                            .frame(width: 32, height: 32)
+
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.purple)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
                         Text("AI cleanup")
                             .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.primary)
+
                         Text("Grammar, paragraphs, lists")
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
+
                     Spacer()
+
                     Toggle("", isOn: $aiCleanupEnabled)
-                        .toggleStyle(.switch)
+                        .toggleStyle(SwitchToggleStyle(tint: .green))
                         .controlSize(.small)
                         .labelsHidden()
-                        .tint(.green)
                         .onChange(of: aiCleanupEnabled) { _, enabled in
                             // Turning cleanup on with no server configured
                             // can't do anything yet — take the user straight
@@ -109,16 +110,17 @@ struct AirboardPopover: View {
                                 onOpenCleanupSettings()
                             }
                         }
+
                     Button(action: onOpenCleanupSettings) {
                         Image(systemName: "gearshape")
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
                     .help("Cleanup server settings")
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
 
                 // Hotkey Settings Button
                 Button(action: onOpenHotkeySettings) {

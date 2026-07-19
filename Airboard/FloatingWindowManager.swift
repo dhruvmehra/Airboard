@@ -287,7 +287,7 @@ class FloatingWindowManager: NSObject {
         )
         
         let popoverWidth: CGFloat = 280
-        let popoverHeight: CGFloat = 392
+        let popoverHeight: CGFloat = 310
         
         let hostingView = NSHostingView(rootView: popoverView)
         hostingView.frame = NSRect(x: 0, y: 0, width: popoverWidth, height: popoverHeight)
@@ -442,11 +442,15 @@ class FloatingWindowManager: NSObject {
         let view = CleanupSettingsView()
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 440, height: 320),
-            styleMask: [.titled, .closable],
+            styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "AI Cleanup Settings"
+        // Blend the title bar into the popover-style blurred content
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.backgroundColor = .clear
         window.contentView = NSHostingView(rootView: view)
         window.center()
         window.isReleasedWhenClosed = false
