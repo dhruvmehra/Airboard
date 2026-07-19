@@ -109,14 +109,18 @@ echo -e "${BLUE}🔏 Step 4: Sign${NC}"
 codesign --deep --force --options runtime --sign "${DEVELOPER_ID}" "${RELEASE_DIR}/${APP_NAME}.app"
 
 echo -e "${BLUE}💾 Step 5: Create DMG${NC}"
-mkdir -p "${RELEASE_DIR}/dmg_temp"
-cp -R "${RELEASE_DIR}/${APP_NAME}.app" "${RELEASE_DIR}/dmg_temp/"
-ln -s /Applications "${RELEASE_DIR}/dmg_temp/Applications"
+# Stage in a system temp dir: hdiutil's helper daemon lacks TCC access to
+# ~/Desktop and fails with "Operation not permitted" when the source folder
+# lives there.
+DMG_STAGE=$(mktemp -d /private/tmp/airboard-dmg.XXXXXX)
+cp -R "${RELEASE_DIR}/${APP_NAME}.app" "${DMG_STAGE}/"
+ln -s /Applications "${DMG_STAGE}/Applications"
 hdiutil create -volname "${APP_NAME}" \
-    -srcfolder "${RELEASE_DIR}/dmg_temp" \
+    -srcfolder "${DMG_STAGE}" \
     -ov -format UDZO \
-    "${RELEASE_DIR}/${DMG_NAME}"
-rm -rf "${RELEASE_DIR}/dmg_temp"
+    "${DMG_STAGE}/${DMG_NAME}"
+mv "${DMG_STAGE}/${DMG_NAME}" "${RELEASE_DIR}/${DMG_NAME}"
+rm -rf "${DMG_STAGE}"
 
 echo -e "${BLUE}📤 Step 6: Notarize${NC}"
 xcrun notarytool submit "${RELEASE_DIR}/${DMG_NAME}" \
