@@ -10,7 +10,7 @@ A lightweight macOS voice transcription app. Press a hotkey, speak, and your wor
 - **🙌 Hands-free mode**: Double-tap the hotkey for continuous dictation
 - **📱 Context-aware**: Adapts to the active app (email, code, messaging, docs)
 - **✨ Auto-insert**: Text appears directly where your cursor is, via the Accessibility API
-- **🪄 AI cleanup (optional)**: point Airboard at any OpenAI-compatible endpoint — your own Ollama, a team server, or a cloud API — and dictation comes back with grammar fixed, paragraphs added, and spoken points formatted as bullet/numbered lists. Off by default until you configure a server; filler words ("um", "uh") are always removed locally either way. See [docs/cleanup-server-recipes.md](docs/cleanup-server-recipes.md).
+- **🪄 AI cleanup (optional)**: point Airboard at any OpenAI-compatible endpoint — your own Ollama, a team server, or a cloud API — and dictation comes back with grammar fixed, paragraphs added, and spoken points formatted as bullet/numbered lists. Does nothing until you configure a server; filler words ("um", "uh") are always removed locally either way. See [docs/cleanup-server-recipes.md](docs/cleanup-server-recipes.md).
 
 ## Requirements
 
@@ -76,7 +76,7 @@ See `CLAUDE.md` for a fuller breakdown of the source layout.
 ## Privacy
 
 - Audio never leaves your machine — speech recognition is fully local.
-- By default, text never leaves your machine either. If you configure an AI cleanup server, dictated text (not audio) is sent to that server only, over HTTPS, only while the AI cleanup toggle is on.
+- By default, text never leaves your machine either. If you configure an AI cleanup server, dictated text (not audio) is sent to that server only — use HTTPS for anything beyond your own machines — only while the AI cleanup toggle is on.
 - The model is downloaded once from Hugging Face, then runs fully offline.
 - Optional, opt-in feedback reports (when you tap "Report issue") send only the text/metadata you choose to submit.
 

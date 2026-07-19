@@ -396,10 +396,11 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
         
+        let mode = currentMode
         let cleanedText = await TranscriptPostProcessor.process(
             text,
             context: currentContext,
-            mode: currentMode == .command ? .command : .dictation
+            mode: mode == .command ? .command : .dictation
         )
         // Keep the RAW transcript for the report-issue flow so cleanup bugs
         // are diagnosable (what the ASR heard vs what was inserted).
@@ -410,10 +411,10 @@ class TranscriptionCoordinator: ObservableObject {
         PerformanceMonitor.shared.endTranscription(inputText: cleanedText)
 
         print("📝 Transcription: \"\(cleanedText)\"")
-        print("📍 Mode: \(currentMode == .command ? "COMMAND" : "DICTATION")")
+        print("📍 Mode: \(mode == .command ? "COMMAND" : "DICTATION")")
 
         // Handle based on mode
-        if currentMode == .command {
+        if mode == .command {
             await handleCommandMode(text: cleanedText)
         } else {
             await handleDictationMode(text: cleanedText)

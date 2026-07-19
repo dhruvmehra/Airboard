@@ -92,8 +92,11 @@ class TranscriptRefiner {
         guard isConfigured else { throw RefineError.notConfigured }
 
         // Normalize the base URL: accept values with or without a trailing
-        // "/" or "/v1" and always call {base}/v1/chat/completions.
+        // "/", "/v1", or the full "/v1/chat/completions" path pasted from
+        // provider docs, and always call {base}/v1/chat/completions.
         var base = serverURL.trimmingCharacters(in: .whitespaces)
+        while base.hasSuffix("/") { base.removeLast() }
+        if base.hasSuffix("/chat/completions") { base.removeLast("/chat/completions".count) }
         while base.hasSuffix("/") { base.removeLast() }
         if base.hasSuffix("/v1") { base.removeLast(3) }
         while base.hasSuffix("/") { base.removeLast() }

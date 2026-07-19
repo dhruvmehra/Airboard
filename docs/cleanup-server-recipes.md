@@ -63,6 +63,9 @@ instead — Airboard doesn't change, only the URL does.
     vllm serve Qwen/Qwen3-30B-A3B-Instruct-2507 --quantization awq --api-key <team-key>
 
 - Server URL: `http://<host>:8000` (put TLS in front for internet exposure)
+  Note: macOS App Transport Security blocks plain `http://` to qualified
+  domain names — bare IPs, `.local`, and single-label hostnames work, but for
+  a real domain you must put TLS in front.
 - Model: `Qwen/Qwen3-30B-A3B-Instruct-2507`
 - API key: the `--api-key` value
 
