@@ -55,6 +55,12 @@ struct CleanupSettingsView: View {
                     Text("Quick setup:")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
+                    Button("Cerebras (fastest)") {
+                        serverURL = "https://api.cerebras.ai"
+                        modelName = "llama-3.3-70b"
+                        testResult = nil
+                    }
+                    .controlSize(.small)
                     Button("OpenRouter") {
                         serverURL = "https://openrouter.ai/api"
                         modelName = "qwen/qwen3-30b-a3b-instruct-2507"

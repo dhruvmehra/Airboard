@@ -10,7 +10,22 @@ The API key is stored in the macOS Keychain. Dictated text is sent to the
 configured server only (over HTTPS), only in normal dictation mode, only
 while the AI cleanup toggle is on.
 
-## 1. OpenRouter / OpenAI (fastest — ~2 minutes)
+## 0. Cerebras (fastest responses — ~2 minutes)
+
+Wafer-scale inference at 2,000+ tokens/sec: cleanup returns in ~0.3–0.6s
+total. Free tier available.
+
+1. Create an API key at https://cloud.cerebras.ai
+2. In Airboard's cleanup settings (or click the "Cerebras" quick-setup button):
+   - Server URL: `https://api.cerebras.ai`
+   - Model: `llama-3.3-70b`
+   - API key: your key
+3. Test connection.
+
+Groq (`https://api.groq.com/openai`, model `llama-3.3-70b-versatile`) is the
+same speed class if you prefer it.
+
+## 1. OpenRouter / OpenAI (~2 minutes)
 
 1. Create an API key at https://openrouter.ai/keys (or platform.openai.com).
 2. In Airboard's cleanup settings:
