@@ -147,6 +147,7 @@ class TranscriptRefiner {
         let body: [String: Any] = [
             "model": modelName,
             "temperature": 0,
+            "max_tokens": 1024,
             "messages": [
                 ["role": "system", "content": Self.instructions],
                 ["role": "user", "content": userMessage],

@@ -19,7 +19,12 @@ enum ProcessingMode {
 
 enum TranscriptPostProcessor {
 
-    static let llmTimeoutSeconds: Double = 6
+    static let llmTimeoutSeconds: Double = 4
+
+    /// Short dictations (quick replies, search queries) don't need grammar,
+    /// paragraphs, or lists — the 1–3s LLM round-trip would be pure perceived
+    /// lag on the snippets people dictate most. Rules-only below this.
+    static let llmMinimumWords = 12
 
     /// Absent key = enabled (default on).
     static var aiCleanupEnabled: Bool {
@@ -31,14 +36,18 @@ enum TranscriptPostProcessor {
 
         guard mode == .dictation,
               aiCleanupEnabled,
+              ruled.split(separator: " ").count >= llmMinimumWords,
               TranscriptRefiner.shared.isConfigured else {
             return ruled
         }
 
         do {
-            return try await withTimeout(seconds: llmTimeoutSeconds) {
+            let startTime = Date()
+            let refined = try await withTimeout(seconds: llmTimeoutSeconds) {
                 try await TranscriptRefiner.shared.refine(ruled)
             }
+            print("⏱️ LLM cleanup: \(Int(Date().timeIntervalSince(startTime) * 1000))ms")
+            return refined
         } catch {
             print("⚠️ Cleanup LLM skipped (\(error.localizedDescription)); inserting rules-cleaned text")
             return ruled
