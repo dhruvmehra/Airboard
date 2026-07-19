@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-07-19
+
 ### Added
 - Filler-word removal ("um", "uh", "ah") in all dictation modes — local, always on
 - Optional AI cleanup via any OpenAI-compatible endpoint (OpenRouter, AWS Bedrock, Ollama, vLLM): grammar and punctuation fixes, paragraph breaks, spoken enumerations formatted as bullet or numbered lists. Configured in the menu popover; API key stored in the Keychain; falls back to local rules within 4s if the server is slow or unreachable; short dictations (under 12 words) skip the server entirely and insert instantly
