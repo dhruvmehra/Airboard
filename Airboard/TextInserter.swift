@@ -48,6 +48,15 @@ class TextInserter {
         // Small delay to ensure the app is ready
         usleep(100000) // 0.1 seconds
 
+        // Multi-line text typed as keystrokes triggers editors' auto-list
+        // continuation (typing "- item⏎" makes the app add its own bullet,
+        // doubling ours), and characters outside our key map (curly quotes,
+        // em dashes — common in LLM output) can't be typed at all. Paste
+        // handles both: editors treat pasted text as literal.
+        if finalText.contains("\n") || finalText.contains(where: { keyCodeForCharacter($0) == nil }) {
+            return pasteText(finalText)
+        }
+
         // Type each character with error checking
         for character in finalText {
             if let error = typeCharacter(character) {
@@ -57,6 +66,37 @@ class TextInserter {
         }
 
         print("✅ Finished inserting text")
+        return .success(())
+    }
+
+    /// Insert via clipboard paste, preserving whatever the user had copied.
+    private static func pasteText(_ text: String) -> Result<Void, TextInsertionError> {
+        let pasteboard = NSPasteboard.general
+        let savedClipboard = pasteboard.string(forType: .string)
+
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        // Cmd+V (key code 9 = "v")
+        guard let vDown = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: true),
+              let vUp = CGEvent(keyboardEventSource: nil, virtualKey: 9, keyDown: false) else {
+            print("❌ Failed to create paste events")
+            return .failure(.eventCreationFailed)
+        }
+        vDown.flags = .maskCommand
+        vUp.flags = .maskCommand
+        vDown.post(tap: .cghidEventTap)
+        vUp.post(tap: .cghidEventTap)
+
+        // Restore the user's clipboard once the paste has landed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            pasteboard.clearContents()
+            if let savedClipboard {
+                pasteboard.setString(savedClipboard, forType: .string)
+            }
+        }
+
+        print("✅ Inserted via paste (multi-line or special characters)")
         return .success(())
     }
     
