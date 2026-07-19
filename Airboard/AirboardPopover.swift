@@ -99,8 +99,7 @@ struct AirboardPopover: View {
                     Spacer()
 
                     Toggle("", isOn: $aiCleanupEnabled)
-                        .toggleStyle(SwitchToggleStyle(tint: .green))
-                        .controlSize(.small)
+                        .toggleStyle(GreenSwitchToggleStyle())
                         .labelsHidden()
                         .onChange(of: aiCleanupEnabled) { _, enabled in
                             // Turning cleanup on with no server configured
@@ -494,6 +493,30 @@ struct AirboardPopover: View {
 }
 
 // MARK: - Visual Effect Blur
+
+/// Custom-drawn switch: NSSwitch renders gray inside non-activating panels
+/// (the popover never becomes key), so system tint APIs are ignored there.
+/// Drawing the capsule ourselves guarantees the green on-state.
+struct GreenSwitchToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Button {
+            configuration.isOn.toggle()
+        } label: {
+            Capsule()
+                .fill(configuration.isOn ? Color.green : Color.primary.opacity(0.2))
+                .frame(width: 34, height: 20)
+                .overlay(
+                    Circle()
+                        .fill(.white)
+                        .shadow(color: .black.opacity(0.15), radius: 1, x: 0, y: 1)
+                        .padding(2)
+                        .offset(x: configuration.isOn ? 7 : -7)
+                )
+                .animation(.spring(duration: 0.2), value: configuration.isOn)
+        }
+        .buttonStyle(.plain)
+    }
+}
 
 struct VisualEffectBlur: NSViewRepresentable {
     var material: NSVisualEffectView.Material
