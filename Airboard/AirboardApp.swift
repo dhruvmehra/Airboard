@@ -48,6 +48,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("🚀 Airboard launched")
         suppressLibraryLogs()
         cleanupLegacyWhisperModels()
+        UpdaterManager.shared.start()
 
         // Prevent multiple instances
         let runningInstances = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier ?? "")

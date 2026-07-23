@@ -17,6 +17,7 @@ struct AirboardPopover: View {
     let onOpenCleanupSettings: () -> Void
     let onOpenPerformance: () -> Void
     let onReportIssue: () -> Void
+    let onCheckForUpdates: () -> Void
     let onDismiss: () -> Void
 
     @AppStorage("aiCleanupEnabled") private var aiCleanupEnabled = true
@@ -24,6 +25,7 @@ struct AirboardPopover: View {
     @State private var isHoveringHotkey = false
     @State private var isHoveringPerformance = false
     @State private var isHoveringReport = false
+    @State private var isHoveringUpdate = false
     @State private var isHoveringRemove = false
     @State private var isHoveringSetup = false
     @State private var showingRemoveConfirm = false
@@ -237,6 +239,47 @@ struct AirboardPopover: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { isHoveringReport = $0 }
+
+                // Check for Updates Button (production builds only)
+                if UpdaterManager.isEnabled {
+                    Button(action: onCheckForUpdates) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.blue.opacity(isHoveringUpdate ? 0.15 : 0.1))
+                                    .frame(width: 32, height: 32)
+
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(Color.blue)
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Check for Updates")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.primary)
+
+                                Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.primary.opacity(isHoveringUpdate ? 0.04 : 0))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { isHoveringUpdate = $0 }
+                }
             }
             .padding(.horizontal, 12)
             .padding(.top, 8)
@@ -553,6 +596,7 @@ struct VisualEffectBlur: NSViewRepresentable {
                 onOpenCleanupSettings: {},
                 onOpenPerformance: {},
                 onReportIssue: {},
+                onCheckForUpdates: {},
                 onDismiss: {}
             )
         }

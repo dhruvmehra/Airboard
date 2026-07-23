@@ -281,6 +281,9 @@ class FloatingWindowManager: NSObject {
             onReportIssue: { [weak self] in
                 self?.handleReportIssue()
             },
+            onCheckForUpdates: {
+                UpdaterManager.shared.checkForUpdates()
+            },
             onDismiss: { [weak self] in
                 self?.hidePopover()
             }
