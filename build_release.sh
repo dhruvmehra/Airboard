@@ -252,7 +252,28 @@ else
     exit 1
 fi
 
+# --- User-visible verification: done means installed apps can SEE it --------
+echo -e "${BLUE}👀 Step 10: Wait for the live feed to serve ${VERSION}${NC}"
+# raw.githubusercontent.com caches for up to 5 minutes; installed apps see
+# the update only after propagation. Don't declare success before then.
+FEED_URL="https://raw.githubusercontent.com/dhruvmehra/Airboard/main/appcast.xml"
+DEADLINE=$((SECONDS + 480))
+until curl -s "$FEED_URL" | grep -q "<sparkle:version>${VERSION}</sparkle:version>"; do
+    if [ $SECONDS -ge $DEADLINE ]; then
+        echo -e "${RED}❌ Live feed still not serving ${VERSION} after 8 minutes — investigate before telling users${NC}"
+        exit 1
+    fi
+    echo "   feed not propagated yet, retrying in 30s..."
+    sleep 30
+done
+# And the asset the feed points at must actually download.
+ASSET_URL="https://github.com/dhruvmehra/Airboard/releases/download/v${VERSION}/${DMG_NAME}"
+if ! curl -s -o /dev/null -f -L -r 0-1023 "$ASSET_URL"; then
+    echo -e "${RED}❌ Feed is live but the release asset does not download: ${ASSET_URL}${NC}"
+    exit 1
+fi
+
 DMG_SIZE=$(du -h "${RELEASE_DIR}/${DMG_NAME}" | cut -f1)
 echo ""
-echo -e "${GREEN}✅ ${APP_NAME} ${VERSION} released and published!${NC}"
+echo -e "${GREEN}✅ ${APP_NAME} ${VERSION} released, published, and live — installed apps can now see the update${NC}"
 echo -e "${GREEN}📦 ${RELEASE_DIR}/${DMG_NAME} (${DMG_SIZE})${NC}"
