@@ -6,6 +6,23 @@
         <description>Airboard updates</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.6</title>
+            <pubDate>Thu, 23 Jul 2026 20:38:39 +0000</pubDate>
+            <sparkle:version>1.0.6</sparkle:version>
+            <sparkle:shortVersionString>1.0.6</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<pre>
+
+### Changed
+- AI cleanup now defaults to OFF — a fresh install has no server configured, so an on-looking toggle was misleading; flipping it on still opens the setup window when unconfigured
+
+### Fixed
+- The AI cleanup settings window could not be closed reliably: its transparent chrome let clicks pass through to the desktop, triggering macOS's show-desktop (all windows hiding). It now uses a standard title bar
+- Opening cleanup settings no longer triggers a Keychain permission prompt when dev and prod builds coexist — each build now stores its API key under its own Keychain entry
+</pre>]]></description>
+            <enclosure url="https://github.com/dhruvmehra/Airboard/releases/download/v1.0.6/Airboard-1.0.6.dmg" sparkle:edSignature="eowSj8xEEF1w+suPLnTshgi7JuAh4qGSobLiALmhDDsm1LSoXQfql26Ua8bmQynGQGD1K0FdQ3yiMTcbnYHmAg==" length="8582205" type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Version 1.0.5</title>
             <pubDate>Thu, 23 Jul 2026 20:23:19 +0000</pubDate>
             <sparkle:version>1.0.5</sparkle:version>

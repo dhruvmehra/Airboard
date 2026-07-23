@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-07-24
+
 ### Changed
 - AI cleanup now defaults to OFF — a fresh install has no server configured, so an on-looking toggle was misleading; flipping it on still opens the setup window when unconfigured
 
