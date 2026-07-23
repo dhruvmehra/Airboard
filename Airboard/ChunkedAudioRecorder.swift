@@ -15,7 +15,7 @@ class ChunkedAudioRecorder: ObservableObject {
     @Published var currentChunkNumber = 0
     @Published var totalDuration: TimeInterval = 0
 
-    private var audioRecorder: AVAudioRecorder?
+    private let captureEngine = MicCaptureEngine()
     private var chunkTimer: Timer?
     private var meterTimer: Timer?
     private var recordingStartTime: Date?
@@ -35,73 +35,37 @@ class ChunkedAudioRecorder: ObservableObject {
     private let minChunkDuration: TimeInterval = 25.0
     private let maxChunkDuration: TimeInterval = 40.0
     private let silenceThresholdDb: Float = -38.0
-    private let audioFormat: [String: Any] = [
-        AVFormatIDKey: Int(kAudioFormatLinearPCM),
-        AVSampleRateKey: 16000.0,
-        AVNumberOfChannelsKey: 1,  // Mono
-        AVLinearPCMBitDepthKey: 16,
-        AVLinearPCMIsFloatKey: false,
-        AVLinearPCMIsBigEndianKey: false,
-        AVLinearPCMIsNonInterleaved: false
-    ]
 
     // MARK: - Start Recording
 
     func startRecording() {
         guard !isRecording else { return }
 
-        setupAudioSession()
-
         isRecording = true
         recordingStartTime = Date()
         currentChunkNumber = 0
         totalDuration = 0
 
-        print("🎬 Starting chunked recording (30s chunks)")
-        startNextChunk()
+        let firstURL = nextChunkURL()
+        let deviceID = MicDeviceManager.shared.resolveActiveDeviceID()
+        do {
+            try captureEngine.start(deviceID: deviceID, fileURL: firstURL)
+            currentChunkURL = firstURL
+            chunkStartTime = Date()
+            print("🎬 Starting chunked recording (\(MicDeviceManager.shared.activeMicName))")
+            scheduleChunkRotation()
+        } catch {
+            print("❌ Failed to start chunked recording: \(error.localizedDescription)")
+            isRecording = false
+        }
     }
 
-    private func setupAudioSession() {
-        #if os(macOS)
-        print("✅ macOS - using AVAudioRecorder with chunking")
-        #else
-        let audioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.record, mode: .measurement, options: [])
-            try audioSession.setActive(true)
-            print("✅ Audio session configured for chunked recording")
-        } catch {
-            print("❌ Audio session setup failed: \(error.localizedDescription)")
-        }
-        #endif
+    private func nextChunkURL() -> URL {
+        FileManager.default.temporaryDirectory
+            .appendingPathComponent("chunk_\(Date().timeIntervalSince1970)_\(currentChunkNumber).wav")
     }
 
     // MARK: - Chunk Management
-
-    private func startNextChunk() {
-        let chunkFilename = FileManager.default.temporaryDirectory
-            .appendingPathComponent("chunk_\(Date().timeIntervalSince1970)_\(currentChunkNumber).wav")
-
-        do {
-            audioRecorder = try AVAudioRecorder(url: chunkFilename, settings: audioFormat)
-            audioRecorder?.isMeteringEnabled = true
-            audioRecorder?.prepareToRecord()
-
-            let success = audioRecorder?.record() ?? false
-            if success {
-                currentChunkURL = chunkFilename
-                chunkStartTime = Date()
-                print("📼 Chunk \(currentChunkNumber) started: \(chunkFilename.lastPathComponent)")
-
-                // After the minimum duration, start watching for a pause in speech
-                scheduleChunkRotation()
-            } else {
-                print("❌ Failed to start chunk \(currentChunkNumber)")
-            }
-        } catch {
-            print("❌ Failed to create chunk recorder: \(error.localizedDescription)")
-        }
-    }
 
     private func scheduleChunkRotation() {
         chunkTimer = Timer.scheduledTimer(withTimeInterval: minChunkDuration, repeats: false) { [weak self] _ in
@@ -119,10 +83,9 @@ class ChunkedAudioRecorder: ObservableObject {
 
         meterTimer?.invalidate()
         meterTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            guard let self = self, self.isRecording, let recorder = self.audioRecorder else { return }
+            guard let self = self, self.isRecording else { return }
 
-            recorder.updateMeters()
-            let power = recorder.averagePower(forChannel: 0)
+            let power = self.captureEngine.currentPowerDb
             let elapsed = Date().timeIntervalSince(self.chunkStartTime ?? Date())
 
             if power < self.silenceThresholdDb || elapsed >= self.maxChunkDuration {
@@ -139,31 +102,35 @@ class ChunkedAudioRecorder: ObservableObject {
     private func rotateChunk() {
         guard isRecording else { return }
 
-        // Stop the old chunk and start the next one IMMEDIATELY — the finished
-        // file is normalized in the background so there's no recording gap.
-        let finishedURL = currentChunkURL
         let finishedNumber = currentChunkNumber
-        audioRecorder?.stop()
-        currentChunkURL = nil
+        let newURL = nextChunkURL()
+        let finishedURL = captureEngine.rotate(to: newURL)
+
+        guard let finishedURL else {
+            // The engine couldn't open the new file, so it kept writing the
+            // current chunk unchanged — no finished file exists, nothing to
+            // finalize, and currentChunkURL/currentChunkNumber must stay put.
+            // Just retry the rotation watch so a later pause tries again.
+            print("⚠️ Chunk rotation failed; continuing current chunk")
+            scheduleChunkRotation()
+            return
+        }
 
         currentChunkNumber += 1
         if let startTime = recordingStartTime {
             totalDuration = Date().timeIntervalSince(startTime)
         }
-        startNextChunk()
+        currentChunkURL = newURL
+        chunkStartTime = Date()
+        scheduleChunkRotation()
 
-        if let url = finishedURL {
-            processingQueue.async { [weak self] in
-                self?.finalizeChunkFile(url: url, chunkNumber: finishedNumber)
-            }
+        processingQueue.async { [weak self] in
+            self?.finalizeChunkFile(url: finishedURL, chunkNumber: finishedNumber)
         }
     }
 
     /// Runs on processingQueue. Finalizes, normalizes, and hands off a finished chunk.
     private func finalizeChunkFile(url: URL, chunkNumber: Int) {
-        // Give AVAudioRecorder time to finish writing the file
-        Thread.sleep(forTimeInterval: 0.1)
-
         do {
             let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
             if let fileSize = attributes[.size] as? Int64 {
@@ -198,9 +165,8 @@ class ChunkedAudioRecorder: ObservableObject {
         meterTimer?.invalidate()
         meterTimer = nil
 
-        let lastURL = currentChunkURL
         let lastNumber = currentChunkNumber
-        audioRecorder?.stop()
+        let lastURL = captureEngine.stop()
         currentChunkURL = nil
 
         isRecording = false
