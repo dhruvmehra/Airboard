@@ -21,6 +21,7 @@ struct AirboardPopover: View {
     let onDismiss: () -> Void
 
     @AppStorage("aiCleanupEnabled") private var aiCleanupEnabled = false
+    @ObservedObject private var micManager = MicDeviceManager.shared
     @State private var isHoveringDownload = false
     @State private var isHoveringHotkey = false
     @State private var isHoveringPerformance = false
@@ -122,6 +123,53 @@ struct AirboardPopover: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
+
+                // Microphone picker
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.teal.opacity(0.1))
+                            .frame(width: 32, height: 32)
+
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Color.teal)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Microphone")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.primary)
+
+                        Text(micManager.activeMicName)
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Menu {
+                        ForEach(micManager.inputDevices) { device in
+                            Button(action: { micManager.selectMic(uid: device.uid) }) {
+                                if micManager.resolvedSelectionUID == device.uid {
+                                    Label(device.name, systemImage: "checkmark")
+                                } else {
+                                    Text(device.name)
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .onAppear { micManager.refreshDevices() }
 
                 // Hotkey Settings Button
                 Button(action: onOpenHotkeySettings) {
