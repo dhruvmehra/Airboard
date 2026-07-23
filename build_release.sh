@@ -69,8 +69,10 @@ DMG_NAME="${APP_NAME}-${VERSION}.dmg"
 echo -e "${GREEN}🚀 Releasing ${APP_NAME} ${VERSION}${NC} (last tag: ${LAST_TAG:-none})"
 
 # --- Stamp version into project + changelog ----------------------------------
-echo -e "${BLUE}🏷  Step 1: Set MARKETING_VERSION = ${VERSION}${NC}"
+echo -e "${BLUE}🏷  Step 1: Set MARKETING_VERSION and CURRENT_PROJECT_VERSION = ${VERSION}${NC}"
 sed -i '' "s/MARKETING_VERSION = [0-9.]*;/MARKETING_VERSION = ${VERSION};/g" "$PBXPROJ"
+# Sparkle compares CFBundleVersion — it must advance every release.
+sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9.]*;/CURRENT_PROJECT_VERSION = ${VERSION};/g" "$PBXPROJ"
 
 echo -e "${BLUE}📝 Step 2: Promote CHANGELOG [Unreleased] -> ${VERSION}${NC}"
 if ! grep -q "^## \[Unreleased\]" "$CHANGELOG"; then
@@ -83,6 +85,9 @@ awk -v ver="$VERSION" -v date="$TODAY" '
     /^## \[Unreleased\]/ { print; print ""; print "## [" ver "] - " date; next }
     { print }
 ' "$CHANGELOG" > "${CHANGELOG}.tmp" && mv "${CHANGELOG}.tmp" "$CHANGELOG"
+
+# Extract this version's section from the changelog as the release notes
+NOTES=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" "$CHANGELOG")
 
 # --- Build --------------------------------------------------------------------
 echo -e "${BLUE}🔨 Step 3: Build (Release, universal)${NC}"
@@ -135,17 +140,44 @@ echo -e "${BLUE}📎 Step 7: Staple${NC}"
 xcrun stapler staple "${RELEASE_DIR}/${DMG_NAME}"
 rm -rf "${RELEASE_DIR}/${APP_NAME}.app"
 
+echo -e "${BLUE}📡 Step 7b: Sign update and append appcast item${NC}"
+SIGN_UPDATE=$(find "${BUILD_DIR}/SourcePackages/artifacts" build/DerivedData/SourcePackages/artifacts -name sign_update -type f 2>/dev/null | head -1)
+if [ -z "$SIGN_UPDATE" ]; then
+    echo -e "${RED}❌ sign_update not found. Build once in Xcode (resolves Sparkle artifacts) or: brew install --cask sparkle${NC}"
+    exit 1
+fi
+
+# Outputs: sparkle:edSignature="..." length="..."
+ED_ATTRIBUTES=$("$SIGN_UPDATE" "${RELEASE_DIR}/${DMG_NAME}" | tr -d '\n')
+PUB_DATE=$(date -u "+%a, %d %b %Y %H:%M:%S +0000")
+
+ITEM=$(cat <<ITEM_EOF
+        <item>
+            <title>Version ${VERSION}</title>
+            <pubDate>${PUB_DATE}</pubDate>
+            <sparkle:version>${VERSION}</sparkle:version>
+            <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<pre>
+${NOTES}
+</pre>]]></description>
+            <enclosure url="https://github.com/dhruvmehra/Airboard/releases/download/v${VERSION}/${DMG_NAME}" ${ED_ATTRIBUTES} type="application/octet-stream"/>
+        </item>
+ITEM_EOF
+)
+
+# Newest item goes directly after the <language> line
+awk -v item="$ITEM" '{print} /<language>en<\/language>/{print item}' appcast.xml > appcast.xml.tmp && mv appcast.xml.tmp appcast.xml
+echo -e "${GREEN}✅ appcast.xml updated${NC}"
+
 # --- Commit + tag (only after everything above succeeded) ---------------------
 echo -e "${BLUE}🏁 Step 8: Commit and tag v${VERSION}${NC}"
-git add "$PBXPROJ" "$CHANGELOG"
+git add "$PBXPROJ" "$CHANGELOG" appcast.xml
 git commit -m "Release ${VERSION}"
 git tag "v${VERSION}"
 
 # --- Publish -------------------------------------------------------------
 echo -e "${BLUE}🌐 Step 9: Push and publish GitHub release${NC}"
-# Extract this version's section from the changelog as the release notes
-NOTES=$(awk "/^## \[${VERSION}\]/{flag=1; next} /^## \[/{flag=0} flag" "$CHANGELOG")
-
 git push origin main --tags
 
 if command -v gh >/dev/null 2>&1; then
