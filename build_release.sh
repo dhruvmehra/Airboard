@@ -148,7 +148,15 @@ if [ -z "$SIGN_UPDATE" ]; then
 fi
 
 # Outputs: sparkle:edSignature="..." length="..."
-ED_ATTRIBUTES=$("$SIGN_UPDATE" "${RELEASE_DIR}/${DMG_NAME}" | tr -d '\n')
+ED_ATTRIBUTES=$("$SIGN_UPDATE" "${RELEASE_DIR}/${DMG_NAME}") || {
+    echo -e "${RED}❌ sign_update failed — refusing to publish an unsigned appcast item${NC}"
+    exit 1
+}
+ED_ATTRIBUTES=$(printf '%s' "$ED_ATTRIBUTES" | tr -d '\n')
+if [ -z "$ED_ATTRIBUTES" ]; then
+    echo -e "${RED}❌ sign_update produced no signature — aborting${NC}"
+    exit 1
+fi
 PUB_DATE=$(date -u "+%a, %d %b %Y %H:%M:%S +0000")
 
 ITEM=$(cat <<ITEM_EOF
@@ -187,6 +195,8 @@ if command -v gh >/dev/null 2>&1; then
 else
     echo "gh CLI not found — create the release manually:"
     echo "  gh release create v${VERSION} ${RELEASE_DIR}/${DMG_NAME} --title \"${APP_NAME} ${VERSION}\""
+    echo -e "${RED}❌ gh CLI not found. appcast.xml was already pushed and now references a release asset that does not exist yet. Run the command above to create it manually, or the update feed will be broken.${NC}"
+    exit 1
 fi
 
 DMG_SIZE=$(du -h "${RELEASE_DIR}/${DMG_NAME}" | cut -f1)
