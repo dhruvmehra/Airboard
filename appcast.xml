@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.sparkle-project.org/xml/rss" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>Airboard</title>
+        <link>https://github.com/dhruvmehra/Airboard</link>
+        <description>Airboard updates</description>
+        <language>en</language>
+    </channel>
+</rss>
