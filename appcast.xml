@@ -6,6 +6,19 @@
         <description>Airboard updates</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.5</title>
+            <pubDate>Thu, 23 Jul 2026 20:23:19 +0000</pubDate>
+            <sparkle:version>1.0.5</sparkle:version>
+            <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<pre>
+
+### Fixed
+- Released builds could not access the microphone (no permission prompt, no entry in System Settings): the release pipeline's re-signing step was stripping the app's entitlements. Affected 1.0.2–1.0.4; the pipeline now verifies entitlements and signature instead of re-signing
+</pre>]]></description>
+            <enclosure url="https://github.com/dhruvmehra/Airboard/releases/download/v1.0.5/Airboard-1.0.5.dmg" sparkle:edSignature="lPBpZXB2M6BYkGgFcI0vFvmvCDMk5sCgihFyTj+6p8boq5qsVJDSbHmrVmApZ0Hr8UofULtJq6/TAP0Et7fHCQ==" length="8582230" type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Version 1.0.4</title>
             <pubDate>Thu, 23 Jul 2026 19:36:30 +0000</pubDate>
             <sparkle:version>1.0.4</sparkle:version>

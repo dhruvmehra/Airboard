@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-07-24
+
 ### Fixed
 - Released builds could not access the microphone (no permission prompt, no entry in System Settings): the release pipeline's re-signing step was stripping the app's entitlements. Affected 1.0.2–1.0.4; the pipeline now verifies entitlements and signature instead of re-signing
 
