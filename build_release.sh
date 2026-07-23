@@ -94,16 +94,26 @@ echo -e "${BLUE}🔨 Step 3: Build (Release, universal)${NC}"
 rm -rf "${BUILD_DIR}" "${RELEASE_DIR}"
 mkdir -p "${RELEASE_DIR}"
 
+# Archive + export is Apple's canonical Developer ID distribution path: it
+# signs with secure timestamps, strips the get-task-allow debug entitlement,
+# and re-signs nested code (Sparkle's helpers) with our Developer ID — a
+# plain `xcodebuild build` does none of that and notarization rejects it.
 xcodebuild -project Airboard.xcodeproj \
     -scheme Airboard \
     -configuration Release \
     -derivedDataPath "${BUILD_DIR}" \
     -destination "generic/platform=macOS" \
+    -archivePath "${BUILD_DIR}/${APP_NAME}.xcarchive" \
     ARCHS="x86_64 arm64" \
     ONLY_ACTIVE_ARCH=NO \
-    clean build
+    clean archive
 
-APP_PATH="${BUILD_DIR}/Build/Products/Release/${APP_NAME}.app"
+xcodebuild -exportArchive \
+    -archivePath "${BUILD_DIR}/${APP_NAME}.xcarchive" \
+    -exportOptionsPlist exportOptions.plist \
+    -exportPath "${BUILD_DIR}/export"
+
+APP_PATH="${BUILD_DIR}/export/${APP_NAME}.app"
 if [ ! -d "$APP_PATH" ]; then
     echo -e "${RED}❌ App not found at ${APP_PATH}${NC}"
     exit 1
@@ -123,6 +133,15 @@ if ! codesign -d --entitlements - "${RELEASE_DIR}/${APP_NAME}.app" 2>/dev/null |
 fi
 if ! codesign -dvv "${RELEASE_DIR}/${APP_NAME}.app" 2>&1 | grep -q "Developer ID Application"; then
     echo -e "${RED}❌ Built app is not Developer ID signed — check Release CODE_SIGN_IDENTITY${NC}"
+    exit 1
+fi
+# Notarization requirements Apple actually rejected us on once:
+if ! codesign -dvv "${RELEASE_DIR}/${APP_NAME}.app" 2>&1 | grep -q "Timestamp="; then
+    echo -e "${RED}❌ Signature has no secure timestamp — did the build skip archive/export?${NC}"
+    exit 1
+fi
+if codesign -d --entitlements - "${RELEASE_DIR}/${APP_NAME}.app" 2>/dev/null | grep -q "get-task-allow"; then
+    echo -e "${RED}❌ App carries the get-task-allow debug entitlement — notarization will reject it${NC}"
     exit 1
 fi
 
