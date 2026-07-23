@@ -449,16 +449,20 @@ class FloatingWindowManager: NSObject {
         let view = CleanupSettingsView()
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 440, height: 320),
-            styleMask: [.titled, .closable, .fullSizeContentView],
+            styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
         window.title = "AI Cleanup Settings"
-        // Blend the title bar into the popover-style blurred content
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.backgroundColor = .clear
-        window.contentView = NSHostingView(rootView: view)
+        // Standard opaque chrome. The previous transparent-titlebar +
+        // clear-background styling made parts of the window click-through:
+        // macOS Sonoma's click-wallpaper-to-show-desktop then hid every
+        // window when users clicked near the close button.
+        let hosting = NSHostingView(rootView: view)
+        window.contentView = hosting
+        // Size the window to the content's natural height (fields + notes
+        // vary) instead of the fixed 320pt guess.
+        window.setContentSize(hosting.fittingSize)
         window.center()
         window.isReleasedWhenClosed = false
 

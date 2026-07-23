@@ -9,7 +9,12 @@ import Foundation
 import Security
 
 enum KeychainHelper {
-    private static let service = "com.pype.airboard.cleanup"
+    /// Per-bundle service name: dev and prod are signed with different
+    /// certificates, so a shared Keychain item triggers macOS ACL prompts
+    /// when the "other" app reads it. Separate items = no prompts, and each
+    /// app manages its own key. (prod: com.pype.airboard.cleanup,
+    /// dev: com.pype.airboard.dev.cleanup)
+    private static let service = (Bundle.main.bundleIdentifier ?? "com.pype.airboard") + ".cleanup"
     private static let account = "apiKey"
 
     static func saveAPIKey(_ key: String) {

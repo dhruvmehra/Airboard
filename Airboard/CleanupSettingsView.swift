@@ -146,9 +146,6 @@ struct CleanupSettingsView: View {
                 .padding(.vertical, 10)
         }
         .frame(width: 440)
-        .background(
-            VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
-        )
     }
 }
 

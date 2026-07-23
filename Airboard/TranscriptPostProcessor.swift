@@ -28,9 +28,11 @@ enum TranscriptPostProcessor {
     /// round-trip ~0.5s.)
     static let llmMinimumWords = 6
 
-    /// Absent key = enabled (default on).
+    /// Absent key = disabled. Default OFF: a fresh install has no server
+    /// configured, and an on-looking toggle for a feature that silently does
+    /// nothing misleads users. Flipping it on with no server opens setup.
     static var aiCleanupEnabled: Bool {
-        UserDefaults.standard.object(forKey: "aiCleanupEnabled") as? Bool ?? true
+        UserDefaults.standard.object(forKey: "aiCleanupEnabled") as? Bool ?? false
     }
 
     static func process(_ text: String, context: AppContext?, mode: ProcessingMode) async -> String {

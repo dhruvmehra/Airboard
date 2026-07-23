@@ -20,7 +20,7 @@ struct AirboardPopover: View {
     let onCheckForUpdates: () -> Void
     let onDismiss: () -> Void
 
-    @AppStorage("aiCleanupEnabled") private var aiCleanupEnabled = true
+    @AppStorage("aiCleanupEnabled") private var aiCleanupEnabled = false
     @State private var isHoveringDownload = false
     @State private var isHoveringHotkey = false
     @State private var isHoveringPerformance = false

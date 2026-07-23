@@ -121,5 +121,5 @@ No XCTest target exists. Testing is manual: build, grant permissions, and dictat
 
 - `primaryHotkey`, `commandModifierHotkey` — hotkey configuration
 - `hasCompletedSetup` — first-run setup completion flag
-- `aiCleanupEnabled` — AI cleanup toggle (default true; no effect until a server is configured)
-- `cleanupServerURL`, `cleanupModelName` — cleanup endpoint config (API key lives in the Keychain, service `com.pype.airboard.cleanup`)
+- `aiCleanupEnabled` — AI cleanup toggle (default false; turning it on with no server configured opens the setup window)
+- `cleanupServerURL`, `cleanupModelName` — cleanup endpoint config (API key lives in the Keychain, service `<bundle id>.cleanup` — dev and prod have separate entries)
