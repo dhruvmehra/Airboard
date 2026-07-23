@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-07-24
+
 ### Added
 - MIT LICENSE file (the README already claimed MIT; now it's true)
 - Automatic updates (Sparkle): the app checks at launch and daily, downloads in the background, and installs on quit. "Check for Updates" available in the menu popover
