@@ -9,6 +9,7 @@ A lightweight macOS voice transcription app. Press a hotkey, speak, and your wor
 - **🗣️ Voice commands**: Open apps/websites, web search, system controls, timers (hold hotkey + ⌘)
 - **🙌 Hands-free mode**: Double-tap the hotkey for continuous dictation
 - **📱 Context-aware**: Adapts to the active app (email, code, messaging, docs)
+- **🎤 Pick your mic**: choose which microphone Airboard records from — remembered per headset, so connecting Bluetooth earphones never silently downgrades your transcription quality
 - **✨ Auto-insert**: Text appears directly where your cursor is, via the Accessibility API
 - **🔄 Auto-updates**: production builds keep themselves current in the background (Sparkle; updates are EdDSA-signed and notarized)
 - **🪄 AI cleanup (optional)**: point Airboard at any OpenAI-compatible endpoint — your own Ollama, a team server, or a cloud API — and dictation comes back with grammar fixed, paragraphs added, and spoken points formatted as bullet/numbered lists. Does nothing until you configure a server; filler words ("um", "uh") are always removed locally either way. See [docs/cleanup-server-recipes.md](docs/cleanup-server-recipes.md).

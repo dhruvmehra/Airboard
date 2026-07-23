@@ -87,7 +87,7 @@ HotkeyManager (detects key press)
 | Area | Key Files |
 |------|-----------|
 | Entry point | `AirboardApp.swift` (AppDelegate-based) |
-| Audio capture | `AudioRecorder.swift`, `ChunkedAudioRecorder.swift` |
+| Audio capture | `AudioRecorder.swift`, `ChunkedAudioRecorder.swift` (policy) on `MicCaptureEngine.swift` (device-pinned capture); `MicDeviceManager.swift` (device list + per-device rules) |
 | ML inference | `ParakeetTranscriptionService.swift` |
 | Orchestration | `TranscriptionCoordinator.swift` |
 | Input handling | `HotkeyManager.swift` |
@@ -123,3 +123,4 @@ No XCTest target exists. Testing is manual: build, grant permissions, and dictat
 - `hasCompletedSetup` — first-run setup completion flag
 - `aiCleanupEnabled` — AI cleanup toggle (default false; turning it on with no server configured opens the setup window)
 - `cleanupServerURL`, `cleanupModelName` — cleanup endpoint config (API key lives in the Keychain, service `<bundle id>.cleanup` — dev and prod have separate entries)
+- `micRuleByDevice` — per-external-device mic choice (externalDeviceUID → chosenMicUID); no rule = system default

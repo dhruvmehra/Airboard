@@ -8,6 +8,9 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+### Added
+- Microphone selection with per-device memory: pick which mic Airboard uses from the menu popover; the choice is remembered for each connected headset (e.g. keep using the MacBook mic when Bluetooth earphones connect)
+
 ## [1.0.6] - 2026-07-24
 
 ### Changed
