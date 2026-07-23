@@ -10,6 +10,7 @@ promotes that section to the released version automatically.
 
 ### Added
 - MIT LICENSE file (the README already claimed MIT; now it's true)
+- Automatic updates (Sparkle): the app checks at launch and daily, downloads in the background, and installs on quit. "Check for Updates" available in the menu popover
 
 ### Changed
 - AI cleanup now runs on dictations of 6+ words (was 12) — fast providers like Cerebras made the round-trip imperceptible

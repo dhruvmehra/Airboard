@@ -28,6 +28,8 @@ Airboard (formerly "Murmur") is a macOS voice transcription app. Users press a h
 builds/signs/notarizes the DMG, then commits and tags `vX.Y.Z`. Afterwards:
 `git push origin main --tags`.
 
+Each release also signs the DMG with the Sparkle EdDSA key (login Keychain of the publishing Mac) and appends a signed item to `appcast.xml`, which ships in the release commit. Installed production apps poll that feed and update automatically; dev builds never check.
+
 ## Versioning & Changelog
 
 - Version source of truth: git tags (`vX.Y.Z`). The release script derives the
@@ -40,6 +42,7 @@ builds/signs/notarizes the DMG, then commits and tags `vX.Y.Z`. Afterwards:
 | Package | Purpose |
 |---------|---------|
 | FluidAudio (pinned to 0.15.5) | Local speech-to-text (Parakeet TDT 0.6B v3, CoreML) |
+| Sparkle (pinned to 2.9.4) | Auto-update (appcast.xml at repo root, served raw) |
 
 Model auto-downloads on first run (version defined in `ParakeetTranscriptionService.modelVersion`); cache path is printed at launch (`AsrModels.defaultCacheDirectory`).
 
@@ -88,6 +91,7 @@ HotkeyManager (detects key press)
 | Settings | `MenuBarManager.swift`, `HotkeySettingsView.swift` |
 | Post-processing | `TranscriptPostProcessor.swift` (orchestrator), `FillerRules.swift`, `TranscriptRefiner.swift` (OpenAI-compatible HTTP client), `CleanupSettingsView.swift`, `KeychainHelper.swift` |
 | Diagnostics | `PerformanceMonitor.swift`, `PerformanceView.swift`, `FeedbackManager.swift` |
+| Updates | `UpdaterManager.swift` (Sparkle; production bundle only) |
 
 ### Key Enums/Types
 
