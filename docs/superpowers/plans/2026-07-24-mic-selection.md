@@ -252,20 +252,7 @@ final class MicDeviceManager: ObservableObject {
 Run: `xcodebuild -project Airboard.xcodeproj -scheme Airboard -configuration Debug -derivedDataPath ./build/DerivedData build 2>&1 | tail -5`
 Expected: `** BUILD SUCCEEDED **`
 
-- [ ] **Step 3: Scratch check — enumeration and rule resolution on this Mac**
-
-Copy the whole file into `/tmp/micmgr_check.swift`, delete the `import Combine` line, change `final class MicDeviceManager: ObservableObject` to `final class MicDeviceManager`, delete the `@Published` attribute and the `objectWillChange.send()` line and the `installDeviceListListener()` call + method (script has no run loop), then append:
-
-```swift
-let m = MicDeviceManager.shared
-print("devices:", m.inputDevices.map { "\($0.name) ext=\($0.isExternal) uid=\($0.uid)" })
-print("default input id:", MicDeviceManager.systemDefaultInputDeviceID() ?? 0)
-print("resolved (should be nil unless a rule exists):", m.resolvedSelectionUID ?? "nil")
-print("activeMicName:", m.activeMicName)
-```
-
-Run: `swift /tmp/micmgr_check.swift`
-Expected: at least one device listed (the MacBook microphone, `ext=false`); default input id non-zero; resolved `nil` (no rules in the scratch defaults domain); activeMicName contains a real device name. Record the output in your report. (The scratch script uses the `swift` binary's own defaults domain — the app's settings are untouched.)
+- [ ] **Step 3: SKIPPED — scratch verification waived by the user; behavior is verified manually in the dev build (Task 7 checklist). The build is this task's only gate.**
 
 - [ ] **Step 4: Commit**
 
@@ -459,27 +446,7 @@ nonisolated final class MicCaptureEngine {
 Run: `xcodebuild -project Airboard.xcodeproj -scheme Airboard -configuration Debug -derivedDataPath ./build/DerivedData build 2>&1 | tail -8`
 Expected: `** BUILD SUCCEEDED **`. If the compiler rejects `nonisolated` on the class declaration in this project's Swift mode, the accepted adaptation is: remove `nonisolated` from the class and instead ensure every member the tap closure touches (`handle`, `currentPowerDb`, the lock and its state) is marked `nonisolated`. The invariant that must hold: **the tap closure compiles and runs without any main-actor hop**.
 
-- [ ] **Step 3: Scratch check — capture, rotate, format**
-
-Concatenate the file into `/tmp/engine_check.swift` (strip nothing) and append:
-
-```swift
-let engine = MicCaptureEngine()
-engine.prepare()
-let url1 = URL(fileURLWithPath: "/tmp/mic_check_1.wav")
-let url2 = URL(fileURLWithPath: "/tmp/mic_check_2.wav")
-try engine.start(deviceID: nil, fileURL: url1)
-Thread.sleep(forTimeInterval: 2.0)
-let finished = engine.rotate(to: url2)
-print("rotated, finished:", finished?.lastPathComponent ?? "nil")
-Thread.sleep(forTimeInterval: 2.0)
-let last = engine.stop()
-print("stopped, last:", last?.lastPathComponent ?? "nil")
-```
-
-Run: `swift /tmp/engine_check.swift && afinfo /tmp/mic_check_1.wav | grep -E "data format|duration" && afinfo /tmp/mic_check_2.wav | grep -E "data format|duration"`
-Expected: `rotated, finished: mic_check_1.wav`, `stopped, last: mic_check_2.wav`; both files report `16000 Hz, Int16, mono` (afinfo shows `1 ch, 16000 Hz, 'lpcm' ... 16-bit`) and ~2s duration each.
-**TCC fallback:** if the agent shell lacks microphone permission, capture may be silent or `engine.start` may fail. In that case verify what you can (file existence, format via afinfo, rotation return values if start succeeded) and state plainly in your report that audible capture was NOT verified in scratch — it gets verified in the app in Task 7. Do not fake a pass. Clean up: `rm -f /tmp/mic_check_*.wav /tmp/engine_check.swift`.
+- [ ] **Step 3: SKIPPED — scratch verification waived by the user; capture/rotation/format are verified manually in the dev build (Task 7 checklist). The build is this task's only gate.**
 
 - [ ] **Step 4: Commit**
 
