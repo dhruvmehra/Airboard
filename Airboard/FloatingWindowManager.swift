@@ -290,9 +290,13 @@ class FloatingWindowManager: NSObject {
         )
         
         let popoverWidth: CGFloat = 280
-        let popoverHeight: CGFloat = 310
-        
+
         let hostingView = NSHostingView(rootView: popoverView)
+        // Size to the content's natural height so the popover fits whatever
+        // rows are present (the production build has an extra "Check for
+        // Updates" row that the dev build hides).
+        hostingView.frame.size.width = popoverWidth
+        let popoverHeight = hostingView.fittingSize.height
         hostingView.frame = NSRect(x: 0, y: 0, width: popoverWidth, height: popoverHeight)
         
         let window = NSPanel(

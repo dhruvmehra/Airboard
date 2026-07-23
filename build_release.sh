@@ -191,7 +191,11 @@ git push origin main --tags
 if command -v gh >/dev/null 2>&1; then
     gh release create "v${VERSION}" "${RELEASE_DIR}/${DMG_NAME}" \
         --title "${APP_NAME} ${VERSION}" \
-        --notes "${NOTES}"
+        --notes "${NOTES}" || {
+        echo -e "${RED}❌ gh release create failed. The appcast is already pushed and points at this asset — upload it manually:${NC}"
+        echo "  gh release create v${VERSION} ${RELEASE_DIR}/${DMG_NAME} --title \"${APP_NAME} ${VERSION}\""
+        exit 1
+    }
 else
     echo "gh CLI not found — create the release manually:"
     echo "  gh release create v${VERSION} ${RELEASE_DIR}/${DMG_NAME} --title \"${APP_NAME} ${VERSION}\""
