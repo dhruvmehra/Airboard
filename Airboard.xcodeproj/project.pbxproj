@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		FA1DA0D10000000000000003 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = FA1DA0D10000000000000002 /* FluidAudio */; };
+		FA1DA0D30000000000000003 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = FA1DA0D30000000000000002 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FA1DA0D10000000000000003 /* FluidAudio in Frameworks */,
+				FA1DA0D30000000000000003 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +86,7 @@
 			name = Airboard;
 			packageProductDependencies = (
 				FA1DA0D10000000000000002 /* FluidAudio */,
+				FA1DA0D30000000000000002 /* Sparkle */,
 			);
 			productName = murmur;
 			productReference = CC26B7F92EDCD31800B10FA0 /* Airboard.app */;
@@ -115,6 +118,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				FA1DA0D10000000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */,
+				FA1DA0D30000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CC26B7FA2EDCD31800B10FA0 /* Products */;
@@ -396,6 +400,14 @@
 				version = 0.15.5;
 			};
 		};
+		FA1DA0D30000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = exactVersion;
+				version = 2.9.4;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -403,6 +415,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FA1DA0D10000000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */;
 			productName = FluidAudio;
+		};
+		FA1DA0D30000000000000002 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA1DA0D30000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
