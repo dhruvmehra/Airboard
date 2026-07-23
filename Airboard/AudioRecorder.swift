@@ -3,140 +3,68 @@ import AVFoundation
 import Combine
 
 class AudioRecorder: ObservableObject {
-    private var audioRecorder: AVAudioRecorder?
+    private let captureEngine = MicCaptureEngine()
     private var recordingStartTime: Date?
-
-    // A recorder primed ahead of time so record() starts with minimal latency.
-    // Creating + preparing an AVAudioRecorder on demand costs 100-300ms of mic
-    // spin-up, which clipped the first word of speech.
-    private var preparedRecorder: AVAudioRecorder?
-    private var preparedURL: URL?
-
-    private static let recordingSettings: [String: Any] = [
-        AVFormatIDKey: Int(kAudioFormatLinearPCM),
-        AVSampleRateKey: 16000.0,
-        AVNumberOfChannelsKey: 1,  // Mono
-        AVLinearPCMBitDepthKey: 16,
-        AVLinearPCMIsFloatKey: false,
-        AVLinearPCMIsBigEndianKey: false,
-        AVLinearPCMIsNonInterleaved: false
-    ]
 
     @Published var isRecording = false
     @Published var recordingURL: URL?
 
     init() {
-        setupAudioSession()
-        prepareNextRecorder()
+        // Warm the engine so startRecording() is fast at hotkey time
+        // (replaces the old pre-prepared AVAudioRecorder trick).
+        captureEngine.prepare()
     }
 
-    private func prepareNextRecorder() {
+    func startRecording() {
+        guard !isRecording else { return }
+
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("recording_\(Date().timeIntervalSince1970).wav")
-        do {
-            let recorder = try AVAudioRecorder(url: url, settings: Self.recordingSettings)
-            recorder.prepareToRecord()
-            preparedRecorder = recorder
-            preparedURL = url
-        } catch {
-            print("⚠️ Failed to pre-prepare recorder: \(error.localizedDescription)")
-            preparedRecorder = nil
-            preparedURL = nil
-        }
-    }
-    
-    private func setupAudioSession() {
-        #if os(macOS)
-        print("✅ macOS - using AVAudioRecorder with post-processing")
-        #else
-        let audioSession = AVAudioSession.sharedInstance()
-        do {
-            // iOS: Enable noise cancellation
-            try audioSession.setCategory(.record, mode: .measurement, options: [])
-            try audioSession.setActive(true)
-            print("✅ Audio session configured with noise suppression")
-        } catch {
-            print("❌ Audio session setup failed: \(error.localizedDescription)")
-        }
-        #endif
-    }
-    
-    func startRecording() {
-        // Use the pre-prepared recorder for instant start; fall back to inline creation
-        if preparedRecorder == nil {
-            prepareNextRecorder()
-        }
-        guard let recorder = preparedRecorder, let url = preparedURL else {
-            print("❌ No recorder available")
-            return
-        }
-        preparedRecorder = nil
-        preparedURL = nil
+        let deviceID = MicDeviceManager.shared.resolveActiveDeviceID()
 
-        audioRecorder = recorder
-        let success = recorder.record()
-        if success {
+        do {
+            try captureEngine.start(deviceID: deviceID, fileURL: url)
             isRecording = true
             recordingURL = url
             recordingStartTime = Date()
-            print("🎙️ Recording started: \(url)")
-        } else {
-            print("❌ Recording failed to start")
+            print("🎙️ Recording started (\(MicDeviceManager.shared.activeMicName)): \(url.lastPathComponent)")
+        } catch {
+            print("❌ Recording failed to start: \(error.localizedDescription)")
         }
     }
-    
+
     func stopRecording() {
-        audioRecorder?.stop()
-
-        // CRITICAL: Give AVAudioRecorder time to finalize the file
-        // Without this, the file may not be fully written when the speech model tries to read it
-        Thread.sleep(forTimeInterval: 0.1)
-
+        guard isRecording else { return }
+        let finishedURL = captureEngine.stop()
         isRecording = false
 
-        let duration: TimeInterval
         if let startTime = recordingStartTime {
-            duration = Date().timeIntervalSince(startTime)
+            let duration = Date().timeIntervalSince(startTime)
             print("⏱️ Recording duration: \(String(format: "%.2f", duration))s")
-        } else {
-            duration = 0
         }
-
-        if let url = recordingURL {
-            do {
-                let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
-                if let fileSize = attributes[.size] as? Int64 {
-                    let sizeKB = Double(fileSize) / 1024.0
-                    print("📊 Recording size: \(String(format: "%.1f", sizeKB))KB")
-
-                    if fileSize >= 1000 {
-                        // Apply audio processing on macOS (post-processing)
-                        normalizeRecordedAudio(url: url)
-                    } else {
-                        print("⚠️ Recording too small - likely invalid")
-                    }
-                }
-            } catch {
-                print("⚠️ Could not verify recording file: \(error.localizedDescription)")
-            }
-
-            print("🎙️ Recording stopped: \(url.path)")
-        } else {
-            print("⚠️ No recording URL available")
-        }
-
         recordingStartTime = nil
 
-        #if !os(macOS)
-        do {
-            try AVAudioSession.sharedInstance().setActive(false)
-        } catch {
-            print("⚠️ Failed to deactivate audio session: \(error.localizedDescription)")
+        guard let url = finishedURL else {
+            print("⚠️ No recording URL available")
+            return
         }
-        #endif
+        recordingURL = url
 
-        // Prime the next recorder so the next dictation starts instantly
-        prepareNextRecorder()
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            if let fileSize = attributes[.size] as? Int64 {
+                let sizeKB = Double(fileSize) / 1024.0
+                print("📊 Recording size: \(String(format: "%.1f", sizeKB))KB")
+                if fileSize >= 1000 {
+                    normalizeRecordedAudio(url: url)
+                } else {
+                    print("⚠️ Recording too small - likely invalid")
+                }
+            }
+        } catch {
+            print("⚠️ Could not verify recording file: \(error.localizedDescription)")
+        }
+        print("🎙️ Recording stopped: \(url.path)")
     }
 
     /// Process audio for better speech recognition
