@@ -10,6 +10,13 @@ Airboard (formerly "Murmur") is a macOS voice transcription app. Users press a h
 
 - Open `Airboard.xcodeproj` in Xcode and build with Cmd+R
 - Minimum deployment target: macOS 14.0
+- **Signing discipline (do not break this):** Debug (`com.pype.airboard.dev`) signs with
+  Apple Development; Release (`com.pype.airboard`) signs with Developer ID Application
+  (manual style). Never launch a prod-bundle-id app signed with the dev cert — macOS
+  TCC records permission grants against the code signature, and a mismatched signature
+  silently poisons Microphone/Accessibility grants for the real app (fix:
+  `tccutil reset Microphone com.pype.airboard`). Test builds that must run the prod
+  bundle id must be built in the Release configuration so they carry the correct cert.
 - Swift 5.0, universal binary (x86_64 + arm64)
 - Dependencies managed via Swift Package Manager (configured in the Xcode project, no standalone Package.swift)
 
