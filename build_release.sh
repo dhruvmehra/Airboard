@@ -174,8 +174,25 @@ ${NOTES}
 ITEM_EOF
 )
 
-# Newest item goes directly after the <language> line
-awk -v item="$ITEM" '{print} /<language>en<\/language>/{print item}' appcast.xml > appcast.xml.tmp && mv appcast.xml.tmp appcast.xml
+# Newest item goes directly after the <language> line. The item is
+# multi-line, so it CANNOT go through `awk -v` (awk rejects newlines in a
+# -v value) — read it from a file with getline instead. No `&&` before the
+# redirect either, so `set -e` actually catches an awk failure.
+ITEM_FILE=$(mktemp)
+printf '%s\n' "$ITEM" > "$ITEM_FILE"
+awk -v itemfile="$ITEM_FILE" '
+    { print }
+    /<language>en<\/language>/ { while ((getline line < itemfile) > 0) print line; close(itemfile) }
+' appcast.xml > appcast.xml.tmp
+mv appcast.xml.tmp appcast.xml
+rm -f "$ITEM_FILE"
+
+# Verify the item actually landed — the previous awk-based approach failed
+# silently and shipped an empty feed.
+if ! grep -q "<sparkle:version>${VERSION}</sparkle:version>" appcast.xml; then
+    echo -e "${RED}❌ appcast.xml did not gain the ${VERSION} item — aborting${NC}"
+    exit 1
+fi
 echo -e "${GREEN}✅ appcast.xml updated${NC}"
 
 # --- Commit + tag (only after everything above succeeded) ---------------------

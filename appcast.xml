@@ -5,5 +5,23 @@
         <link>https://github.com/dhruvmehra/Airboard</link>
         <description>Airboard updates</description>
         <language>en</language>
+        <item>
+            <title>Version 1.0.4</title>
+            <pubDate>Thu, 23 Jul 2026 19:36:30 +0000</pubDate>
+            <sparkle:version>1.0.4</sparkle:version>
+            <sparkle:shortVersionString>1.0.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<pre>
+
+### Added
+- MIT LICENSE file (the README already claimed MIT; now it's true)
+- Automatic updates (Sparkle): the app checks at launch and daily, downloads in the background, and installs on quit. "Check for Updates" available in the menu popover
+
+### Changed
+- AI cleanup now runs on dictations of 6+ words (was 12) — fast providers like Cerebras made the round-trip imperceptible
+- Performance metrics measure transcription time only, no longer including the AI cleanup round-trip
+</pre>]]></description>
+            <enclosure url="https://github.com/dhruvmehra/Airboard/releases/download/v1.0.4/Airboard-1.0.4.dmg" sparkle:edSignature="mB4uL63A8pbXV7WgwxWnX03bxmoHvcr35VcRc+1OTcdh0qSk0wi8P6FaJZOUqp++mIatPIQyiwnzT7W4wSLjAw==" length="13576343" type="application/octet-stream"/>
+        </item>
     </channel>
 </rss>
