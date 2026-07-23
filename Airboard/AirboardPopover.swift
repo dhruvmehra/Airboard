@@ -93,7 +93,7 @@ struct AirboardPopover: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.primary)
 
-                        Text("Grammar, paragraphs, lists")
+                        Text("Grammar")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
