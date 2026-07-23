@@ -78,7 +78,16 @@ nonisolated final class MicCaptureEngine {
             self?.handle(buffer: buffer)
         }
 
-        try engine.start()
+        do {
+            try engine.start()
+        } catch {
+            inputNode.removeTap(onBus: 0)
+            stateLock.lock()
+            converter = nil
+            file = nil
+            stateLock.unlock()
+            throw error
+        }
 
         stateLock.lock()
         isRunning = true
@@ -127,11 +136,24 @@ nonisolated final class MicCaptureEngine {
     /// Swap output files mid-capture (hands-free chunk rotation).
     /// Returns the finished file's URL. Capture continues without a gap.
     func rotate(to newURL: URL) -> URL? {
-        stateLock.lock(); defer { stateLock.unlock() }
-        let finished = file?.url
-        file = nil  // AVAudioFile finalizes on dealloc
-        file = try? AVAudioFile(forWriting: newURL, settings: targetFormat.settings,
-                                commonFormat: .pcmFormatInt16, interleaved: true)
+        var newFile = try? AVAudioFile(forWriting: newURL, settings: targetFormat.settings,
+                                       commonFormat: .pcmFormatInt16, interleaved: true)
+        if newFile == nil {
+            newFile = try? AVAudioFile(forWriting: newURL, settings: targetFormat.settings,
+                                       commonFormat: .pcmFormatInt16, interleaved: true)
+        }
+        guard let newFile else {
+            print("❌ Chunk rotation failed: could not open \(newURL.lastPathComponent); continuing current chunk")
+            return nil
+        }
+
+        stateLock.lock()
+        let oldFile = file
+        file = newFile
+        stateLock.unlock()
+
+        let finished = oldFile?.url
+        // oldFile deallocates here, finalizing the WAV header OFF the tap's lock.
         return finished
     }
 
