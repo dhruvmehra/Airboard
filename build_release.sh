@@ -110,8 +110,21 @@ if [ ! -d "$APP_PATH" ]; then
 fi
 cp -R "$APP_PATH" "${RELEASE_DIR}/"
 
-echo -e "${BLUE}🔏 Step 4: Sign${NC}"
-codesign --deep --force --options runtime --sign "${DEVELOPER_ID}" "${RELEASE_DIR}/${APP_NAME}.app"
+echo -e "${BLUE}🔏 Step 4: Verify build signature${NC}"
+# The Release config signs with Developer ID + entitlements at build time.
+# Do NOT re-sign here: a bare `codesign --deep --force` STRIPS the
+# entitlements (hardened runtime then silently blocks the microphone — no
+# prompt, no Settings entry; this shipped broken in 1.0.2–1.0.4) and
+# clobbers Sparkle's nested helper signatures. Verify instead of re-signing.
+codesign --verify --deep --strict "${RELEASE_DIR}/${APP_NAME}.app"
+if ! codesign -d --entitlements - "${RELEASE_DIR}/${APP_NAME}.app" 2>/dev/null | grep -q "audio-input"; then
+    echo -e "${RED}❌ Built app is missing the microphone entitlement — check Release signing config${NC}"
+    exit 1
+fi
+if ! codesign -dvv "${RELEASE_DIR}/${APP_NAME}.app" 2>&1 | grep -q "Developer ID Application"; then
+    echo -e "${RED}❌ Built app is not Developer ID signed — check Release CODE_SIGN_IDENTITY${NC}"
+    exit 1
+fi
 
 echo -e "${BLUE}💾 Step 5: Create DMG${NC}"
 # Stage in a system temp dir: hdiutil's helper daemon lacks TCC access to
