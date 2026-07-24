@@ -628,6 +628,62 @@ class FloatingWindowManager: NSObject {
         }
     }
 
+    // MARK: - Memory confirm card
+
+    private var memoryConfirmWindow: NSPanel?
+
+    func showMemoryConfirm(
+        cleaned: String, heard: String, names: [String],
+        onSave: @escaping (String) -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            // Latest wins: an unanswered card is replaced (its fact drops).
+            self.memoryConfirmWindow?.close()
+            self.memoryConfirmWindow = nil
+            guard let screen = NSScreen.main else { return }
+
+            let dismiss: () -> Void = { [weak self] in
+                self?.memoryConfirmWindow?.close()
+                self?.memoryConfirmWindow = nil
+            }
+            let view = MemoryConfirmView(
+                text: cleaned,
+                onSave: { saved in dismiss(); onSave(saved) },
+                onCancel: { dismiss(); onCancel() })
+
+            let hosting = NSHostingView(rootView: view)
+            let size = hosting.fittingSize
+            let frame = NSRect(
+                x: screen.visibleFrame.midX - size.width / 2,
+                y: screen.visibleFrame.maxY - size.height - 60,
+                width: size.width, height: size.height)
+
+            // Key-accepting panel: the card takes typing. .nonactivatingPanel
+            // is deliberately NOT used here.
+            let panel = NSPanel(contentRect: frame,
+                                styleMask: [.titled, .fullSizeContentView],
+                                backing: .buffered, defer: false)
+            panel.titleVisibility = .hidden
+            panel.titlebarAppearsTransparent = true
+            panel.isOpaque = false
+            panel.backgroundColor = .clear
+            panel.level = .floating
+            panel.isMovableByWindowBackground = true
+            panel.isReleasedWhenClosed = false
+            // A confirm card has exactly two exits: Save and Cancel.
+            // Hide the traffic lights the .titled mask would show.
+            panel.standardWindowButton(.closeButton)?.isHidden = true
+            panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
+            panel.standardWindowButton(.zoomButton)?.isHidden = true
+            panel.contentView = hosting
+            self.memoryConfirmWindow = panel
+            panel.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
+
     func cleanup() {
         NotificationCenter.default.removeObserver(self)
         DispatchQueue.main.async { [weak self] in
@@ -643,6 +699,8 @@ class FloatingWindowManager: NSObject {
             self?.memoryWindow = nil
             self?.toastWindow?.close()
             self?.toastWindow = nil
+            self?.memoryConfirmWindow?.close()
+            self?.memoryConfirmWindow = nil
             self?.downloadModalWindow?.close()
             self?.downloadModalWindow = nil
             self?.floatingWindow?.orderOut(nil)

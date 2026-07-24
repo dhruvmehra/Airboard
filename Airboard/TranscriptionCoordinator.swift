@@ -457,15 +457,27 @@ class TranscriptionCoordinator: ObservableObject {
         switch memoryOutcome {
         case .notMemoryCommand:
             break  // continue to CommandDetector below
-        case .confirmFact(let cleaned, _, _):
-            // TEMPORARY (replaced by the confirmation card in the next
-            // task): store directly so the build stays green mid-plan.
-            print("🧠 Memory: remembered '\(cleaned)' (confirm card pending)")
+        case .confirmFact(let cleaned, let heard, let names):
+            print("🧠 Memory: confirming fact '\(cleaned)' (heard: '\(heard)', names: \(names))")
             await MainActor.run {
-                MemoryStore.shared.addNote(cleaned)
-                FloatingWindowManager.shared.showCommandExecuted()
-                FloatingWindowManager.shared.showToast("Remembered: \(cleaned)")
-                self.showNotification(title: "Remembered", body: cleaned)
+                FloatingWindowManager.shared.showMemoryConfirm(
+                    cleaned: cleaned, heard: heard, names: names,
+                    onSave: { savedText in
+                        let store = MemoryStore.shared
+                        store.addNote(savedText)
+                        // Edits teach: single-word substitutions become
+                        // glossary pairs ("reparty" -> "Ashish").
+                        for pair in MemoryBias.editDiffPairs(heard: heard, saved: savedText) {
+                            store.addGlossary(term: pair.term, heardAs: pair.heardAs)
+                        }
+                        // Names survive only if present in the SAVED text.
+                        store.addExtractedNames(MemoryBias.reconcile(names: names, savedText: savedText))
+                        print("🧠 Memory: stored '\(savedText)'")
+                        FloatingWindowManager.shared.showToast("Remembered: \(savedText)")
+                    },
+                    onCancel: {
+                        print("🧠 Memory: confirmation cancelled")
+                    })
             }
             return
         case .learned(let term):
