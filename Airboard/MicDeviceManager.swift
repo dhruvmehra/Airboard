@@ -185,7 +185,7 @@ final class MicDeviceManager: ObservableObject {
         return value as String
     }
 
-    static func systemDefaultInputDeviceID() -> AudioDeviceID? {
+    nonisolated static func systemDefaultInputDeviceID() -> AudioDeviceID? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDefaultInputDevice,
             mScope: kAudioObjectPropertyScopeGlobal,
