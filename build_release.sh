@@ -153,18 +153,12 @@ if codesign -d --entitlements - "${RELEASE_DIR}/${APP_NAME}.app" 2>/dev/null | g
 fi
 
 echo -e "${BLUE}💾 Step 5: Create DMG${NC}"
-# Stage in a system temp dir: hdiutil's helper daemon lacks TCC access to
-# ~/Desktop and fails with "Operation not permitted" when the source folder
-# lives there.
-DMG_STAGE=$(mktemp -d /private/tmp/airboard-dmg.XXXXXX)
-cp -R "${RELEASE_DIR}/${APP_NAME}.app" "${DMG_STAGE}/"
-ln -s /Applications "${DMG_STAGE}/Applications"
-hdiutil create -volname "${APP_NAME}" \
-    -srcfolder "${DMG_STAGE}" \
-    -ov -format UDZO \
-    "${DMG_STAGE}/${DMG_NAME}"
-mv "${DMG_STAGE}/${DMG_NAME}" "${RELEASE_DIR}/${DMG_NAME}"
-rm -rf "${DMG_STAGE}"
+# Styled installer per the design system (drop-zone background art, version
+# baked in). The helper script stages in /private/tmp (hdiutil TCC) and
+# writes the output OUTSIDE the imaged folder — the old inline block wrote
+# the DMG into its own source folder, shipping the DMG inside its own
+# volume (1.0.7's installer window).
+./scripts/make_styled_dmg.sh "${RELEASE_DIR}/${APP_NAME}.app" "${RELEASE_DIR}/${DMG_NAME}"
 
 # Sign the DMG itself (not just the app inside) so Gatekeeper reports
 # "Notarized Developer ID" on the disk image too.
