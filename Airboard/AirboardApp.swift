@@ -74,6 +74,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        // Dev and prod are DIFFERENT bundle ids so they can coexist for TCC
+        // grants — but two LIVE instances both answer the hotkey and type
+        // into the focused app, interleaving every character (field bug:
+        // "LeLt'sS sese ei fi ti tw owrokrsk s..."). Warn loudly and offer
+        // to quit the other one.
+        let ownID = Bundle.main.bundleIdentifier ?? "com.pype.airboard"
+        let siblingID = ownID == "com.pype.airboard.dev"
+            ? "com.pype.airboard" : "com.pype.airboard.dev"
+        let siblings = NSRunningApplication.runningApplications(withBundleIdentifier: siblingID)
+        if !siblings.isEmpty {
+            print("⚠️ Sibling Airboard running (\(siblingID)) — both would type!")
+            let alert = NSAlert()
+            alert.messageText = "Two Airboards are running"
+            alert.informativeText = "Another Airboard (\(siblingID)) is already running. With both alive, every dictation gets typed twice — interleaved into garbage. Quit one."
+            alert.addButton(withTitle: "Quit the Other Airboard")
+            alert.addButton(withTitle: "Keep Both (I know)")
+            NSApp.activate(ignoringOtherApps: true)
+            if alert.runModal() == .alertFirstButtonReturn {
+                siblings.forEach { $0.terminate() }
+            }
+        }
+
         UpdaterManager.shared.start()
 
         // Cleanup API keys moved from one global Keychain item to per-server
