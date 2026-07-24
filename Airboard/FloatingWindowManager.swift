@@ -574,6 +574,15 @@ class FloatingWindowManager: NSObject {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    /// The screen the user is actually working on: the one holding the
+    /// mouse pointer. NSScreen.main follows keyboard focus and lands on
+    /// the wrong display for HUDs (field bug: confirm card appeared on
+    /// another monitor while dictating into Ghostty).
+    private var activeScreen: NSScreen? {
+        let mouse = NSEvent.mouseLocation
+        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+    }
+
     // MARK: - Toast (transient feedback pill)
 
     // Memory teach/recall feedback must be VISIBLE without depending on
@@ -591,7 +600,7 @@ class FloatingWindowManager: NSObject {
     private func presentToast(_ text: String) {
         toastWindow?.close()
         toastWindow = nil
-        guard let screen = NSScreen.main else { return }
+        guard let screen = activeScreen else { return }
 
         let hosting = NSHostingView(rootView: ToastPillView(text: text))
         let size = hosting.fittingSize
@@ -642,7 +651,7 @@ class FloatingWindowManager: NSObject {
             // Latest wins: an unanswered card is replaced (its fact drops).
             self.memoryConfirmWindow?.close()
             self.memoryConfirmWindow = nil
-            guard let screen = NSScreen.main else { return }
+            guard let screen = activeScreen else { return }
 
             let dismiss: () -> Void = { [weak self] in
                 self?.memoryConfirmWindow?.close()
