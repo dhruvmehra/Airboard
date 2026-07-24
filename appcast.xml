@@ -6,6 +6,38 @@
         <description>Airboard updates</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.7</title>
+            <pubDate>Fri, 24 Jul 2026 11:55:33 +0000</pubDate>
+            <sparkle:version>1.0.7</sparkle:version>
+            <sparkle:shortVersionString>1.0.7</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<pre>
+
+### Fixed
+- Turning AI Cleanup on now opens the setup window when the API key is missing (not only when the server URL/model are empty)
+- The AI Cleanup toggle no longer stays on when cleanup can't work: it snaps back off until a valid config exists, and turns itself on when you save one
+- API keys are now stored per server: a Cerebras key is never sent to OpenRouter/Ollama when you switch providers (existing key migrates automatically)
+- Bluetooth earphones no longer drop to muffled call-quality audio when Airboard launches: the app no longer opens the default (Bluetooth) microphone at startup
+- Recording from a selected mic actually works now: the capture core was rebuilt on AVCaptureSession. The old engine's device pinning was the root cause of every mic failure to date — truncated recordings (~0.2s of audio captured regardless of how long you spoke), hangs when recording started, and the earlier deadlocks. Recording via a chosen mic also no longer touches the Bluetooth mic at all, so music stays crisp while you dictate through the MacBook mic
+- Popover logo is now the Airboard brand red (was mistakenly blue)
+- Dictating a request ("can you give me three points on…") is now always transcribed, never answered or refused by the cleanup LLM: dictation is sent as tagged material-to-edit, and any refusal the model produces anyway is discarded in favor of your own words
+- AI Cleanup settings now show the exact system prompt sent with every request — and let you edit it (auto-saves; one click restores the default)
+
+### Changed
+- AI Cleanup settings always show which server a key is saved for ("Key saved for api.cerebras.ai"), with a Remove button
+- Cerebras is the default AI Cleanup provider (preset fills gpt-oss-120b)
+
+### Changed
+- Popover polish per the Airboard design system: "AI Cleanup" title casing, Microphone row uses the semantic blue accent
+
+### Added
+- Microphone selection with per-device memory: pick which mic Airboard uses from the menu popover; the choice is remembered for each connected headset (e.g. keep using the MacBook mic when Bluetooth earphones connect)
+- New look: the entire app adopts the Airboard design system v2 "Sleek Dark" — dark-only, tokenized surfaces, blue-led actions
+- New guided onboarding for first-run setup: six steps (Welcome → The Gesture → Microphone → Accessibility → Your Hotkey → Try It), skippable at any point; existing users never see it
+</pre>]]></description>
+            <enclosure url="https://github.com/dhruvmehra/Airboard/releases/download/v1.0.7/Airboard-1.0.7.dmg" sparkle:edSignature="OE0EOVVDfl9POfvhv4FG2pEw9GSgy+trONPpklZS09fUfh8VexVV9MktJh8/wS/jpFX9uDAFiiv2Z6R4Aj6oCw==" length="8782434" type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Version 1.0.6</title>
             <pubDate>Thu, 23 Jul 2026 20:38:39 +0000</pubDate>
             <sparkle:version>1.0.6</sparkle:version>

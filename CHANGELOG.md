@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-07-24
+
 ### Fixed
 - Turning AI Cleanup on now opens the setup window when the API key is missing (not only when the server URL/model are empty)
 - The AI Cleanup toggle no longer stays on when cleanup can't work: it snaps back off until a valid config exists, and turns itself on when you save one
