@@ -603,24 +603,19 @@ struct FloatingIndicatorView: View {
                     .frame(width: 44, height: 44)
                     .offset(y: 1)
                 
-                // Main circle
+                // Main circle — HUD blur with the DS wash + hairline, mirroring
+                // the popover panel treatment (Task 2).
                 Circle()
                     .fill(.ultraThinMaterial)
+                    .overlay(Circle().fill(DS.Surface.hud))
                     .frame(width: 44, height: 44)
                     .overlay(
                         Circle()
-                            .stroke(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.2), Color.clear],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                ),
-                                lineWidth: 0.5
-                            )
+                            .stroke(DS.Surface.hudBorder, lineWidth: 1)
                     )
                     .overlay(
                         Circle()
-                            .stroke(Color.blue.opacity(isHovered ? 0.6 : 0), lineWidth: 2)
+                            .stroke(DS.Accent.primary.opacity(isHovered ? 0.6 : 0), lineWidth: 2)
                     )
                 
                 // Recording/transcribing ring
@@ -634,20 +629,20 @@ struct FloatingIndicatorView: View {
                 if isDownloading {
                     Circle()
                         .trim(from: 0, to: downloadProgress)
-                        .stroke(Color.blue, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                        .stroke(DS.Accent.download, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
                         .frame(width: 44, height: 44)
                         .rotationEffect(.degrees(-90))
                 }
-                
+
                 // Icon
                 if isDownloading {
                     VStack(spacing: 0) {
                         Image(systemName: "arrow.down")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(DS.Accent.download)
                         Text("\(Int(downloadProgress * 100))%")
-                            .font(.system(size: 8, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.blue.opacity(0.8))
+                            .font(DS.Typo.rounded(8, .semibold))
+                            .foregroundStyle(DS.Accent.download.opacity(0.8))
                     }
                     .allowsHitTesting(false)
                 } else {
@@ -693,29 +688,29 @@ struct FloatingIndicatorView: View {
     }
     
     private var iconColor: Color {
-        // Show orange warning if permissions not granted
+        // Show warning if permissions not granted
         if !SetupWindowController.shared.allPermissionsGranted {
-            return .orange
+            return DS.Accent.warning
         }
-        
+
         // Command mode - purple
         if isCommandMode && (isRecording || isTranscribing) {
-            return .purple
+            return DS.Accent.command
         }
-        
+
         // Dictation mode - red when recording
-        if isRecording { return .red }
-        if isTranscribing { return .orange }
-        
+        if isRecording { return DS.Accent.recording }
+        if isTranscribing { return DS.Accent.transcribing }
+
         // Idle
-        return .primary.opacity(0.4)
+        return DS.Label.tertiary
     }
-    
+
     private var accentColor: Color {
         if isCommandMode {
-            return .purple
+            return DS.Accent.command
         }
-        return isRecording ? .red : .orange
+        return isRecording ? DS.Accent.recording : DS.Accent.transcribing
     }
     
     private var helpText: String {
@@ -744,89 +739,97 @@ struct DownloadModalView: View {
     private var isWarmingUp: Bool { downloadState.progress >= 0.999 }
 
     var body: some View {
-        ZStack {
-            // Background blur effect
-            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                .ignoresSafeArea()
+        // Download modal is a dialog, not a floating HUD — it gets the same
+        // opaque DS.Surface.panel chrome as the other restyled windows
+        // (Tasks 3–4), not the blur treatment reserved for the popover and
+        // floating indicator.
+        VStack(spacing: 0) {
+            // Header with animated gradient — sized by its content, no clipping
+            ZStack {
+                LinearGradient(
+                    colors: [DS.Palette.blue, DS.Palette.cyan],
+                    startPoint: animateGradient ? .topLeading : .bottomTrailing,
+                    endPoint: animateGradient ? .bottomTrailing : .topLeading
+                )
+                .animation(
+                    Animation.easeInOut(duration: 3.0).repeatForever(autoreverses: true),
+                    value: animateGradient
+                )
 
-            VStack(spacing: 0) {
-                // Header with animated gradient — sized by its content, no clipping
-                ZStack {
-                    LinearGradient(
-                        colors: [
-                            Color.blue.opacity(0.8),
-                            Color.purple.opacity(0.6)
-                        ],
-                        startPoint: animateGradient ? .topLeading : .bottomTrailing,
-                        endPoint: animateGradient ? .bottomTrailing : .topLeading
-                    )
-                    .animation(
-                        Animation.easeInOut(duration: 3.0).repeatForever(autoreverses: true),
-                        value: animateGradient
-                    )
+                VStack(spacing: 10) {
+                    Image(systemName: "waveform.circle.fill")
+                        .font(.system(size: 36, weight: .light))
+                        .foregroundStyle(DS.Label.onAccent)
+                        .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
 
-                    VStack(spacing: 10) {
-                        Image(systemName: "waveform.circle.fill")
-                            .font(.system(size: 36, weight: .light))
-                            .foregroundStyle(.white)
-                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-
-                        Text(isWarmingUp ? "Almost Ready" : "Downloading Speech Model")
-                            .font(.system(size: 20, weight: .semibold, design: .rounded))
-                            .foregroundColor(.white)
-                    }
-                    .padding(.vertical, 20)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-
-                // Content area
-                VStack(spacing: 16) {
-                    Text("Airboard is completely private and works offline. The speech model is downloaded once to your Mac — after that, everything runs locally.")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .lineSpacing(4)
-                        .padding(.horizontal, 24)
-
-                    // Live progress
-                    VStack(spacing: 6) {
-                        ProgressView(value: downloadState.progress)
-                            .progressViewStyle(.linear)
-                            .tint(.blue)
-                            .padding(.horizontal, 32)
-
-                        Text(isWarmingUp
-                             ? "Preparing the model — the logo will pulse when ready"
-                             : "\(Int(downloadState.progress * 100))% · ~630 MB, one-time download")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Button(action: onDismiss) {
-                        Text("OK")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white)
-                            .frame(width: 100)
-                            .padding(.vertical, 8)
-                            .background(
-                                LinearGradient(
-                                    colors: [Color.blue, Color.blue.opacity(0.8)],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            )
-                            .cornerRadius(8)
-                    }
-                    .buttonStyle(.plain)
+                    Text(isWarmingUp ? "Almost Ready" : "Downloading Speech Model")
+                        .font(.system(size: 20, weight: .semibold, design: .rounded))
+                        .foregroundColor(DS.Label.onAccent)
                 }
                 .padding(.vertical, 20)
-                .padding(.horizontal, 20)
             }
+            .fixedSize(horizontal: false, vertical: true)
+
+            // Content area
+            VStack(spacing: 16) {
+                Text("Airboard is completely private and works offline. The speech model is downloaded once to your Mac — after that, everything runs locally.")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(DS.Label.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 24)
+
+                // Live progress
+                VStack(spacing: 6) {
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: DS.Radius.r3)
+                                .fill(DS.Fill.track)
+
+                            RoundedRectangle(cornerRadius: DS.Radius.r3)
+                                .fill(DS.Accent.primary)
+                                .frame(width: geometry.size.width * downloadState.progress)
+                        }
+                    }
+                    .frame(height: 6)
+                    .padding(.horizontal, 32)
+
+                    Text(isWarmingUp
+                         ? "Preparing the model — the logo will pulse when ready"
+                         : "\(Int(downloadState.progress * 100))% · ~630 MB, one-time download")
+                        .font(DS.Typo.rounded(12, .medium))
+                        .foregroundColor(DS.Label.secondary)
+                }
+
+                Button(action: onDismiss) {
+                    Text("OK")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(DS.Label.onAccent)
+                        .frame(width: 100)
+                        .padding(.vertical, 8)
+                        .background(
+                            LinearGradient(
+                                colors: [DS.Accent.primary, DS.Accent.primary.opacity(0.8)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .cornerRadius(DS.Radius.r8)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 20)
+            .padding(.horizontal, 20)
         }
         .frame(width: 420)
         .fixedSize(horizontal: false, vertical: true)
-        .cornerRadius(16)
+        .background(DS.Surface.panel)
+        .cornerRadius(DS.Radius.r16)
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.r16, style: .continuous)
+                .strokeBorder(DS.Border.hairline, lineWidth: 1)
+        )
         .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
         .onAppear {
             animateGradient = true
