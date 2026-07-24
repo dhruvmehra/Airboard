@@ -457,15 +457,15 @@ class TranscriptionCoordinator: ObservableObject {
         switch memoryOutcome {
         case .notMemoryCommand:
             break  // continue to CommandDetector below
-        case .remembered(let note):
-            print("🧠 Memory: remembered '\(note)'")
+        case .confirmFact(let cleaned, _, _):
+            // TEMPORARY (replaced by the confirmation card in the next
+            // task): store directly so the build stays green mid-plan.
+            print("🧠 Memory: remembered '\(cleaned)' (confirm card pending)")
             await MainActor.run {
+                MemoryStore.shared.addNote(cleaned)
                 FloatingWindowManager.shared.showCommandExecuted()
-                // Toast, not just a notification: dev builds are typically
-                // denied notification permission, which made teaching look
-                // completely dead in the field.
-                FloatingWindowManager.shared.showToast("Remembered: \(note)")
-                self.showNotification(title: "Remembered", body: note)
+                FloatingWindowManager.shared.showToast("Remembered: \(cleaned)")
+                self.showNotification(title: "Remembered", body: cleaned)
             }
             return
         case .learned(let term):

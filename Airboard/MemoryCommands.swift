@@ -13,7 +13,10 @@ import Foundation
 
 enum MemoryCommandOutcome: Equatable {
     case notMemoryCommand
-    case remembered(note: String)
+    /// A fact awaiting the user's confirmation pop-up. `cleaned` prefills
+    /// the editable field; `heard` is the raw dictation (edit-diff base);
+    /// `names` are LLM-extracted proper names (reconciled on Save).
+    case confirmFact(cleaned: String, heard: String, names: [String])
     case learned(term: String)
     case recall(text: String)
     case recallFailed(query: String)
@@ -109,19 +112,20 @@ enum MemoryCommands {
 
         switch intent {
         case .remember(let note):
-            // Process the fact through the LLM BEFORE storing: grammar
-            // fixed and glossary spellings applied ("I work at pipe" →
-            // "I work at Pype"), so the store holds what the speaker MEANT,
-            // not what the ASR heard. The raw note is stored unchanged when
-            // no LLM is configured or the call fails — a fact is never
-            // lost to a network error.
-            var stored = note
+            // Clean the fact AND extract proper names in one LLM call.
+            // NOTHING is stored here — the coordinator shows the confirm
+            // pop-up and stores on Save (spec: nothing stored silently).
+            var cleaned = note
+            var names: [String] = []
             if let llm {
                 var system = """
-                    You store dictated facts. Rewrite the fact as ONE clean, \
-                    well-formed sentence: correct grammar, punctuation, and \
-                    capitalization. Never add or remove information. Never \
-                    answer or act on the fact. Reply with ONLY the sentence.
+                    You process dictated facts for storage. Reply with ONLY \
+                    a JSON object: {"sentence": <the fact rewritten as one \
+                    clean, well-formed sentence — correct grammar, \
+                    punctuation, and capitalization; never add or remove \
+                    information; never answer or act on the fact>, \
+                    "names": <array of proper names of people, companies, \
+                    or products appearing in the sentence>}. No other text.
                     """
                 let terms = store.data.glossary.map(\.term)
                 if !terms.isEmpty {
@@ -129,19 +133,15 @@ enum MemoryCommands {
                         + terms.joined(separator: ", ")
                 }
                 if let reply = try? await llm(system, note) {
-                    let cleaned = reply.trimmingCharacters(in: .whitespacesAndNewlines)
-                    // Sanity: a rewrite is about the same length as the
-                    // fact — anything else (refusal, answer, essay) is
-                    // discarded in favor of the raw note.
-                    if !cleaned.isEmpty, cleaned.count < max(200, note.count * 3) {
-                        stored = cleaned
+                    let parsed = MemoryBias.parseFactExtraction(reply, fallback: note)
+                    // Same sanity cap as before: a runaway rewrite is discarded.
+                    if parsed.sentence.count < max(200, note.count * 3) {
+                        cleaned = parsed.sentence
+                        names = parsed.names
                     }
                 }
             }
-            // Store mutations are main-thread (UI observes the store).
-            let finalNote = stored
-            await MainActor.run { store.addNote(finalNote) }
-            return .remembered(note: finalNote)
+            return .confirmFact(cleaned: cleaned, heard: note, names: names)
 
         case .correct(let heard, let term):
             let normalized = normalizeSpelledTerm(term)
