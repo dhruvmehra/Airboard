@@ -34,6 +34,11 @@ class TranscriptionCoordinator: ObservableObject {
     @Published private(set) var lastTranscribedText: String?
     @Published private(set) var lastContext: AppContext?
 
+    // Model readiness mirrors for onboarding's Try It step (the service
+    // itself is private to the coordinator).
+    @Published private(set) var isModelReady = false
+    @Published private(set) var modelDownloadProgress: Double = 0
+
     private var hasCompletedFirstTranscription = false
 
     // Chunked recording state
@@ -77,7 +82,8 @@ class TranscriptionCoordinator: ObservableObject {
     private func setupObservers() {
         // Transcription service download progress
         transcriptionService.$downloadProgress
-            .sink { progress in
+            .sink { [weak self] progress in
+                self?.modelDownloadProgress = progress
                 FloatingWindowManager.shared.showDownloadProgress(progress: progress)
             }
             .store(in: &cancellables)
@@ -86,8 +92,9 @@ class TranscriptionCoordinator: ObservableObject {
         // download state and pulse the floating icon so the user knows it's usable.
         transcriptionService.$isModelReady
             .removeDuplicates()
-            .filter { $0 }
-            .sink { _ in
+            .sink { [weak self] ready in
+                self?.isModelReady = ready
+                guard ready else { return }
                 FloatingWindowManager.shared.hideFloatingIndicator()
                 NotificationCenter.default.post(name: .pulseFloatingIcon, object: nil)
             }
