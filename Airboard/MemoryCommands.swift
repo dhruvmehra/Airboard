@@ -144,30 +144,85 @@ enum MemoryCommands {
             return .learned(term: normalized)
 
         case .recall(let query):
-            let notes = store.memories
-            if let llm, !notes.isEmpty {
-                let system = """
-                    You recall stored facts. Given the speaker's notes and a \
-                    request, reply with ONLY the exact text to insert — the \
-                    fact itself, no preamble, no quotes, no commentary. Apply \
-                    any spellings the notes define. If no note answers the \
-                    request, reply with exactly NONE.
-                    """
-                let user = "Notes:\n" + notes.map { "- \($0)" }.joined(separator: "\n")
-                    + "\n\nRequest: \(query)"
-                if let reply = try? await llm(system, user) {
-                    let answer = reply.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !answer.isEmpty && answer.uppercased() != "NONE" {
-                        return .recall(text: answer)
-                    }
-                    return .recallFailed(query: query)
+            return await resolveRecall(query: query, store: store, llm: llm)
+        }
+    }
+
+    /// Shared recall resolution: LLM against the notes when configured,
+    /// local keyword fallback otherwise.
+    static func resolveRecall(
+        query: String,
+        store: MemoryStore,
+        llm: ((String, String) async throws -> String)?
+    ) async -> MemoryCommandOutcome {
+        let notes = store.memories
+        if let llm, !notes.isEmpty {
+            let system = """
+                You recall stored facts. Given the speaker's notes and a \
+                request, reply with ONLY the exact text to insert — the \
+                fact itself, no preamble, no quotes, no commentary. Apply \
+                any spellings the notes define. If no note answers the \
+                request, reply with exactly NONE.
+                """
+            let user = "Notes:\n" + notes.map { "- \($0)" }.joined(separator: "\n")
+                + "\n\nRequest: \(query)"
+            if let reply = try? await llm(system, user) {
+                let answer = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !answer.isEmpty && answer.uppercased() != "NONE" {
+                    return .recall(text: answer)
                 }
-                // LLM errored — fall through to the local match below.
+                return .recallFailed(query: query)
             }
-            if let localAnswer = localRecall(query: query, notes: notes) {
-                return .recall(text: localAnswer)
-            }
-            return .recallFailed(query: query)
+            // LLM errored — fall through to the local match below.
+        }
+        if let localAnswer = localRecall(query: query, notes: notes) {
+            return .recall(text: localAnswer)
+        }
+        return .recallFailed(query: query)
+    }
+
+    /// LLM interpretation of an utterance no exact pattern (and no regular
+    /// command) matched — the last resort before "Unknown Command". Any
+    /// phrasing of "save this" becomes a memory intent; the confirmation
+    /// card remains the guard against misreads.
+    static func classify(
+        text: String,
+        store: MemoryStore,
+        llm: ((String, String) async throws -> String)?
+    ) async -> MemoryCommandOutcome {
+        guard let llm else { return .notMemoryCommand }
+        let system = """
+            You classify ONE spoken command for a dictation app's memory \
+            feature. Reply with ONLY a JSON object.
+            Intents:
+            - "remember": the speaker wants something saved for later (any \
+            phrasing — remember, don't forget, note this, keep in mind, \
+            save that...). Add "memory": the fact as ONE clean sentence \
+            (fix grammar and capitalization; never add information).
+            - "recall": the speaker wants a saved fact typed out (write my \
+            address, what's my email, fill in where I work). Add "query".
+            - "correct": the speaker teaches a spelling. Add "term" (the \
+            correct spelling) and "heardAs" (the misheard form).
+            - "none": anything else (apps, media, search, system, or unclear).
+            Examples: {"intent":"remember","memory":"My gym closes on Mondays."} \
+            {"intent":"none"}
+            """
+        guard let reply = try? await llm(system, text) else { return .notMemoryCommand }
+        switch MemoryBias.parseIntent(reply) {
+        case .remember(let memory):
+            // Sanity cap: an interpretation must be commensurate with what
+            // was said, else confirm the raw words instead.
+            let cleaned = memory.count < max(200, text.count * 3) ? memory : text
+            return .confirmFact(cleaned: cleaned, heard: text)
+        case .recall(let query):
+            return await resolveRecall(query: query, store: store, llm: llm)
+        case .correct(let term, let heardAs):
+            let normalized = normalizeSpelledTerm(term)
+            let line = MemoryBias.spellingMemory(term: normalized, heardAs: heardAs.lowercased())
+            await MainActor.run { store.addMemory(line) }
+            return .learned(term: normalized)
+        case .none:
+            return .notMemoryCommand
         }
     }
 

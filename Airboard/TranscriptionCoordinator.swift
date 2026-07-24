@@ -453,10 +453,49 @@ class TranscriptionCoordinator: ObservableObject {
         }
         let memoryOutcome = await MemoryCommands.handle(
             text: text, store: MemoryStore.shared, llm: llm)
+        if await dispatchMemoryOutcome(memoryOutcome) { return }
 
-        switch memoryOutcome {
+        let parsedCommand = CommandDetector.detect(text)
+        if parsedCommand.isValid {
+            print("✅ Valid command detected: \(parsedCommand.type)")
+            await MainActor.run {
+                let success = CommandExecutor.execute(parsedCommand)
+                if success {
+                    FloatingWindowManager.shared.showCommandExecuted()
+                }
+            }
+            return
+        }
+
+        // Nothing matched exactly — one LLM pass interprets the utterance
+        // before giving up. Any phrasing of "save this" ("don't forget…",
+        // "note that…", "keep in mind…") becomes a memory intent; the
+        // confirmation card remains the guard against misreads.
+        let interpreted = await MemoryCommands.classify(
+            text: text, store: MemoryStore.shared, llm: llm)
+        if await dispatchMemoryOutcome(interpreted) { return }
+
+        print("❓ Could not parse command: \(text)")
+        await MainActor.run {
+            let content = UNMutableNotificationContent()
+            content.title = "Unknown Command"
+            content.body = "Couldn't understand: \(text)"
+            content.sound = .default
+            let request = UNNotificationRequest(
+                identifier: UUID().uuidString,
+                content: content,
+                trigger: nil
+            )
+            UNUserNotificationCenter.current().add(request)
+        }
+    }
+
+    /// Act on a memory outcome. Returns false for .notMemoryCommand so the
+    /// caller can keep interpreting the utterance.
+    private func dispatchMemoryOutcome(_ outcome: MemoryCommandOutcome) async -> Bool {
+        switch outcome {
         case .notMemoryCommand:
-            break  // continue to CommandDetector below
+            return false
         case .confirmFact(let cleaned, let heard):
             print("🧠 Memory: confirming fact '\(cleaned)' (heard: '\(heard)')")
             await MainActor.run {
@@ -477,7 +516,7 @@ class TranscriptionCoordinator: ObservableObject {
                         print("🧠 Memory: confirmation cancelled")
                     })
             }
-            return
+            return true
         case .learned(let term):
             print("🧠 Memory: learned spelling '\(term)'")
             await MainActor.run {
@@ -485,13 +524,13 @@ class TranscriptionCoordinator: ObservableObject {
                 FloatingWindowManager.shared.showToast("Learned spelling: \(term)")
                 self.showNotification(title: "Learned spelling", body: term)
             }
-            return
+            return true
         case .recall(let recalledText):
             print("🧠 Memory: recall inserting '\(recalledText)'")
             await MainActor.run {
                 self.insertTextIntoTargetApp(recalledText)
             }
-            return
+            return true
         case .recallFailed(let query):
             print("🧠 Memory: recall failed for '\(query)'")
             await MainActor.run {
@@ -499,37 +538,10 @@ class TranscriptionCoordinator: ObservableObject {
                 self.showNotification(title: "Airboard Memory",
                                       body: "Nothing remembered about \(query)")
             }
-            return
-        }
-
-        let parsedCommand = CommandDetector.detect(text)
-        
-        await MainActor.run {
-            if parsedCommand.isValid {
-                print("✅ Valid command detected: \(parsedCommand.type)")
-                let success = CommandExecutor.execute(parsedCommand)
-                
-                if success {
-                    FloatingWindowManager.shared.showCommandExecuted()
-                }
-            } else {
-                print("❓ Could not parse command: \(text)")
-                // Show notification for unknown command
-                let content = UNMutableNotificationContent()
-                content.title = "Unknown Command"
-                content.body = "Couldn't understand: \(text)"
-                content.sound = .default
-                
-                let request = UNNotificationRequest(
-                    identifier: UUID().uuidString,
-                    content: content,
-                    trigger: nil
-                )
-                UNUserNotificationCenter.current().add(request)
-            }
+            return true
         }
     }
-    
+
     // MARK: - Dictation Mode Handler
     
     private func handleDictationMode(text: String) async {

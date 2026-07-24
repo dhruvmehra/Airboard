@@ -34,6 +34,46 @@ enum MemoryBias {
         "\"\(term)\" is the correct spelling — often heard as \"\(heardAs)\"."
     }
 
+    /// A classified command-mode intent from the LLM interpreter.
+    enum ClassifiedIntent: Equatable {
+        case remember(memory: String)
+        case recall(query: String)
+        case correct(term: String, heardAs: String)
+        case none
+    }
+
+    /// Parse the intent-classifier reply: {"intent": "...", ...fields}.
+    /// Lenient (fence-stripping, whitelisted intents, missing fields →
+    /// .none) — a malformed reply degrades to "not a memory command",
+    /// never to a wrong action.
+    static func parseIntent(_ reply: String) -> ClassifiedIntent {
+        let unfenced = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "^```(json)?", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "```$", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let data = unfenced.data(using: .utf8),
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let intent = obj["intent"] as? String else { return .none }
+        func field(_ key: String) -> String? {
+            guard let v = obj[key] as? String else { return nil }
+            let t = v.trimmingCharacters(in: .whitespacesAndNewlines)
+            return t.isEmpty ? nil : t
+        }
+        switch intent.lowercased() {
+        case "remember":
+            guard let memory = field("memory") else { return .none }
+            return .remember(memory: memory)
+        case "recall":
+            guard let query = field("query") else { return .none }
+            return .recall(query: query)
+        case "correct":
+            guard let term = field("term"), let heardAs = field("heardAs") else { return .none }
+            return .correct(term: term, heardAs: heardAs)
+        default:
+            return .none
+        }
+    }
+
     private static func tokens(_ s: String) -> [String] {
         s.split(whereSeparator: { $0.isWhitespace })
             .map { $0.trimmingCharacters(in: .punctuationCharacters) }
