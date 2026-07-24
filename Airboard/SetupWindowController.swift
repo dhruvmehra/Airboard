@@ -58,12 +58,24 @@ class SetupWindowController: NSObject, NSWindowDelegate {
     }
 
     func showPermissionSetup() {
+        // Already presenting (e.g. Try It's insertion failed because
+        // Accessibility was skipped): the onboarding window IS the
+        // permission UI — surface it instead of rebuilding mid-flow.
+        if let window {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
         showOnboarding(startingAt: isMicrophoneGranted ? .accessibility : .microphone)
     }
 
     // MARK: - Window
 
     private func showOnboarding(startingAt step: OnboardingFlow.Step) {
+        // Detach the delegate before replacing the window: close() calls
+        // windowWillClose synchronously, which would consume onComplete and
+        // force-mark setup complete mid-swap.
+        window?.delegate = nil
         window?.close()
 
         let newWindow = NSWindow(
