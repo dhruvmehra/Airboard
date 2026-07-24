@@ -54,7 +54,9 @@ class TextInserter {
         // em dashes — common in LLM output) can't be typed at all. Paste
         // handles both: editors treat pasted text as literal.
         if finalText.contains("\n") || finalText.contains(where: { keyCodeForCharacter($0) == nil }) {
-            return pasteText(finalText)
+            let result = pasteText(finalText)
+            if case .success = result { recordInsertion(finalText) }
+            return result
         }
 
         // Type each character with error checking
@@ -66,6 +68,7 @@ class TextInserter {
         }
 
         print("✅ Finished inserting text")
+        recordInsertion(finalText)
         return .success(())
     }
 
@@ -100,13 +103,47 @@ class TextInserter {
         return .success(())
     }
     
-    /// Add a separating space only when we can SEE the character before
-    /// the cursor and it needs one. The old "field's last character"
-    /// fallback fired whenever the cursor position was unreadable (many
-    /// apps) and guessed from text that had nothing to do with the cursor
-    /// — the field-reported "every dictation starts with a stray space"
-    /// bug. Unknown cursor now means NO space: a missing space is a small
-    /// fix; an injected one is a constant irritation.
+    // Chars that want a space after them before new text starts.
+    private static let spaceableChars: Set<Character> =
+        [".", ",", "!", "?", ";", ":", ")", "]", "\"", "'"]
+
+    private static func isSpaceable(_ c: Character) -> Bool {
+        c.isLetter || c.isNumber || spaceableChars.contains(c)
+    }
+
+    /// What we last inserted, and where. Terminal-style apps (Ghostty,
+    /// Claude Code) report the cursor as position 0 regardless of reality,
+    /// so when AX can't tell us the char before the cursor, the only
+    /// trustworthy signal is our own history: if WE just put text ending
+    /// in a word character into this same app, the user is chaining
+    /// utterances and needs a separating space.
+    private static var lastInsertion: (pid: pid_t, spaceable: Bool, at: Date)?
+
+    static func recordInsertion(_ text: String) {
+        guard let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              let last = text.last else { return }
+        lastInsertion = (pid, isSpaceable(last), Date())
+    }
+
+    /// Fallback when the char before the cursor is unknowable: chain-space
+    /// only after OUR OWN recent insertion into the same app. A fresh
+    /// dictation (new prompt, different app, or after the window expires)
+    /// gets no space — that was the old "every dictation starts with a
+    /// stray space" bug, which guessed from the field's last character.
+    private static func chainedInsertionNeedsSpace() -> Bool {
+        guard let last = lastInsertion,
+              let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              last.pid == pid,
+              last.spaceable,
+              Date().timeIntervalSince(last.at) < 30 else { return false }
+        print("  🔗 Chaining after our own insertion — adding space")
+        return true
+    }
+
+    /// Add a separating space when the character before the cursor needs
+    /// one. Prefers actually READING that character via AX; when the app
+    /// won't reveal the cursor (terminals report position 0), falls back
+    /// to the chained-insertion signal above.
     private static func shouldAddLeadingSpace() -> Bool {
         guard let frontmostApp = NSWorkspace.shared.frontmostApplication else { return false }
         let app = AXUIElementCreateApplication(frontmostApp.processIdentifier)
@@ -114,32 +151,36 @@ class TextInserter {
         var focusedElement: CFTypeRef?
         guard AXUIElementCopyAttributeValue(app, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success,
               let element = focusedElement else {
-            print("  ❌ No focused element — no leading space")
-            return false
+            print("  ❌ No focused element")
+            return chainedInsertionNeedsSpace()
         }
 
         var value: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element as! AXUIElement, kAXValueAttribute as CFString, &value) == .success,
               let text = value as? String, !text.isEmpty else {
-            print("  ❌ No field text — no leading space")
+            print("  ❌ Empty field — no leading space")
             return false
         }
 
         var selectedRangeValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(element as! AXUIElement, kAXSelectedTextRangeAttribute as CFString, &selectedRangeValue) == .success,
               let rangeValue = selectedRangeValue as! AXValue? else {
-            print("  ❌ Cursor position unreadable — no leading space")
-            return false
+            print("  ❌ Cursor position unreadable")
+            return chainedInsertionNeedsSpace()
         }
 
         var range = CFRange()
-        guard AXValueGetValue(rangeValue, .cfRange, &range) else { return false }
+        guard AXValueGetValue(rangeValue, .cfRange, &range) else {
+            return chainedInsertionNeedsSpace()
+        }
         // range.location = cursor, or the START of a selection (typed text
         // replaces the selection, so the char BEFORE it is what matters).
         let cursorPosition = range.location
         guard cursorPosition > 0 && cursorPosition <= text.count else {
-            print("  ❌ Cursor at start — no leading space")
-            return false
+            // Position 0 in a non-empty buffer is how terminals lie about
+            // the cursor — treat it as unknown, not as "at the start".
+            print("  ❌ Cursor reported at start of non-empty text")
+            return chainedInsertionNeedsSpace()
         }
 
         let index = text.index(text.startIndex, offsetBy: cursorPosition - 1)
@@ -149,8 +190,7 @@ class TextInserter {
         // Space only after word characters and sentence-closing punctuation.
         // Never after whitespace, and never after openers like ( [ " — a
         // space there splits the construct the user is typing into.
-        let closers: Set<Character> = [".", ",", "!", "?", ";", ":", ")", "]", "\"", "'"]
-        return charBeforeCursor.isLetter || charBeforeCursor.isNumber || closers.contains(charBeforeCursor)
+        return isSpaceable(charBeforeCursor)
     }
 
     private static func typeCharacter(_ character: Character) -> TextInsertionError? {
