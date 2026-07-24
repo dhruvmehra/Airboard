@@ -458,24 +458,34 @@ class TranscriptionCoordinator: ObservableObject {
         case .notMemoryCommand:
             break  // continue to CommandDetector below
         case .remembered(let note):
+            print("🧠 Memory: remembered '\(note)'")
             await MainActor.run {
                 FloatingWindowManager.shared.showCommandExecuted()
+                // Toast, not just a notification: dev builds are typically
+                // denied notification permission, which made teaching look
+                // completely dead in the field.
+                FloatingWindowManager.shared.showToast("Remembered: \(note)")
                 self.showNotification(title: "Remembered", body: note)
             }
             return
         case .learned(let term):
+            print("🧠 Memory: learned spelling '\(term)'")
             await MainActor.run {
                 FloatingWindowManager.shared.showCommandExecuted()
+                FloatingWindowManager.shared.showToast("Learned spelling: \(term)")
                 self.showNotification(title: "Learned spelling", body: term)
             }
             return
         case .recall(let recalledText):
+            print("🧠 Memory: recall inserting '\(recalledText)'")
             await MainActor.run {
                 self.insertTextIntoTargetApp(recalledText)
             }
             return
         case .recallFailed(let query):
+            print("🧠 Memory: recall failed for '\(query)'")
             await MainActor.run {
+                FloatingWindowManager.shared.showToast("Nothing remembered about \(query)")
                 self.showNotification(title: "Airboard Memory",
                                       body: "Nothing remembered about \(query)")
             }

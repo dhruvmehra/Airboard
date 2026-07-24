@@ -574,6 +574,60 @@ class FloatingWindowManager: NSObject {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    // MARK: - Toast (transient feedback pill)
+
+    // Memory teach/recall feedback must be VISIBLE without depending on
+    // notification permission (dev builds are typically denied — field bug:
+    // teaching worked but looked completely dead). A small HUD pill at the
+    // top of the screen, ignoring the mouse, gone in ~2s.
+    private var toastWindow: NSPanel?
+
+    func showToast(_ text: String) {
+        DispatchQueue.main.async { [weak self] in
+            self?.presentToast(text)
+        }
+    }
+
+    private func presentToast(_ text: String) {
+        toastWindow?.close()
+        toastWindow = nil
+        guard let screen = NSScreen.main else { return }
+
+        let hosting = NSHostingView(rootView: ToastPillView(text: text))
+        let size = hosting.fittingSize
+        let frame = NSRect(
+            x: screen.visibleFrame.midX - size.width / 2,
+            y: screen.visibleFrame.maxY - size.height - 16,
+            width: size.width, height: size.height)
+
+        let panel = NSPanel(contentRect: frame,
+                            styleMask: [.borderless, .nonactivatingPanel],
+                            backing: .buffered, defer: false)
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.level = .statusBar
+        panel.ignoresMouseEvents = true
+        panel.collectionBehavior = [.canJoinAllSpaces, .transient]
+        panel.isReleasedWhenClosed = false
+        panel.contentView = hosting
+        panel.alphaValue = 1
+        panel.orderFrontRegardless()
+        toastWindow = panel
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self, weak panel] in
+            guard let panel, self?.toastWindow === panel else { return }
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.25
+                panel.animator().alphaValue = 0
+            }, completionHandler: { [weak self] in
+                if self?.toastWindow === panel {
+                    panel.close()
+                    self?.toastWindow = nil
+                }
+            })
+        }
+    }
+
     func cleanup() {
         NotificationCenter.default.removeObserver(self)
         DispatchQueue.main.async { [weak self] in
@@ -587,6 +641,8 @@ class FloatingWindowManager: NSObject {
             self?.performanceWindow = nil
             self?.memoryWindow?.close()
             self?.memoryWindow = nil
+            self?.toastWindow?.close()
+            self?.toastWindow = nil
             self?.downloadModalWindow?.close()
             self?.downloadModalWindow = nil
             self?.floatingWindow?.orderOut(nil)
@@ -871,6 +927,31 @@ struct DownloadModalView: View {
         .onAppear {
             animateGradient = true
         }
+    }
+}
+
+// MARK: - Toast Pill View
+
+/// HUD-style feedback pill ("Learned spelling: Pype"). Same surface
+/// language as the popover: hud wash + hairline, success glyph.
+struct ToastPillView: View {
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(DS.Accent.success)
+            Text(text)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(DS.Label.primary)
+                .lineLimit(2)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(Capsule().fill(DS.Surface.hud))
+        .overlay(Capsule().strokeBorder(DS.Surface.hudBorder, lineWidth: 1))
+        .fixedSize()
     }
 }
 

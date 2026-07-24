@@ -88,7 +88,14 @@ enum MemoryCommands {
     /// Join them into a word; leave multi-word phrases alone.
     static func normalizeSpelledTerm(_ term: String) -> String {
         let parts = term.split(whereSeparator: { $0 == " " || $0 == "-" })
-        guard parts.count >= 2, parts.allSatisfy({ $0.count == 1 }) else { return term }
+        guard parts.count >= 2 else { return term }
+        // Join when the term is spelled out ("p y p e") OR when the ASR
+        // fragmented one word ("pyp e" — field bug): any single-letter
+        // fragment signals fragmentation. Multi-word phrases without one
+        // ("New York") stay untouched. Tradeoff: a real single-letter word
+        // in a term ("Plan B") joins wrongly — add those by hand in the
+        // Memory window.
+        guard parts.contains(where: { $0.count == 1 }) else { return term }
         let joined = parts.joined().lowercased()
         return joined.prefix(1).uppercased() + joined.dropFirst()
     }
@@ -116,12 +123,20 @@ enum MemoryCommands {
         case .recall(let query):
             let notes = store.data.notes
             if let llm, !notes.isEmpty {
-                let system = """
+                var system = """
                     You recall stored facts. Given the speaker's notes and a \
                     request, reply with ONLY the exact text to insert — the \
                     fact itself, no preamble, no quotes, no commentary. If no \
                     note answers the request, reply with exactly NONE.
                     """
+                // Notes are stored as the ASR heard them ("I work at pipe");
+                // the glossary carries the true spellings — apply them on
+                // the way out so recalls type "Pype", not "pipe".
+                let terms = store.data.glossary.map(\.term)
+                if !terms.isEmpty {
+                    system += "\nApply these exact spellings in your reply wherever the fact refers to them: "
+                        + terms.joined(separator: ", ")
+                }
                 let user = "Notes:\n" + notes.map { "- \($0)" }.joined(separator: "\n")
                     + "\n\nRequest: \(query)"
                 if let reply = try? await llm(system, user) {
