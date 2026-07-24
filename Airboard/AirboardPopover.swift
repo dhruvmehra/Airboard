@@ -90,7 +90,7 @@ struct AirboardPopover: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("AI cleanup")
+                        Text("AI Cleanup")
                             .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.primary)
 
@@ -128,12 +128,12 @@ struct AirboardPopover: View {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(Color.teal.opacity(0.1))
+                            .fill(Color.blue.opacity(0.1))
                             .frame(width: 32, height: 32)
 
                         Image(systemName: "mic.fill")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.teal)
+                            .foregroundStyle(Color.blue)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {

@@ -8,6 +8,12 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+### Fixed
+- Turning AI Cleanup on now opens the setup window when the API key is missing (not only when the server URL/model are empty)
+
+### Changed
+- Popover polish per the Airboard design system: "AI Cleanup" title casing, Microphone row uses the semantic blue accent
+
 ### Added
 - Microphone selection with per-device memory: pick which mic Airboard uses from the menu popover; the choice is remembered for each connected headset (e.g. keep using the MacBook mic when Bluetooth earphones connect)
 
