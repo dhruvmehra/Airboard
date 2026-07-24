@@ -15,6 +15,7 @@ struct AirboardPopover: View {
     let onRemoveModel: () -> Void
     let onOpenHotkeySettings: () -> Void
     let onOpenCleanupSettings: () -> Void
+    let onOpenMemorySettings: () -> Void
     let onOpenPerformance: () -> Void
     let onReportIssue: () -> Void
     let onCheckForUpdates: () -> Void
@@ -24,6 +25,7 @@ struct AirboardPopover: View {
     @ObservedObject private var micManager = MicDeviceManager.shared
     @State private var isHoveringDownload = false
     @State private var isHoveringHotkey = false
+    @State private var isHoveringMemory = false
     @State private var isHoveringPerformance = false
     @State private var isHoveringReport = false
     @State private var isHoveringUpdate = false
@@ -202,7 +204,47 @@ struct AirboardPopover: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { isHoveringHotkey = $0 }
-                
+
+                // Memory Button
+                Button(action: onOpenMemorySettings) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(DS.Tint.purple)
+                                .frame(width: DS.Badge.size, height: DS.Badge.size)
+
+                            Image(systemName: "brain")
+                                .font(.system(size: DS.Badge.glyph, weight: .medium))
+                                .foregroundStyle(DS.Accent.command)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Memory")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(DS.Label.primary)
+
+                            Text("Spellings & facts Airboard remembers")
+                                .font(.system(size: 11))
+                                .foregroundColor(DS.Label.secondary)
+                                .lineLimit(1)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(DS.Label.tertiary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.Radius.r10)
+                            .fill(isHoveringMemory ? DS.Fill.hover : Color.clear)
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveringMemory = $0 }
+
                 // Performance Button
                 Button(action: onOpenPerformance) {
                     HStack(spacing: 12) {
@@ -628,6 +670,7 @@ struct VisualEffectBlur: NSViewRepresentable {
                 onRemoveModel: {},
                 onOpenHotkeySettings: {},
                 onOpenCleanupSettings: {},
+                onOpenMemorySettings: {},
                 onOpenPerformance: {},
                 onReportIssue: {},
                 onCheckForUpdates: {},

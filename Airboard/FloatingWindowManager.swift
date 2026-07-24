@@ -16,6 +16,7 @@ class FloatingWindowManager: NSObject {
     private var hotkeyWindow: NSWindow?
     private var cleanupSettingsWindow: NSWindow?
     private var performanceWindow: NSWindow?
+    private var memoryWindow: NSWindow?
 
     // Auto-hide state
     private var isHidden = false
@@ -275,6 +276,9 @@ class FloatingWindowManager: NSObject {
             onOpenCleanupSettings: { [weak self] in
                 self?.handleOpenCleanupSettings()
             },
+            onOpenMemorySettings: { [weak self] in
+                self?.handleOpenMemorySettings()
+            },
             onOpenPerformance: { [weak self] in
                 self?.handleOpenPerformance()
             },
@@ -399,6 +403,11 @@ class FloatingWindowManager: NSObject {
         showCleanupSettingsWindow()
     }
 
+    private func handleOpenMemorySettings() {
+        hidePopover()
+        showMemorySettingsWindow()
+    }
+
     private func handleOpenPerformance() {
         hidePopover()
         showPerformanceWindow()
@@ -467,6 +476,32 @@ class FloatingWindowManager: NSObject {
         window.isReleasedWhenClosed = false
 
         cleanupSettingsWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Memory Window
+
+    private func showMemorySettingsWindow() {
+        if let existing = memoryWindow {
+            existing.close()
+            memoryWindow = nil
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 480, height: 420),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Memory"
+        let hosting = NSHostingView(rootView: MemorySettingsView())
+        window.contentView = hosting
+        window.setContentSize(hosting.fittingSize)
+        window.center()
+        window.isReleasedWhenClosed = false
+
+        memoryWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -550,6 +585,8 @@ class FloatingWindowManager: NSObject {
             self?.cleanupSettingsWindow = nil
             self?.performanceWindow?.close()
             self?.performanceWindow = nil
+            self?.memoryWindow?.close()
+            self?.memoryWindow = nil
             self?.downloadModalWindow?.close()
             self?.downloadModalWindow = nil
             self?.floatingWindow?.orderOut(nil)
