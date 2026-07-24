@@ -50,9 +50,14 @@ final class MemoryStore: ObservableObject {
     // MARK: - Mutations (main thread; UI observes)
 
     /// Add a memory line. Exact-duplicate lines (case-insensitive) are
-    /// dropped silently.
+    /// dropped silently. Interior newlines collapse to spaces — a memory
+    /// is ONE line; a multi-line value would silently lose its tail on
+    /// the next load (parse only reads "- "-prefixed lines).
     func addMemory(_ line: String) {
-        let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = line
+            .replacingOccurrences(of: "\r", with: " ")
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
               !memories.contains(where: { $0.lowercased() == trimmed.lowercased() }) else { return }
         memories.append(trimmed)
@@ -120,9 +125,12 @@ final class MemoryStore: ObservableObject {
             guard !item.isEmpty else { continue }
             let lower = item.lowercased()
             if lower.hasPrefix("share memory with ai cleanup:") {
+                // Exact value match: substring matching turned "none" into
+                // "on" (review finding M1).
                 let value = lower.dropFirst("share memory with ai cleanup:".count)
+                    .trimmingCharacters(in: .whitespaces)
                 UserDefaults.standard.set(
-                    value.contains("yes") || value.contains("true") || value.contains("on"),
+                    value == "yes" || value == "true" || value == "on",
                     forKey: shareWithLLMKey)
                 continue
             }

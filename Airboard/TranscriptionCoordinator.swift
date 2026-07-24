@@ -447,8 +447,25 @@ class TranscriptionCoordinator: ObservableObject {
         // the regular command table. Non-memory text falls straight through.
         var llm: ((String, String) async throws -> String)?
         if TranscriptRefiner.shared.isFullyConfigured {
+            // 6s deadline per call (same discipline as the cleanup path):
+            // command mode can chain two calls (classify → recall), and a
+            // hung server must not freeze the pill for the transport's
+            // full 10s each.
             llm = { system, user in
-                try await TranscriptRefiner.shared.complete(system: system, user: user)
+                try await withThrowingTaskGroup(of: String.self) { group in
+                    group.addTask {
+                        try await TranscriptRefiner.shared.complete(system: system, user: user)
+                    }
+                    group.addTask {
+                        try await Task.sleep(nanoseconds: 6_000_000_000)
+                        throw TranscriptRefiner.RefineError.timeout
+                    }
+                    guard let first = try await group.next() else {
+                        throw TranscriptRefiner.RefineError.timeout
+                    }
+                    group.cancelAll()
+                    return first
+                }
             }
         }
         let memoryOutcome = await MemoryCommands.handle(

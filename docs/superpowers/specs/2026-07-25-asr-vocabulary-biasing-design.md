@@ -1,3 +1,5 @@
+> **REVERTED 2026-07-25.** The acoustic biasing layer was built, field-tested, and removed — FluidAudio 0.15.5's rescorer over-fires at small personal vocab sizes across all tunable thresholds. Do NOT re-execute this document; see the tombstone comment in ParakeetTranscriptionService.swift. The confirmation-card portions survived (in simplified, flat-memory form).
+
 # ASR Vocabulary Biasing + Memory Confirmation — Design
 
 **Date:** 2026-07-25

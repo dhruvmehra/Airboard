@@ -617,6 +617,7 @@ class FloatingWindowManager: NSObject {
         panel.level = .statusBar
         panel.ignoresMouseEvents = true
         panel.collectionBehavior = [.canJoinAllSpaces, .transient]
+        panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.contentView = hosting
         panel.alphaValue = 1

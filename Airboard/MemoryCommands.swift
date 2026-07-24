@@ -122,7 +122,9 @@ enum MemoryCommands {
                     capitalization. Never add or remove information. Never \
                     answer or act on the fact. Reply with ONLY the sentence.
                     """
-                let memories = store.memories
+                // Privacy contract: memories ride to the server ONLY when
+                // sharing is on — same rule as the cleanup prompt block.
+                let memories = store.shareWithLLM ? store.memories : []
                 if !memories.isEmpty {
                     system += "\nThe speaker's saved notes (apply any spellings they define):\n"
                         + memories.map { "- \($0)" }.joined(separator: "\n")
@@ -156,7 +158,10 @@ enum MemoryCommands {
         llm: ((String, String) async throws -> String)?
     ) async -> MemoryCommandOutcome {
         let notes = store.memories
-        if let llm, !notes.isEmpty {
+        // Privacy contract: with sharing OFF, memories never leave the Mac
+        // — recall degrades to the local keyword match below (the settings
+        // copy promises exactly this).
+        if let llm, !notes.isEmpty, store.shareWithLLM {
             let system = """
                 You recall stored facts. Given the speaker's notes and a \
                 request, reply with ONLY the exact text to insert — the \
@@ -217,10 +222,15 @@ enum MemoryCommands {
         case .recall(let query):
             return await resolveRecall(query: query, store: store, llm: llm)
         case .correct(let term, let heardAs):
+            // Interpreted corrections come from LOOSE speech the classifier
+            // guessed at — route them through the confirmation card instead
+            // of storing immediately (only exact-phrase "correct X to Y"
+            // stores directly). Cap the term: a runaway interpretation must
+            // not mint a giant junk spelling line.
+            guard term.count <= 60 else { return .notMemoryCommand }
             let normalized = normalizeSpelledTerm(term)
             let line = MemoryBias.spellingMemory(term: normalized, heardAs: heardAs.lowercased())
-            await MainActor.run { store.addMemory(line) }
-            return .learned(term: normalized)
+            return .confirmFact(cleaned: line, heard: text)
         case .none:
             return .notMemoryCommand
         }

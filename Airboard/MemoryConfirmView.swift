@@ -72,7 +72,9 @@ struct MemoryConfirmView: View {
                         .fill(DS.Accent.primary))
                     .disabled(!canSave)
                     .opacity(canSave ? 1 : 0.4)
-                    .keyboardShortcut(.return, modifiers: [.command])
+                    // Plain Return works even when focus left the field
+                    // (the header advertises "⏎ save"); ⌘⏎ kept as alias.
+                    .keyboardShortcut(.defaultAction)
             }
         }
         .padding(14)
