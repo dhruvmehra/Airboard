@@ -8,6 +8,9 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+### Added
+- Airboard Memory: teach spellings ("correct pipe to Pype") and facts ("remember I work at Pype") by voice in command mode; recall facts anywhere ("write my address" types it at your cursor). Spellings are applied in context by AI Cleanup — "the water pipe" stays "pipe". Everything is editable in the new Memory window, stored locally, with a switch controlling whether memory is shared with the cleanup LLM
+
 ### Fixed
 - Dictations no longer start with a stray leading space, and chained utterances still get their separating space: the old heuristic guessed from the field's last character whenever the cursor position was unreadable (terminals always are). Now Airboard reads the character before the cursor when the app reveals it, and otherwise adds a space only when chaining right after its own previous insertion (same app, within 30s)
 - AI Cleanup no longer invents paragraph breaks: the default prompt now keeps consecutive sentences in one paragraph (if you saved a custom system prompt, press "Reset to default" to pick this up)
