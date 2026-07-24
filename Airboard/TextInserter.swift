@@ -100,85 +100,59 @@ class TextInserter {
         return .success(())
     }
     
+    /// Add a separating space only when we can SEE the character before
+    /// the cursor and it needs one. The old "field's last character"
+    /// fallback fired whenever the cursor position was unreadable (many
+    /// apps) and guessed from text that had nothing to do with the cursor
+    /// — the field-reported "every dictation starts with a stray space"
+    /// bug. Unknown cursor now means NO space: a missing space is a small
+    /// fix; an injected one is a constant irritation.
     private static func shouldAddLeadingSpace() -> Bool {
-        // SIMPLIFIED: Use a more reliable method to check for text before cursor
-        
-        // Get the frontmost app
-        guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
-            print("  ⚠️ No frontmost app")
-            return false
-        }
-        
-        let pid = frontmostApp.processIdentifier
-        let app = AXUIElementCreateApplication(pid)
-        
-        // Get focused UI element
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication else { return false }
+        let app = AXUIElementCreateApplication(frontmostApp.processIdentifier)
+
         var focusedElement: CFTypeRef?
-        let result = AXUIElementCopyAttributeValue(app, kAXFocusedUIElementAttribute as CFString, &focusedElement)
-        
-        guard result == .success, let element = focusedElement else {
-            print("  ⚠️ No focused element (result: \(result.rawValue))")
+        guard AXUIElementCopyAttributeValue(app, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success,
+              let element = focusedElement else {
+            print("  ❌ No focused element — no leading space")
             return false
         }
-        
-        // Method 1: Try to get selected text
-        var selectedText: CFTypeRef?
-        let selectedResult = AXUIElementCopyAttributeValue(element as! AXUIElement, kAXSelectedTextAttribute as CFString, &selectedText)
-        
-        if selectedResult == .success, let text = selectedText as? String, !text.isEmpty {
-            print("  📍 Selected text: '\(text)'")
-            if let lastChar = text.last, !lastChar.isWhitespace && lastChar != "\n" {
-                print("  ✅ Last char is non-whitespace: '\(lastChar)'")
-                return true
-            }
-        }
-        
-        // Method 2: Try to get value (full text content)
+
         var value: CFTypeRef?
-        let valueResult = AXUIElementCopyAttributeValue(element as! AXUIElement, kAXValueAttribute as CFString, &value)
-        
-        if valueResult == .success, let text = value as? String, !text.isEmpty {
-            print("  📍 Field value length: \(text.count) chars")
-            
-            // Try to get selection range to find cursor position
-            var selectedRangeValue: CFTypeRef?
-            let rangeResult = AXUIElementCopyAttributeValue(element as! AXUIElement, kAXSelectedTextRangeAttribute as CFString, &selectedRangeValue)
-            
-            if rangeResult == .success, let rangeValue = selectedRangeValue as! AXValue? {
-                var range = CFRange()
-                if AXValueGetValue(rangeValue, .cfRange, &range) {
-                    let cursorPosition = range.location
-                    print("  📍 Cursor position: \(cursorPosition) / \(text.count)")
-                    
-                    // Check character before cursor
-                    if cursorPosition > 0 && cursorPosition <= text.count {
-                        let index = text.index(text.startIndex, offsetBy: cursorPosition - 1)
-                        let charBeforeCursor = text[index]
-                        print("  📍 Char before cursor: '\(charBeforeCursor)'")
-                        
-                        if !charBeforeCursor.isWhitespace && charBeforeCursor != "\n" {
-                            print("  ✅ Should add space!")
-                            return true
-                        } else {
-                            print("  ❌ Already has space/newline")
-                            return false
-                        }
-                    }
-                }
-            }
-            
-            // Fallback: If we have text but couldn't get cursor position,
-            // check if the last character is non-whitespace
-            if let lastChar = text.last, !lastChar.isWhitespace && lastChar != "\n" {
-                print("  ✅ Fallback: Last char is non-whitespace: '\(lastChar)'")
-                return true
-            }
+        guard AXUIElementCopyAttributeValue(element as! AXUIElement, kAXValueAttribute as CFString, &value) == .success,
+              let text = value as? String, !text.isEmpty else {
+            print("  ❌ No field text — no leading space")
+            return false
         }
-        
-        print("  ❌ No text found before cursor")
-        return false
+
+        var selectedRangeValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element as! AXUIElement, kAXSelectedTextRangeAttribute as CFString, &selectedRangeValue) == .success,
+              let rangeValue = selectedRangeValue as! AXValue? else {
+            print("  ❌ Cursor position unreadable — no leading space")
+            return false
+        }
+
+        var range = CFRange()
+        guard AXValueGetValue(rangeValue, .cfRange, &range) else { return false }
+        // range.location = cursor, or the START of a selection (typed text
+        // replaces the selection, so the char BEFORE it is what matters).
+        let cursorPosition = range.location
+        guard cursorPosition > 0 && cursorPosition <= text.count else {
+            print("  ❌ Cursor at start — no leading space")
+            return false
+        }
+
+        let index = text.index(text.startIndex, offsetBy: cursorPosition - 1)
+        let charBeforeCursor = text[index]
+        print("  📍 Char before cursor: '\(charBeforeCursor)'")
+
+        // Space only after word characters and sentence-closing punctuation.
+        // Never after whitespace, and never after openers like ( [ " — a
+        // space there splits the construct the user is typing into.
+        let closers: Set<Character> = [".", ",", "!", "?", ";", ":", ")", "]", "\"", "'"]
+        return charBeforeCursor.isLetter || charBeforeCursor.isNumber || closers.contains(charBeforeCursor)
     }
-    
+
     private static func typeCharacter(_ character: Character) -> TextInsertionError? {
         // Handle special characters
         if character == "\n" {

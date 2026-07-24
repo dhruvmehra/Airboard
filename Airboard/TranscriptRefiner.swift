@@ -87,7 +87,10 @@ class TranscriptRefiner {
         Rewrite with:
         - filler words and false starts removed
         - grammar, punctuation, and capitalization corrected
-        - sentence and paragraph breaks added where natural
+        - sentence breaks where natural, but keep everything in ONE \
+        paragraph unless the speaker clearly moves to a new topic or \
+        dictates an email with distinct parts — never insert blank lines \
+        between consecutive sentences, and never end with a line break
         - unordered spoken enumerations formatted as a list, one item per \
         line, each starting with "- "
         - ordered enumerations ("first... then... finally...") formatted as \
