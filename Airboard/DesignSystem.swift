@@ -12,6 +12,14 @@ import SwiftUI
 
 enum DS {
 
+    // MARK: Brand — the logo. The waveform mark is ALWAYS brand red; this
+    // and the recording state are the only red in the app. Never use these
+    // for UI chrome.
+    enum Brand {
+        static let red   = Color(hex: 0xE5352B)
+        static let black = Color(hex: 0x0A0A0A)
+    }
+
     // MARK: Surfaces
     enum Surface {
         static let window  = Color(hex: 0x0F0F11)

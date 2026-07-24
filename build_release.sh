@@ -68,6 +68,13 @@ fi
 DMG_NAME="${APP_NAME}-${VERSION}.dmg"
 echo -e "${GREEN}🚀 Releasing ${APP_NAME} ${VERSION}${NC} (last tag: ${LAST_TAG:-none})"
 
+# --- Design-system gate: raw color literals never ship ------------------------
+echo -e "${BLUE}🎨 Step 0: Design-system adoption check${NC}"
+./scripts/check_design_system.sh || {
+    echo -e "${RED}❌ Design-system check failed — fix the raw literals before releasing${NC}"
+    exit 1
+}
+
 # --- Stamp version into project + changelog ----------------------------------
 echo -e "${BLUE}🏷  Step 1: Set MARKETING_VERSION and CURRENT_PROJECT_VERSION = ${VERSION}${NC}"
 sed -i '' "s/MARKETING_VERSION = [0-9.]*;/MARKETING_VERSION = ${VERSION};/g" "$PBXPROJ"

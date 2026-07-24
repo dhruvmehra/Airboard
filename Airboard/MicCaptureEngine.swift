@@ -35,11 +35,12 @@ nonisolated final class MicCaptureEngine {
         return _currentPowerDb
     }
 
-    /// Warm the graph so start() is fast at hotkey time.
-    func prepare() {
-        _ = engine.inputNode
-        engine.prepare()
-    }
+    // There is deliberately NO warm-up/prepare() on this type: warming an
+    // engine at launch opened the system-default INPUT device and held it —
+    // with Bluetooth earphones connected, that forced the headset into the
+    // HFP call profile (muffled output audio, mic flapping) the moment the
+    // app started, even when the user's mic rule pointed elsewhere. The
+    // warmed engine was also discarded anyway: start() builds a fresh one.
 
     /// Begin capturing to fileURL. deviceID nil = follow the system default
     /// (native AUHAL tracking — safe because every recording uses a fresh engine).
@@ -57,8 +58,12 @@ nonisolated final class MicCaptureEngine {
         // next hotkey press, teardown has long settled.
         engine = AVAudioEngine()
         let inputNode = engine.inputNode
-        engine.prepare()
 
+        // Pin the requested device BEFORE the engine allocates anything.
+        // Preparing first opened the DEFAULT input (the Bluetooth mic when
+        // earphones are connected) and then switched devices mid-allocation —
+        // which both triggered the headset's HFP profile (muffled output,
+        // mic flapping) and could stall the render callbacks (~0.3s captures).
         // Pin ONLY when a specific device was requested. The nil case keeps
         // the AUHAL's native default-device tracking — safe because each
         // recording gets a FRESH engine (see stop()), so a pin from a prior

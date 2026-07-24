@@ -9,11 +9,10 @@ class AudioRecorder: ObservableObject {
     @Published var isRecording = false
     @Published var recordingURL: URL?
 
-    init() {
-        // Warm the engine so startRecording() is fast at hotkey time
-        // (replaces the old pre-prepared AVAudioRecorder trick).
-        captureEngine.prepare()
-    }
+    // No init-time engine warm-up: it opened (and held) the system-default
+    // input at launch — with Bluetooth earphones that meant HFP muffling from
+    // the moment the app started — and the warmed engine was discarded by
+    // start() anyway. See MicCaptureEngine for the full story.
 
     func startRecording() {
         guard !isRecording else { return }
