@@ -59,6 +59,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("🚀 Airboard launched")
+        // Design system v2 is dark-only: the app renders dark regardless of
+        // the system appearance setting.
+        NSApp.appearance = NSAppearance(named: .darkAqua)
         redirectLogsToFile()
         cleanupLegacyWhisperModels()
 
