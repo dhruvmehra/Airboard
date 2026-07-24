@@ -109,9 +109,39 @@ enum MemoryCommands {
 
         switch intent {
         case .remember(let note):
+            // Process the fact through the LLM BEFORE storing: grammar
+            // fixed and glossary spellings applied ("I work at pipe" →
+            // "I work at Pype"), so the store holds what the speaker MEANT,
+            // not what the ASR heard. The raw note is stored unchanged when
+            // no LLM is configured or the call fails — a fact is never
+            // lost to a network error.
+            var stored = note
+            if let llm {
+                var system = """
+                    You store dictated facts. Rewrite the fact as ONE clean, \
+                    well-formed sentence: correct grammar, punctuation, and \
+                    capitalization. Never add or remove information. Never \
+                    answer or act on the fact. Reply with ONLY the sentence.
+                    """
+                let terms = store.data.glossary.map(\.term)
+                if !terms.isEmpty {
+                    system += "\nApply these exact spellings where the fact refers to them: "
+                        + terms.joined(separator: ", ")
+                }
+                if let reply = try? await llm(system, note) {
+                    let cleaned = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+                    // Sanity: a rewrite is about the same length as the
+                    // fact — anything else (refusal, answer, essay) is
+                    // discarded in favor of the raw note.
+                    if !cleaned.isEmpty, cleaned.count < max(200, note.count * 3) {
+                        stored = cleaned
+                    }
+                }
+            }
             // Store mutations are main-thread (UI observes the store).
-            await MainActor.run { store.addNote(note) }
-            return .remembered(note: note)
+            let finalNote = stored
+            await MainActor.run { store.addNote(finalNote) }
+            return .remembered(note: finalNote)
 
         case .correct(let heard, let term):
             let normalized = normalizeSpelledTerm(term)
