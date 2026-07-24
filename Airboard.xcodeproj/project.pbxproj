@@ -12,7 +12,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		CC26B7F92EDCD31800B10FA0 /* Airboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Airboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC26B7F92EDCD31800B10FA0 /* Airboard Dev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Airboard Dev.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -60,7 +60,7 @@
 		CC26B7FA2EDCD31800B10FA0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				CC26B7F92EDCD31800B10FA0 /* Airboard.app */,
+				CC26B7F92EDCD31800B10FA0 /* Airboard Dev.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -89,7 +89,7 @@
 				FA1DA0D30000000000000002 /* Sparkle */,
 			);
 			productName = murmur;
-			productReference = CC26B7F92EDCD31800B10FA0 /* Airboard.app */;
+			productReference = CC26B7F92EDCD31800B10FA0 /* Airboard Dev.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
