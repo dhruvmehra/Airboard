@@ -15,3 +15,4 @@ release/
 .DS_Store
 .claude/
 .superpowers/
+.gstack/

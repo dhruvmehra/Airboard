@@ -61,9 +61,13 @@ MemoryConfirmView + FloatingWindowManager.showMemoryConfirm (new)
   DS v2 card: HUD surface + hairline, brain badge, editable text field
   prefilled with the cleaned fact, Save (⏎, DS primary) / Cancel (esc,
   quiet). Key-accepting floating panel (NOT non-activating — it takes
-  typing; normal control rendering applies). On Save: store note (+
-  extracted names to watch-list, + edit-diff glossary pairs); toast
-  confirms. On Cancel: nothing stored.
+  typing; normal control rendering applies). On Save: the SAVED text (as
+  edited by the user) is stored as the note — the edited version is the
+  truth everywhere. Extracted names are reconciled against the saved text:
+  names no longer present after the edit are dropped, replacement words
+  from edit-diffs are added — the pre-edit garble never reaches the
+  watch-list. Glossary pairs derive from the edit diff. Toast confirms
+  what was stored. On Cancel: nothing stored.
 ```
 
 ### Edit-diff learning rule
