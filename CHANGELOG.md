@@ -9,7 +9,7 @@ promotes that section to the released version automatically.
 ## [Unreleased]
 
 ### Fixed
-- Dictations no longer start with a stray leading space: the space-before-text heuristic guessed from the field's last character whenever the cursor position was unreadable — now it only adds a space when it can actually see a word character before the cursor
+- Dictations no longer start with a stray leading space, and chained utterances still get their separating space: the old heuristic guessed from the field's last character whenever the cursor position was unreadable (terminals always are). Now Airboard reads the character before the cursor when the app reveals it, and otherwise adds a space only when chaining right after its own previous insertion (same app, within 30s)
 - AI Cleanup no longer invents paragraph breaks: the default prompt now keeps consecutive sentences in one paragraph (if you saved a custom system prompt, press "Reset to default" to pick this up)
 - Installer window labels ("Airboard", "Applications") are now readable: Finder always draws DMG labels in black, so the background art gives them light plates
 - Installer tagline updated to "On-device speech to text · Optional AI cleanup" — accurate now that cleanup can use a remote LLM
