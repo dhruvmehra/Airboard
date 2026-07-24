@@ -192,6 +192,40 @@ struct CleanupSettingsView: View {
             Divider()
                 .padding(.horizontal, 12)
 
+            // The exact system prompt sent with every cleanup request —
+            // visible so there's no mystery about what the LLM is told.
+            VStack(alignment: .leading, spacing: 6) {
+                Text("System prompt")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(DS.Label.primary)
+                Text("Sent with every request. Your dictation is wrapped in <dictation> tags and framed as text to edit — so a request you speak (\"give me three points on…\") is transcribed, never answered. Answering is Command mode's job.")
+                    .font(.system(size: 10))
+                    .foregroundColor(DS.Label.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                ScrollView {
+                    Text(TranscriptRefiner.instructions)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(DS.Label.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                        .textSelection(.enabled)
+                }
+                .frame(height: 96)
+                .background(
+                    RoundedRectangle(cornerRadius: DS.Radius.r8)
+                        .fill(DS.Surface.control)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.Radius.r8)
+                        .stroke(DS.Border.hairline, lineWidth: 1)
+                )
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+                .padding(.horizontal, 12)
+
             Text("When configured, dictated text is sent to this server for cleanup. Nothing is ever sent when these fields are empty or AI cleanup is toggled off.")
                 .font(.system(size: 10))
                 .foregroundColor(DS.Label.secondary)

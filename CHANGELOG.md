@@ -15,6 +15,8 @@ promotes that section to the released version automatically.
 - Bluetooth earphones no longer drop to muffled call-quality audio when Airboard launches: the app no longer opens the default (Bluetooth) microphone at startup
 - Recording from a selected mic actually works now: the capture core was rebuilt on AVCaptureSession. The old engine's device pinning was the root cause of every mic failure to date — truncated recordings (~0.2s of audio captured regardless of how long you spoke), hangs when recording started, and the earlier deadlocks. Recording via a chosen mic also no longer touches the Bluetooth mic at all, so music stays crisp while you dictate through the MacBook mic
 - Popover logo is now the Airboard brand red (was mistakenly blue)
+- Dictating a request ("can you give me three points on…") is now always transcribed, never answered or refused by the cleanup LLM: dictation is sent as tagged material-to-edit, and any refusal the model produces anyway is discarded in favor of your own words
+- AI Cleanup settings now show the exact system prompt sent with every request
 
 ### Changed
 - AI Cleanup settings always show which server a key is saved for ("Key saved for api.cerebras.ai"), with a Remove button
