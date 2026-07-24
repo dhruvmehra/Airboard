@@ -17,13 +17,14 @@ struct HotkeySettingsView: View {
             HStack {
                 Text("Hotkey Settings")
                     .font(.system(size: 16, weight: .semibold))
-                
+                    .foregroundColor(DS.Label.primary)
+
                 Spacer()
-                
+
                 Button(action: { dismiss() }) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 18))
-                        .foregroundStyle(.secondary.opacity(0.6))
+                        .foregroundStyle(DS.Label.tertiary)
                 }
                 .buttonStyle(.plain)
             }
@@ -40,10 +41,11 @@ struct HotkeySettingsView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Dictation Hotkey")
                             .font(.system(size: 14, weight: .semibold))
-                        
+                            .foregroundColor(DS.Label.primary)
+
                         Text("Hold this key to dictate text")
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                         
                         VStack(spacing: 6) {
                             ForEach(HotkeyOption.allCases.filter { $0 != selectedCommandModifier }, id: \.self) { option in
@@ -66,10 +68,11 @@ struct HotkeySettingsView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Command Modifier")
                             .font(.system(size: 14, weight: .semibold))
-                        
+                            .foregroundColor(DS.Label.primary)
+
                         Text("Hold with dictation key for voice commands")
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                         
                         VStack(spacing: 6) {
                             ForEach(HotkeyOption.allCases.filter { $0 != selectedPrimaryHotkey }, id: \.self) { option in
@@ -92,18 +95,18 @@ struct HotkeySettingsView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("Dictation", systemImage: "waveform")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.red)
+                            .foregroundColor(DS.Accent.recording)
                         Text("Hold \(selectedPrimaryHotkey.displayName) and speak")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                        
+                            .foregroundColor(DS.Label.secondary)
+
                         Label("Voice Command", systemImage: "bolt.fill")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.purple)
+                            .foregroundColor(DS.Accent.command)
                             .padding(.top, 4)
                         Text("Hold \(selectedPrimaryHotkey.displayName) + \(selectedCommandModifier.displayName) and speak")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                     }
                     .padding(.vertical, 8)
                 }
@@ -112,7 +115,7 @@ struct HotkeySettingsView: View {
             }
         }
         .frame(width: 300, height: 500)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(DS.Surface.panel)
     }
 }
 
@@ -128,23 +131,23 @@ struct HotkeyOptionRow: View {
             HStack(spacing: 12) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 16))
-                    .foregroundColor(isSelected ? .blue : .secondary.opacity(0.4))
-                
+                    .foregroundColor(isSelected ? DS.Accent.primary : DS.Label.tertiary)
+
                 Text(option.displayName)
                     .font(.system(size: 13))
-                    .foregroundColor(.primary)
-                
+                    .foregroundColor(DS.Label.primary)
+
                 Spacer()
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.blue.opacity(0.1) : (isHovering ? Color.primary.opacity(0.05) : Color.clear))
+                RoundedRectangle(cornerRadius: DS.Radius.r10)
+                    .fill(isSelected ? DS.Tint.blue : (isHovering ? DS.Fill.hover : Color.clear))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
+                RoundedRectangle(cornerRadius: DS.Radius.r10)
+                    .stroke(isSelected ? DS.Border.selected : Color.clear, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
