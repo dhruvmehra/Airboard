@@ -10,6 +10,7 @@ Airboard (formerly "Murmur") is a macOS voice transcription app. Users press a h
 
 - Open `Airboard.xcodeproj` in Xcode and build with Cmd+R
 - Minimum deployment target: macOS 14.0
+- The app forces dark appearance (`.darkAqua`) at launch — design system v2 is dark-only.
 - **Signing discipline (do not break this):** Debug (`com.pype.airboard.dev`) signs with
   Apple Development; Release (`com.pype.airboard`) signs with Developer ID Application
   (manual style). Never launch a prod-bundle-id app signed with the dev cert — macOS
@@ -94,7 +95,7 @@ HotkeyManager (detects key press)
 | Text output | `TextInserter.swift` (Accessibility API) |
 | Commands | `CommandDetector.swift`, `CommandExecutor.swift`, `CommandTypes.swift` |
 | Context | `AppContextDetector.swift` (detects active app type: email, code, messaging, etc.) |
-| UI | `FloatingWindowManager.swift`, `AirboardPopover.swift`, `SetupWindowController.swift` |
+| UI | `FloatingWindowManager.swift`, `AirboardPopover.swift`, `SetupWindowController.swift`, `DesignSystem.swift` (v2 tokens — all styled views consume these), `OnboardingFlow.swift` (guided first-run flow hosted by `SetupWindowController`) |
 | Settings | `MenuBarManager.swift`, `HotkeySettingsView.swift` |
 | Post-processing | `TranscriptPostProcessor.swift` (orchestrator), `FillerRules.swift`, `TranscriptRefiner.swift` (OpenAI-compatible HTTP client), `CleanupSettingsView.swift`, `KeychainHelper.swift` |
 | Diagnostics | `PerformanceMonitor.swift`, `PerformanceView.swift`, `FeedbackManager.swift` |

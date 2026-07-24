@@ -16,6 +16,8 @@ promotes that section to the released version automatically.
 
 ### Added
 - Microphone selection with per-device memory: pick which mic Airboard uses from the menu popover; the choice is remembered for each connected headset (e.g. keep using the MacBook mic when Bluetooth earphones connect)
+- New look: the entire app adopts the Airboard design system v2 "Sleek Dark" — dark-only, tokenized surfaces, blue-led actions
+- New guided onboarding for first-run setup: six steps (Welcome → The Gesture → Microphone → Accessibility → Your Hotkey → Try It), skippable at any point; existing users never see it
 
 ## [1.0.6] - 2026-07-24
 
