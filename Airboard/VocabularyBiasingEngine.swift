@@ -29,6 +29,16 @@ actor VocabularyBiasingEngine {
     /// word is terrible.
     private static let similarityFloor: Float = 0.65
 
+    /// The context-biasing weight is a FLAT BONUS added to the vocabulary
+    /// term's acoustic score before comparing against what was heard
+    /// (FluidAudio: shouldReplace = vocabScore + cbw > originalScore).
+    /// Their default 4.5 is recall-tuned for keyword-spotting benchmarks —
+    /// in dictation it let "Inakshi" beat "at pipe" while sounding much
+    /// worse (field bug: words replaced by names all over). 1.5 keeps a
+    /// small benefit-of-the-doubt: the name must explain the audio nearly
+    /// as well as the heard words to win.
+    private static let contextBiasWeight: Float = 1.5
+
     private var vocab: CustomVocabularyContext?
     private var ctcModels: CtcModels?
     private var spotter: CtcKeywordSpotter?
@@ -57,7 +67,7 @@ actor VocabularyBiasingEngine {
             let out = rescorer.ctcTokenRescore(
                 transcript: text, tokenTimings: tokenTimings,
                 logProbs: spotResult.logProbs, frameDuration: spotResult.frameDuration,
-                cbw: vocabConfig.cbw,
+                cbw: Self.contextBiasWeight,
                 marginSeconds: ContextBiasingConstants.defaultMarginSeconds,
                 minSimilarity: max(vocabConfig.minSimilarity, Self.similarityFloor))
             if out.wasModified {

@@ -228,6 +228,13 @@ class TextInserter {
             return .eventCreationFailed
         }
 
+        // Explicit empty flags: events created with a nil source INHERIT
+        // the session's current modifier state — after a shifted character,
+        // a latched shift flag turned whole runs of text into caps
+        // ("I WAS TALKING TO Inakshi…", field bug). Never inherit.
+        keyDownEvent.flags = []
+        keyUpEvent.flags = []
+
         keyDownEvent.post(tap: .cghidEventTap)
         keyUpEvent.post(tap: .cghidEventTap)
         return nil
