@@ -25,6 +25,8 @@ actor VocabularyBiasingEngine {
     private var builtRevision: Int = -1
     private var downloadFailedThisLaunch = false
 
+    private var rebuildInFlight = false
+
     /// Rescore a transcript against the memory watch-list. nil = leave the
     /// transcript alone (empty list, unavailable helper, or any failure).
     func rescore(text: String, tokenTimings: [TokenTiming], audioURL: URL) async -> String? {
@@ -74,8 +76,29 @@ actor VocabularyBiasingEngine {
             builtRevision = revision
             return
         }
-        guard !downloadFailedThisLaunch else { return }
+        guard !downloadFailedThisLaunch, !rebuildInFlight else { return }
 
+        // First-ever activation needs a ~98MB download — NEVER make a
+        // dictation wait on the network. Kick the build off in the
+        // background and let this transcription go out unbiased; the
+        // next one after the download completes gets biasing.
+        let modelsCached = CtcModels.modelsExist(at: CtcModels.defaultCacheDirectory(for: .ctc110m))
+        if !modelsCached {
+            rebuildInFlight = true
+            Task { [weak self] in
+                await self?.buildVocabulary(revision: revision, content: content)
+                await self?.clearRebuildFlag()
+            }
+            return
+        }
+        await buildVocabulary(revision: revision, content: content)
+    }
+
+    private func clearRebuildFlag() {
+        rebuildInFlight = false
+    }
+
+    private func buildVocabulary(revision: Int, content: String) async {
         do {
             let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent(Bundle.main.bundleIdentifier ?? "com.pype.airboard", isDirectory: true)
