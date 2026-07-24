@@ -23,22 +23,22 @@ struct CleanupSettingsView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.purple.opacity(0.1))
-                        .frame(width: 32, height: 32)
+                        .fill(DS.Tint.purple)
+                        .frame(width: DS.Badge.size, height: DS.Badge.size)
 
                     Image(systemName: "wand.and.stars")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.purple)
+                        .font(.system(size: DS.Badge.glyph, weight: .medium))
+                        .foregroundStyle(DS.Accent.command)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("AI Cleanup")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.primary)
+                        .foregroundColor(DS.Label.primary)
 
                     Text("Any OpenAI-compatible server: OpenRouter, Bedrock, Ollama, vLLM")
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DS.Label.secondary)
                 }
 
                 Spacer()
@@ -54,7 +54,7 @@ struct CleanupSettingsView: View {
                 HStack(spacing: 8) {
                     Text("Quick setup:")
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DS.Label.secondary)
                     Button("Cerebras (fastest)") {
                         serverURL = "https://api.cerebras.ai"
                         modelName = "llama-3.3-70b"
@@ -77,24 +77,30 @@ struct CleanupSettingsView: View {
                 }
 
                 TextField("Server URL  (e.g. https://openrouter.ai/api)", text: $serverURL)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
                     .font(.system(size: 12))
+                    .foregroundColor(DS.Label.primary)
+                    .dsFieldChrome()
                 TextField("Model  (e.g. qwen/qwen3-30b-a3b-instruct-2507)", text: $modelName)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
                     .font(.system(size: 12))
+                    .foregroundColor(DS.Label.primary)
+                    .dsFieldChrome()
 
                 HStack(spacing: 8) {
                     SecureField(hasStoredKey ? "API key saved — type to replace" : "API key (not needed for local servers)",
                                 text: $apiKeyField)
-                        .textFieldStyle(.roundedBorder)
+                        .textFieldStyle(.plain)
                         .font(.system(size: 12))
+                        .foregroundColor(DS.Label.primary)
+                        .dsFieldChrome()
                     Button("Save") {
                         KeychainHelper.saveAPIKey(apiKeyField)
                         apiKeyField = ""
                         hasStoredKey = KeychainHelper.hasAPIKey
                         testResult = nil
                     }
-                    .controlSize(.small)
+                    .buttonStyle(DSPrimaryButtonStyle())
                     .disabled(apiKeyField.isEmpty)
                     if hasStoredKey {
                         Button("Remove") {
@@ -120,12 +126,13 @@ struct CleanupSettingsView: View {
                             isTesting = false
                         }
                     }
-                    .controlSize(.small)
+                    .buttonStyle(DSPrimaryButtonStyle())
                     .disabled(isTesting || !TranscriptRefiner.shared.isConfigured)
 
                     if let testResult {
                         Text(testResult)
                             .font(.system(size: 11))
+                            .foregroundColor(testResult.hasPrefix("✅") ? DS.Accent.success : DS.Label.secondary)
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -140,12 +147,48 @@ struct CleanupSettingsView: View {
 
             Text("When configured, dictated text is sent to this server for cleanup. Nothing is ever sent when these fields are empty or AI cleanup is toggled off.")
                 .font(.system(size: 10))
-                .foregroundColor(.secondary)
+                .foregroundColor(DS.Label.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
         }
         .frame(width: 440)
+        .background(DS.Surface.panel)
+    }
+}
+
+/// Shared DS chrome for text/secure fields: control surface + hairline stroke.
+private extension View {
+    func dsFieldChrome() -> some View {
+        self
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: DS.Radius.r8)
+                    .fill(DS.Surface.control)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.r8)
+                    .stroke(DS.Border.control, lineWidth: 1)
+            )
+    }
+}
+
+/// DS primary CTA: accent fill, on-accent label, r8 radius. Dims when disabled.
+private struct DSPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(DS.Label.onAccent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: DS.Radius.r8)
+                    .fill(DS.Accent.primary)
+            )
+            .opacity(isEnabled ? (configuration.isPressed ? 0.85 : 1) : 0.4)
     }
 }
 
