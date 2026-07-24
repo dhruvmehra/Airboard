@@ -82,6 +82,7 @@ class TranscriptionCoordinator: ObservableObject {
     private func setupObservers() {
         // Transcription service download progress
         transcriptionService.$downloadProgress
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] progress in
                 self?.modelDownloadProgress = progress
                 FloatingWindowManager.shared.showDownloadProgress(progress: progress)
@@ -92,6 +93,7 @@ class TranscriptionCoordinator: ObservableObject {
         // download state and pulse the floating icon so the user knows it's usable.
         transcriptionService.$isModelReady
             .removeDuplicates()
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] ready in
                 self?.isModelReady = ready
                 guard ready else { return }

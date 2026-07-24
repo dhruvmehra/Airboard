@@ -20,6 +20,7 @@ struct AirboardApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyManager = HotkeyManager()
     private lazy var coordinator = TranscriptionCoordinator.shared
+    private var hotkeyMonitoringStarted = false
     
     /// Route stdout+stderr to a log file instead of discarding them. The old
     /// version dup2'd stderr to /dev/null, which made every field problem
@@ -112,6 +113,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func startHotkeyMonitoring() {
+        hotkeyMonitoringStarted = true
+        // Idempotent start: tears down any monitors before installing new
+        // ones so this is safe to call more than once.
+        hotkeyManager.stopMonitoring()
         hotkeyManager.startMonitoring(
             onDictationStart: { [weak self] in
                 guard let self = self else { return }
@@ -138,6 +143,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc func hotkeyDidChange() {
+        // Onboarding's hotkey step posts .hotkeyChanged before setup
+        // completes; monitoring starts once, on completion.
+        guard hotkeyMonitoringStarted else { return }
         print("🔄 Hotkey changed, restarting monitoring")
         hotkeyManager.restartMonitoring(
             onDictationStart: { [weak self] in

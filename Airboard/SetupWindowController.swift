@@ -128,6 +128,11 @@ class SetupWindowController: NSObject, NSWindowDelegate {
         hasCompletedSetup = true
         let completion = onComplete
         onComplete = nil
+        // Forces SwiftUI teardown/onDisappear — close() alone doesn't
+        // guarantee it, and a leaked local key monitor from TryItStep would
+        // keep driving the real recording pipeline whenever an Airboard
+        // window is key.
+        window?.contentView = nil
         window?.close()
         window = nil
         NotificationCenter.default.post(name: .pulseFloatingIcon, object: nil)
@@ -141,6 +146,8 @@ class SetupWindowController: NSObject, NSWindowDelegate {
         if !hasCompletedSetup { hasCompletedSetup = true }
         let completion = onComplete
         onComplete = nil
+        // Forces SwiftUI teardown/onDisappear for the native red-X path too.
+        window?.contentView = nil
         window = nil
         completion?()
     }

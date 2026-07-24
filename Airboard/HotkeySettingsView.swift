@@ -142,11 +142,11 @@ struct HotkeyOptionRow: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(
-                RoundedRectangle(cornerRadius: DS.Radius.r10)
+                RoundedRectangle(cornerRadius: DS.Radius.r8)
                     .fill(isSelected ? DS.Tint.blue : (isHovering ? DS.Fill.hover : Color.clear))
             )
             .overlay(
-                RoundedRectangle(cornerRadius: DS.Radius.r10)
+                RoundedRectangle(cornerRadius: DS.Radius.r8)
                     .stroke(isSelected ? DS.Border.selected : Color.clear, lineWidth: 1)
             )
         }

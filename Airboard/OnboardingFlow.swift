@@ -509,9 +509,9 @@ private struct TryItStep: View {
         } footer: {
             HStack(spacing: 14) {
                 PrimaryButton(title: hasTranscribed ? "Finish setup" : "Try it first",
-                              disabled: !hasTranscribed, action: finish)
+                              disabled: !hasTranscribed, action: { removeKeyMonitor(); finish() })
                 Spacer()
-                Button(action: skip) {
+                Button(action: { removeKeyMonitor(); skip() }) {
                     Text("Skip & finish")
                         .font(DS.Typo.mono(11)).kerning(0.7)
                         .foregroundColor(DS.Label.tertiary)
@@ -524,7 +524,7 @@ private struct TryItStep: View {
             installKeyMonitor()
         }
         .onDisappear(perform: removeKeyMonitor)
-        .onReceive(coordinator.$lastTranscribedText.dropFirst()) { newText in
+        .onReceive(coordinator.$lastTranscribedText.dropFirst().receive(on: DispatchQueue.main)) { newText in
             guard let newText, !newText.isEmpty else { return }
             hasTranscribed = true
             // The real pipeline inserts into the focused editor via the
