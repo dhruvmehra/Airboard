@@ -33,6 +33,13 @@ enum MemoryCommands {
     static func detectLocally(_ raw: String) -> LocalIntent? {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         while let last = text.last, ".?!,".contains(last) { text.removeLast() }
+        // ASR often punctuates after the verb ("Remember, I work at Pype").
+        // Drop a single comma that directly follows the first word so the
+        // prefix checks still match.
+        if let commaIndex = text.firstIndex(of: ","),
+           !text[..<commaIndex].contains(" ") {
+            text.remove(at: commaIndex)
+        }
         let lower = text.lowercased()
 
         if lower.hasPrefix("remember ") {
@@ -136,7 +143,11 @@ enum MemoryCommands {
     /// Offline fallback: pick the note sharing the most words with the
     /// query; if it reads "My <thing> is <value>", insert just the value.
     static func localRecall(query: String, notes: [String]) -> String? {
+        // "my" appears in nearly every query AND note — matching on it
+        // alone inserts unrelated facts. Score only meaningful words.
+        let stopwords: Set<String> = ["my", "the", "a", "an", "i", "is", "in", "at", "of"]
         let queryWords = Set(query.lowercased().split(separator: " ").map(String.init))
+            .subtracting(stopwords)
         guard !queryWords.isEmpty else { return nil }
         var best: (note: String, score: Int)?
         for note in notes {
