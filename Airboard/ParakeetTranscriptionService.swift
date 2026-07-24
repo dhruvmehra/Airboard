@@ -160,24 +160,22 @@ class ParakeetTranscriptionService: ObservableObject {
                 return
             }
 
-            // Acoustic vocabulary biasing: re-check the audio for the
-            // user's memory terms and correct from sound. Inert when the
-            // watch-list is empty; never blocks or fails the dictation.
-            // Runs BEFORE the audio file is deleted — it needs the samples.
-            var finalText = transcribedText
-            if let timings = result.tokenTimings, !timings.isEmpty {
-                if let corrected = await VocabularyBiasingEngine.shared.rescore(
-                    text: transcribedText, tokenTimings: timings, audioURL: audioURL) {
-                    finalText = corrected
-                }
-            }
-
-            transcription = finalText
+            // NOTE: acoustic vocabulary biasing (CTC word-spotter rescoring
+            // of memory terms) was built and REMOVED here 2026-07-25: with
+            // small personal vocabularies FluidAudio 0.15.5's candidate
+            // matcher stamped names over unrelated speech ("is working" ->
+            // "Inakshi") across every tunable threshold, and any text gate
+            // strict enough to stop that also killed the genuine acoustic
+            // recoveries. Name correction lives in the cleanup LLM's
+            // glossary (MemoryStore.promptBlock). Revisit only with an
+            // offline eval harness of recorded utterances or an upstream
+            // precision fix.
+            transcription = transcribedText
 
             PerformanceMonitor.shared.finalizeSession()
             isTranscribing = false
 
-            print("✅ Done: \(finalText)")
+            print("✅ Done: \(transcribedText)")
             print("⏱️ \(Int(duration))ms")
 
             deleteAudioFile(at: audioURL)

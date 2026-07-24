@@ -1,11 +1,10 @@
 //
 //  MemoryBias.swift
 //
-//  Pure logic for the ASR vocabulary watch-list and the memory confirm
-//  pop-up: watch-list assembly (glossary first, extracted names after,
-//  capped), FluidAudio simple-format vocab serialization, storage-LLM
-//  extraction-JSON parsing, edit-diff glossary learning, and name
-//  reconciliation against the user's saved text.
+//  Pure logic for the memory confirm pop-up: storage-LLM extraction-JSON
+//  parsing, edit-diff glossary learning, and name reconciliation against
+//  the user's saved text. (The acoustic watch-list helpers that lived here
+//  were removed with the vocabulary-biasing layer, 2026-07-25.)
 //
 //  Foundation-only on purpose: compiles standalone for scratch tests.
 //
@@ -13,47 +12,6 @@
 import Foundation
 
 enum MemoryBias {
-
-    /// Biasing quality degrades on huge lists; glossary (curated) wins,
-    /// extracted names fill the remainder newest-first.
-    static let termCap = 200
-
-    static func watchList(from data: MemoryData) -> [(term: String, aliases: [String])] {
-        var seen = Set<String>()
-        var out: [(term: String, aliases: [String])] = []
-        for entry in data.glossary {
-            let term = sanitize(entry.term)
-            guard !term.isEmpty, seen.insert(term.lowercased()).inserted else { continue }
-            let aliases = entry.heardAs.isEmpty ? [] : [sanitize(entry.heardAs)]
-            out.append((term, aliases.filter { !$0.isEmpty }))
-            if out.count == termCap { return out }
-        }
-        for name in data.extractedNames.reversed() {  // newest first
-            let term = sanitize(name)
-            guard !term.isEmpty, seen.insert(term.lowercased()).inserted else { continue }
-            out.append((term, []))
-            if out.count == termCap { break }
-        }
-        return out
-    }
-
-    /// FluidAudio simple vocab format: one term per line, optionally
-    /// "Term: alias1, alias2". Nil when there is nothing to bias.
-    static func vocabFileContent(from data: MemoryData) -> String? {
-        let list = watchList(from: data)
-        guard !list.isEmpty else { return nil }
-        return list.map { item in
-            item.aliases.isEmpty ? item.term : "\(item.term): \(item.aliases.joined(separator: ", "))"
-        }.joined(separator: "\n")
-    }
-
-    /// The simple format uses ':' and ',' as separators — strip them from
-    /// values so a weird term can't corrupt the file.
-    private static func sanitize(_ s: String) -> String {
-        s.replacingOccurrences(of: ":", with: "")
-            .replacingOccurrences(of: ",", with: " ")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
 
     /// Parse the storage LLM's reply: {"sentence": "...", "names": ["..."]}.
     /// Anything malformed degrades to (fallback-or-raw-reply, no names) —

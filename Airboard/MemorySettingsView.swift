@@ -141,7 +141,7 @@ struct MemorySettingsView: View {
                         Text("Names")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(DS.Label.primary)
-                        Text("Picked up from your facts — helps Airboard recognize them when you speak. Never sent anywhere.")
+                        Text("Picked up from your facts — AI Cleanup uses them to spell names right in your dictation.")
                             .font(.system(size: 10))
                             .foregroundColor(DS.Label.secondary)
                             .fixedSize(horizontal: false, vertical: true)

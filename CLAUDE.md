@@ -94,7 +94,7 @@ HotkeyManager (detects key press)
 | Input handling | `HotkeyManager.swift` |
 | Text output | `TextInserter.swift` (Accessibility API) |
 | Commands | `CommandDetector.swift`, `CommandExecutor.swift`, `CommandTypes.swift` |
-| Memory | `MemoryStore.swift` (glossary + notes + extracted names, memory.json in App Support), `MemoryCommands.swift` (voice teach/recall intents), `MemoryBias.swift` (watch-list + confirm-card logic), `VocabularyBiasingEngine.swift` (CTC acoustic biasing), `MemoryConfirmView.swift` (fact confirmation card), `MemorySettingsView.swift` |
+| Memory | `MemoryStore.swift` (glossary + notes + extracted names, memory.json in App Support), `MemoryCommands.swift` (voice teach/recall intents), `MemoryBias.swift` (confirm-card logic), `MemoryConfirmView.swift` (fact confirmation card), `MemorySettingsView.swift` |
 | Context | `AppContextDetector.swift` (detects active app type: email, code, messaging, etc.) |
 | UI | `FloatingWindowManager.swift`, `AirboardPopover.swift`, `SetupWindowController.swift`, `DesignSystem.swift` (v2 tokens — all styled views consume these), `OnboardingFlow.swift` (guided first-run flow hosted by `SetupWindowController`) |
 | Settings | `MenuBarManager.swift`, `HotkeySettingsView.swift` |
@@ -127,4 +127,4 @@ No XCTest target exists. Testing is manual: build, grant permissions, and dictat
 - `cleanupServerURL`, `cleanupModelName` — cleanup endpoint config (API key lives in the Keychain, service `<bundle id>.cleanup` — dev and prod have separate entries)
 - `micRuleByDevice` — per-external-device mic choice (externalDeviceUID → chosenMicUID); no rule = system default
 
-Memory lives in `~/Library/Application Support/<bundle id>/memory.json` (NOT UserDefaults) — glossary, notes, extractedNames, shareWithLLM flag. The bias watch-list (glossary + extractedNames, cap 200) feeds an on-device CTC rescorer (FluidAudio custom vocabulary, `.ctc110m` helper, lazily downloaded); empty memory = biasing fully inert.
+Memory lives in `~/Library/Application Support/<bundle id>/memory.json` (NOT UserDefaults) — glossary, notes, extractedNames, shareWithLLM flag. extractedNames also join the cleanup prompt's spelling list. (An acoustic CTC-biasing layer was built and removed 2026-07-25 — see ParakeetTranscriptionService for why; don't re-add without an offline eval harness.)
