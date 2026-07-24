@@ -35,12 +35,6 @@ struct AirboardPopover: View {
         VStack(spacing: 0) {
             // Header
             HStack(spacing: 8) {
-                // The brand mark: the Airboard waveform is always brand red
-                // (tokens: --brand-red) — never blue, never a gradient.
-                Image(systemName: "waveform.circle.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(DS.Brand.red)
-
                 Text("Airboard")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(DS.Label.primary)

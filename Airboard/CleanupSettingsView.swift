@@ -17,9 +17,29 @@ struct CleanupSettingsView: View {
     @State private var hasStoredKey = false
     @State private var promptText = TranscriptRefiner.shared.systemPrompt
 
+    /// A custom prompt is SAVED (in use for requests).
     private var isCustomPrompt: Bool {
-        promptText != TranscriptRefiner.defaultInstructions
-            && !promptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        TranscriptRefiner.shared.systemPrompt != TranscriptRefiner.defaultInstructions
+    }
+
+    /// The editor differs from what's saved — Save becomes available.
+    private var promptDirty: Bool {
+        promptText != TranscriptRefiner.shared.systemPrompt
+    }
+
+    private func savePrompt() {
+        let trimmed = promptText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || promptText == TranscriptRefiner.defaultInstructions {
+            UserDefaults.standard.removeObject(forKey: TranscriptRefiner.systemPromptKey)
+            promptText = TranscriptRefiner.defaultInstructions
+        } else {
+            UserDefaults.standard.set(promptText, forKey: TranscriptRefiner.systemPromptKey)
+        }
+    }
+
+    private func resetPrompt() {
+        UserDefaults.standard.removeObject(forKey: TranscriptRefiner.systemPromptKey)
+        promptText = TranscriptRefiner.defaultInstructions
     }
     @State private var testResult: String?
     @State private var isTesting = false
@@ -215,14 +235,16 @@ struct CleanupSettingsView: View {
                             .background(Capsule().fill(DS.Tint.blue))
                     }
                     Spacer()
-                    if isCustomPrompt {
-                        Button("Reset to default") {
-                            promptText = TranscriptRefiner.defaultInstructions
-                        }
-                        .controlSize(.small)
+                    if isCustomPrompt || promptDirty {
+                        Button("Reset to default", action: resetPrompt)
+                            .controlSize(.small)
+                    }
+                    if promptDirty {
+                        Button("Save", action: savePrompt)
+                            .buttonStyle(DSPrimaryButtonStyle())
                     }
                 }
-                Text("Sent with every request; edits save automatically. Your dictation is always wrapped in <dictation> tags and framed as text to edit — so a request you speak (\"give me three points on…\") is transcribed, never answered. Answering is Command mode's job.")
+                Text("Sent with every request — edit below and press Save. Your dictation is always wrapped in <dictation> tags and framed as text to edit — so a request you speak (\"give me three points on…\") is transcribed, never answered. Answering is Command mode's job.")
                     .font(.system(size: 10))
                     .foregroundColor(DS.Label.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -240,15 +262,6 @@ struct CleanupSettingsView: View {
                         RoundedRectangle(cornerRadius: DS.Radius.r8)
                             .stroke(DS.Border.control, lineWidth: 1)
                     )
-                    .onChange(of: promptText) { _, newValue in
-                        // Default text (or blank) = no override stored.
-                        if newValue == TranscriptRefiner.defaultInstructions
-                            || newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            UserDefaults.standard.removeObject(forKey: TranscriptRefiner.systemPromptKey)
-                        } else {
-                            UserDefaults.standard.set(newValue, forKey: TranscriptRefiner.systemPromptKey)
-                        }
-                    }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)

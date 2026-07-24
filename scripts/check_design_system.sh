@@ -50,12 +50,16 @@ else
     echo "✅ none"
 fi
 
-section "4. Brand mark is brand red (never blue, never a gradient)"
-if grep -A4 'waveform.circle.fill' "$SRC/AirboardPopover.swift" | grep -q "DS.Brand.red"; then
-    echo "✅ popover brand mark uses DS.Brand.red"
+section "4. Brand mark, if present, is brand red (never blue, never a gradient)"
+if grep -q 'waveform.circle.fill' "$SRC/AirboardPopover.swift"; then
+    if grep -A4 'waveform.circle.fill' "$SRC/AirboardPopover.swift" | grep -q "DS.Brand.red"; then
+        echo "✅ popover brand mark uses DS.Brand.red"
+    else
+        echo "❌ A waveform brand mark in the popover must use DS.Brand.red (#E5352B)."
+        FAIL=1
+    fi
 else
-    echo "❌ The popover's waveform brand mark must use DS.Brand.red (#E5352B)."
-    FAIL=1
+    echo "✅ popover header is text-only (no brand mark — by decision 2026-07-24)"
 fi
 
 echo ""
