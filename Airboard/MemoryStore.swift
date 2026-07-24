@@ -69,34 +69,122 @@ final class MemoryStore: ObservableObject {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(Bundle.main.bundleIdentifier ?? "com.pype.airboard", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("memory.json")
+        return dir.appendingPathComponent("memory.md")
     }
 
     private static func load(from url: URL) -> MemoryData {
-        guard let raw = try? Data(contentsOf: url) else { return MemoryData() }
-        do {
-            return try JSONDecoder().decode(MemoryData.self, from: raw)
-        } catch {
-            // Corrupt: keep the bad file aside, start empty. Never crash,
-            // never silently overwrite what might be recoverable data.
-            let bad = url.deletingLastPathComponent()
-                .appendingPathComponent("memory.json.bad")
-            try? FileManager.default.removeItem(at: bad)
-            try? FileManager.default.moveItem(at: url, to: bad)
-            print("⚠️ memory.json unreadable (\(error.localizedDescription)); moved to memory.json.bad, starting empty")
-            return MemoryData()
+        // One-time migration from the JSON era: if memory.md doesn't exist
+        // yet but memory.json does, convert it and set the original aside.
+        let jsonURL = url.deletingLastPathComponent().appendingPathComponent("memory.json")
+        if !FileManager.default.fileExists(atPath: url.path),
+           let raw = try? Data(contentsOf: jsonURL),
+           let migrated = try? JSONDecoder().decode(MemoryData.self, from: raw) {
+            try? markdown(from: migrated).write(to: url, atomically: true, encoding: .utf8)
+            let aside = jsonURL.appendingPathExtension("migrated")
+            try? FileManager.default.removeItem(at: aside)
+            try? FileManager.default.moveItem(at: jsonURL, to: aside)
+            print("📦 Migrated memory.json → memory.md")
+            return migrated
         }
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else { return MemoryData() }
+        return parse(markdown: text)
     }
 
     private func save() {
         revision += 1
         do {
-            let enc = JSONEncoder()
-            enc.outputFormatting = [.prettyPrinted, .sortedKeys]
-            try enc.encode(data).write(to: fileURL, options: .atomic)
+            try Self.markdown(from: data).write(to: fileURL, atomically: true, encoding: .utf8)
         } catch {
-            print("⚠️ memory.json save failed: \(error.localizedDescription)")
+            print("⚠️ memory.md save failed: \(error.localizedDescription)")
         }
+    }
+
+    // MARK: - Markdown format (Claude-style: human-readable, hand-editable)
+
+    /// Serialize memory as markdown. This is the file the user may open and
+    /// edit by hand; Airboard normalizes formatting on its next save.
+    static func markdown(from data: MemoryData) -> String {
+        var lines: [String] = [
+            "# Airboard Memory",
+            "",
+            "Airboard reads and rewrites this file — edit freely, one item per",
+            "\"- \" line. Vocabulary lines: `- Term (heard as \"misheard\") — note`",
+            "(the heard-as and note parts are optional).",
+            "",
+            "## Vocabulary",
+            "",
+        ]
+        for e in data.glossary {
+            var line = "- \(e.term)"
+            if !e.heardAs.isEmpty { line += " (heard as \"\(e.heardAs)\")" }
+            if !e.note.isEmpty { line += " — \(e.note)" }
+            lines.append(line)
+        }
+        lines += ["", "## Facts", ""]
+        for n in data.notes { lines.append("- \(n)") }
+        lines += ["", "## Names", ""]
+        for n in data.extractedNames { lines.append("- \(n)") }
+        lines += [
+            "",
+            "## Settings",
+            "",
+            "- Share memory with AI Cleanup: \(data.shareWithLLM ? "yes" : "no")",
+            "",
+        ]
+        return lines.joined(separator: "\n")
+    }
+
+    /// Lenient parse: sections by `## ` header, items by `- ` prefix.
+    /// Anything that doesn't fit is ignored rather than treated as corrupt —
+    /// a hand-edited file can never wipe the user's memory.
+    static func parse(markdown text: String) -> MemoryData {
+        var data = MemoryData()
+        var section = ""
+        for rawLine in text.components(separatedBy: "\n") {
+            let line = rawLine.trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("## ") {
+                section = line.dropFirst(3).trimmingCharacters(in: .whitespaces).lowercased()
+                continue
+            }
+            guard line.hasPrefix("- ") else { continue }
+            let item = String(line.dropFirst(2)).trimmingCharacters(in: .whitespaces)
+            guard !item.isEmpty else { continue }
+            switch section {
+            case "vocabulary":
+                data.glossary.append(Self.parseGlossaryLine(item))
+            case "facts":
+                data.notes.append(item)
+            case "names":
+                data.extractedNames.append(item)
+            case "settings":
+                let lower = item.lowercased()
+                if lower.hasPrefix("share memory with ai cleanup:") {
+                    let value = lower.dropFirst("share memory with ai cleanup:".count)
+                    data.shareWithLLM = value.contains("yes") || value.contains("true") || value.contains("on")
+                }
+            default:
+                break
+            }
+        }
+        return data
+    }
+
+    /// `Term (heard as "misheard") — note` — both suffixes optional.
+    private static func parseGlossaryLine(_ item: String) -> GlossaryEntry {
+        var term = item
+        var heardAs = ""
+        var note = ""
+        if let dash = term.range(of: " — ") {
+            note = String(term[dash.upperBound...]).trimmingCharacters(in: .whitespaces)
+            term = String(term[..<dash.lowerBound])
+        }
+        if let start = term.range(of: "(heard as \""),
+           let end = term.range(of: "\")", range: start.upperBound..<term.endIndex) {
+            heardAs = String(term[start.upperBound..<end.lowerBound])
+            term = String(term[..<start.lowerBound])
+        }
+        return GlossaryEntry(term: term.trimmingCharacters(in: .whitespaces),
+                             heardAs: heardAs, note: note)
     }
 
     // MARK: - Mutations (call on the main thread; UI and command mode both do)

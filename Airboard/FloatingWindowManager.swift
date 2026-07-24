@@ -679,6 +679,10 @@ class FloatingWindowManager: NSObject {
             panel.isOpaque = false
             panel.backgroundColor = .clear
             panel.level = .floating
+            // Follow the user to whatever Space or full-screen app they are
+            // in — without this the card materializes on the desktop Space
+            // only (field bug: "the pop-up appears only on the desktop").
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.isMovableByWindowBackground = true
             panel.isReleasedWhenClosed = false
             // A confirm card has exactly two exits: Save and Cancel.
