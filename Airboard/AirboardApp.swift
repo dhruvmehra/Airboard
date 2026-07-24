@@ -21,12 +21,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyManager = HotkeyManager()
     private lazy var coordinator = TranscriptionCoordinator.shared
     
-    private func suppressLibraryLogs() {
-        let devNull = open("/dev/null", O_WRONLY)
-        if devNull != -1 {
-            dup2(devNull, STDERR_FILENO)
-            close(devNull)
+    /// Route stdout+stderr to a log file instead of discarding them. The old
+    /// version dup2'd stderr to /dev/null, which made every field problem
+    /// undiagnosable — "check the logs" had no logs to check. The file is
+    /// truncated on each launch so it never grows unbounded.
+    private func redirectLogsToFile() {
+        let logDir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Logs")
+        try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
+        let logPath = logDir.appendingPathComponent("Airboard.log").path
+
+        let fd = open(logPath, O_WRONLY | O_CREAT | O_TRUNC, 0o644)
+        if fd != -1 {
+            dup2(fd, STDOUT_FILENO)
+            dup2(fd, STDERR_FILENO)
+            close(fd)
+            // Line-buffer stdout so prints land in the file promptly
+            setvbuf(stdout, nil, _IOLBF, 0)
         }
+        print("📓 Log started \(Date()) — \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?") (\(Bundle.main.bundleIdentifier ?? "?"))")
     }
 
     /// The Whisper-based versions of Airboard cached a ~630MB model under
@@ -46,7 +59,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         print("🚀 Airboard launched")
-        suppressLibraryLogs()
+        redirectLogsToFile()
         cleanupLegacyWhisperModels()
 
         // Prevent multiple instances
