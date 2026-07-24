@@ -10,6 +10,11 @@ promotes that section to the released version automatically.
 
 ### Added
 - Airboard Memory: teach spellings ("correct pipe to Pype") and facts ("remember I work at Pype") by voice in command mode; recall facts anywhere ("write my address" types it at your cursor). Facts are cleaned by the AI before storing (grammar fixed, your taught spellings applied — falls back to the raw words offline), and spellings are applied in context by AI Cleanup — "the water pipe" stays "pipe". A toast confirms every teach on screen. Everything is editable in the new Memory window, stored locally, with a switch controlling whether memory is shared with the cleanup LLM
+- Name recognition: words you teach Airboard (and names from your saved facts) are now recognized by the speech model itself — a small on-device helper (98 MB, downloaded once when you first teach a word) re-checks the audio for your words and corrects the transcript from sound, not guessing. "Pype" and "Ashish" come out right even with AI Cleanup off
+- Memory confirmation: every "remember…" fact now shows a small card to review and edit before it's saved — and correcting a misheard name in the card teaches Airboard the right spelling automatically
+
+### Changed
+- Nothing is stored to memory silently anymore — facts always pass through the confirmation card
 
 ### Fixed
 - Dictations no longer start with a stray leading space, and chained utterances still get their separating space: the old heuristic guessed from the field's last character whenever the cursor position was unreadable (terminals always are). Now Airboard reads the character before the cursor when the app reveals it, and otherwise adds a space only when chaining right after its own previous insertion (same app, within 30s)
