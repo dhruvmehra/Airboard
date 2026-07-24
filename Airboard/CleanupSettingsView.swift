@@ -15,6 +15,12 @@ struct CleanupSettingsView: View {
     @AppStorage("aiCleanupEnabled") private var aiCleanupEnabled = false
     @State private var apiKeyField = ""
     @State private var hasStoredKey = false
+    @State private var promptText = TranscriptRefiner.shared.systemPrompt
+
+    private var isCustomPrompt: Bool {
+        promptText != TranscriptRefiner.defaultInstructions
+            && !promptText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
     @State private var testResult: String?
     @State private var isTesting = false
 
@@ -193,32 +199,56 @@ struct CleanupSettingsView: View {
                 .padding(.horizontal, 12)
 
             // The exact system prompt sent with every cleanup request —
-            // visible so there's no mystery about what the LLM is told.
+            // visible AND editable; edits save as you type. The <dictation>
+            // envelope and refusal guard live in code, not in this text.
             VStack(alignment: .leading, spacing: 6) {
-                Text("System prompt")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(DS.Label.primary)
-                Text("Sent with every request. Your dictation is wrapped in <dictation> tags and framed as text to edit — so a request you speak (\"give me three points on…\") is transcribed, never answered. Answering is Command mode's job.")
+                HStack(spacing: 8) {
+                    Text("System prompt")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(DS.Label.primary)
+                    if isCustomPrompt {
+                        Text("custom")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(DS.Accent.primary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(DS.Tint.blue))
+                    }
+                    Spacer()
+                    if isCustomPrompt {
+                        Button("Reset to default") {
+                            promptText = TranscriptRefiner.defaultInstructions
+                        }
+                        .controlSize(.small)
+                    }
+                }
+                Text("Sent with every request; edits save automatically. Your dictation is always wrapped in <dictation> tags and framed as text to edit — so a request you speak (\"give me three points on…\") is transcribed, never answered. Answering is Command mode's job.")
                     .font(.system(size: 10))
                     .foregroundColor(DS.Label.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                ScrollView {
-                    Text(TranscriptRefiner.instructions)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundColor(DS.Label.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(8)
-                        .textSelection(.enabled)
-                }
-                .frame(height: 96)
-                .background(
-                    RoundedRectangle(cornerRadius: DS.Radius.r8)
-                        .fill(DS.Surface.control)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: DS.Radius.r8)
-                        .stroke(DS.Border.hairline, lineWidth: 1)
-                )
+                TextEditor(text: $promptText)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundColor(DS.Label.primary)
+                    .scrollContentBackground(.hidden)
+                    .padding(4)
+                    .frame(height: 110)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.Radius.r8)
+                            .fill(DS.Surface.control)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.r8)
+                            .stroke(DS.Border.control, lineWidth: 1)
+                    )
+                    .onChange(of: promptText) { _, newValue in
+                        // Default text (or blank) = no override stored.
+                        if newValue == TranscriptRefiner.defaultInstructions
+                            || newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            UserDefaults.standard.removeObject(forKey: TranscriptRefiner.systemPromptKey)
+                        } else {
+                            UserDefaults.standard.set(newValue, forKey: TranscriptRefiner.systemPromptKey)
+                        }
+                    }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
