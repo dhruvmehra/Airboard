@@ -12,7 +12,8 @@ promotes that section to the released version automatically.
 - Turning AI Cleanup on now opens the setup window when the API key is missing (not only when the server URL/model are empty)
 - The AI Cleanup toggle no longer stays on when cleanup can't work: it snaps back off until a valid config exists, and turns itself on when you save one
 - API keys are now stored per server: a Cerebras key is never sent to OpenRouter/Ollama when you switch providers (existing key migrates automatically)
-- Bluetooth earphones no longer drop to muffled call-quality audio when Airboard launches or records: the app no longer opens the default (Bluetooth) microphone it isn't using — the chosen mic is pinned before the audio engine touches any device
+- Bluetooth earphones no longer drop to muffled call-quality audio when Airboard launches: the app no longer opens the default (Bluetooth) microphone at startup
+- Recording from a selected mic actually works now: the capture core was rebuilt on AVCaptureSession. The old engine's device pinning was the root cause of every mic failure to date — truncated recordings (~0.2s of audio captured regardless of how long you spoke), hangs when recording started, and the earlier deadlocks. Recording via a chosen mic also no longer touches the Bluetooth mic at all, so music stays crisp while you dictate through the MacBook mic
 - Popover logo is now the Airboard brand red (was mistakenly blue)
 
 ### Changed

@@ -19,10 +19,10 @@ class AudioRecorder: ObservableObject {
 
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("recording_\(Date().timeIntervalSince1970).wav")
-        let deviceID = MicDeviceManager.shared.resolveActiveDeviceID()
+        let deviceUID = MicDeviceManager.shared.resolvedSelectionUID
 
         do {
-            try captureEngine.start(deviceID: deviceID, fileURL: url)
+            try captureEngine.start(deviceUID: deviceUID, fileURL: url)
             isRecording = true
             recordingURL = url
             recordingStartTime = Date()

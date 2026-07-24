@@ -53,14 +53,9 @@ final class MicDeviceManager: ObservableObject {
         print("🎙️ Mic rule saved: use '\(uid)' while \(externals.map(\.name)) connected")
     }
 
-    /// Which device should this recording use? nil = don't pin (follow the
-    /// system default — no rule applies, or the chosen device is absent).
-    func resolveActiveDeviceID() -> AudioDeviceID? {
-        guard let uid = resolvedSelectionUID else { return nil }
-        return inputDevices.first(where: { $0.uid == uid })?.id
-    }
-
     /// The UID the current rules resolve to, or nil for system default.
+    /// (Recorders hand this to MicCaptureEngine; AVCaptureDevice.uniqueID
+    /// is the same CoreAudio UID string on macOS.)
     var resolvedSelectionUID: String? {
         let externalsByRecency = inputDevices
             .filter(\.isExternal)

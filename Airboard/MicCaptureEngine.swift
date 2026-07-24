@@ -2,27 +2,49 @@
 //  MicCaptureEngine.swift
 //
 //  Capture core that records from a SPECIFIC input device (or the system
-//  default when deviceID is nil) to 16kHz mono Int16 WAV — the pipeline's
-//  contract. AVAudioRecorder cannot select a device; this engine can.
-//  The tap runs on a realtime audio thread: all shared state is
+//  default when deviceUID is nil) to 16kHz mono Int16 WAV — the pipeline's
+//  contract.
+//
+//  Built on AVCaptureSession, NOT AVAudioEngine. AVAudioEngine with a
+//  kAudioOutputUnitProperty_CurrentDevice pin was the root cause of every
+//  field failure this component has had: pinning the default device spawned
+//  CADefaultDeviceAggregate ghosts and a HAL-mutex deadlock; pinning a
+//  non-default device starved the render callbacks after ~0.2s (verified in
+//  isolation, 2026-07-24: 0.2s of audio delivered in 3s wall time — while
+//  AVCaptureSession pinned to the same device delivered all 3.0s).
+//  AVCaptureSession treats device selection as a first-class input AND only
+//  opens the device it was given — choosing the built-in mic never touches
+//  a connected Bluetooth headset's mic, so playback never drops into the
+//  muffled HFP profile.
+//
+//  The sample-buffer delegate runs on a private queue: all shared state is
 //  lock-protected and this type must stay off the main actor.
 //
 
 import Foundation
 import AVFoundation
-import CoreAudio
+import CoreMedia
 
-nonisolated final class MicCaptureEngine {
+nonisolated final class MicCaptureEngine: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate {
 
-    // Recreated after every recording (see stop()): a fresh AUHAL can never
-    // carry a stale device pin, and explicit pinning of the *default* device
-    // is avoided entirely — it made CoreAudio spawn per-process
-    // CADefaultDeviceAggregate ghost devices whose teardown deadlocked
-    // removeTap on the HAL mutex (observed hang, 2026-07-24).
-    private var engine = AVAudioEngine()
-    private var converter: AVAudioConverter?
     private let targetFormat = AVAudioFormat(
         commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: true)!
+
+    /// The output converts to the pipeline contract IN the session (macOS
+    /// supports audioSettings on AVCaptureAudioDataOutput), so delegate
+    /// buffers arrive ready to write — no AVAudioConverter stage.
+    private static let outputSettings: [String: Any] = [
+        AVFormatIDKey: kAudioFormatLinearPCM,
+        AVSampleRateKey: 16000.0,
+        AVNumberOfChannelsKey: 1,
+        AVLinearPCMBitDepthKey: 16,
+        AVLinearPCMIsFloatKey: false,
+        AVLinearPCMIsBigEndianKey: false,
+        AVLinearPCMIsNonInterleaved: false,
+    ]
+
+    private var session: AVCaptureSession?
+    private let sampleQueue = DispatchQueue(label: "com.pype.airboard.mic-capture")
 
     private let stateLock = NSLock()
     private var file: AVAudioFile?
@@ -35,125 +57,96 @@ nonisolated final class MicCaptureEngine {
         return _currentPowerDb
     }
 
-    // There is deliberately NO warm-up/prepare() on this type: warming an
-    // engine at launch opened the system-default INPUT device and held it —
-    // with Bluetooth earphones connected, that forced the headset into the
-    // HFP call profile (muffled output audio, mic flapping) the moment the
-    // app started, even when the user's mic rule pointed elsewhere. The
-    // warmed engine was also discarded anyway: start() builds a fresh one.
+    // There is deliberately NO warm-up/prepare() on this type: warming a
+    // capture graph at launch opened the system-default INPUT device and
+    // held it — with Bluetooth earphones connected, that forced the headset
+    // into the HFP call profile (muffled output audio, mic flapping) the
+    // moment the app started, even when the user's mic rule pointed
+    // elsewhere.
 
-    /// Begin capturing to fileURL. deviceID nil = follow the system default
-    /// (native AUHAL tracking — safe because every recording uses a fresh engine).
-    func start(deviceID: AudioDeviceID?, fileURL: URL) throws {
+    /// Begin capturing to fileURL. deviceUID nil = use the system default
+    /// device. The UID is the CoreAudio device UID (identical to
+    /// AVCaptureDevice.uniqueID on macOS — verified against live hardware).
+    func start(deviceUID: String?, fileURL: URL) throws {
         stateLock.lock()
         let alreadyRunning = isRunning
         stateLock.unlock()
         guard !alreadyRunning else { return }
 
-        // Fresh engine created NOW, not in stop(): building the next engine
-        // in stop()'s immediate aftermath bound its AUHAL to the device while
-        // CoreAudio was still tearing the previous one down — that engine came
-        // up half-dead and captured ~0.2s regardless of recording length
-        // (field bug: every SECOND dictation produced a 6.7KB file). By the
-        // next hotkey press, teardown has long settled.
-        engine = AVAudioEngine()
-        let inputNode = engine.inputNode
-
-        // Pin the requested device BEFORE the engine allocates anything.
-        // Preparing first opened the DEFAULT input (the Bluetooth mic when
-        // earphones are connected) and then switched devices mid-allocation —
-        // which both triggered the headset's HFP profile (muffled output,
-        // mic flapping) and could stall the render callbacks (~0.3s captures).
-        // Pin ONLY when a specific device was requested. The nil case keeps
-        // the AUHAL's native default-device tracking — safe because each
-        // recording gets a FRESH engine (see stop()), so a pin from a prior
-        // recording cannot linger. (Explicitly pinning the default device
-        // spawned CADefaultDeviceAggregate ghosts and a HAL-mutex deadlock.)
-        if let deviceID, let audioUnit = inputNode.audioUnit {
-            var device = deviceID
-            let status = AudioUnitSetProperty(
-                audioUnit,
-                kAudioOutputUnitProperty_CurrentDevice,
-                kAudioUnitScope_Global,
-                0,
-                &device,
-                UInt32(MemoryLayout<AudioDeviceID>.size))
-            if status != noErr {
-                // Fall back silently to the default device (spec behavior).
-                print("⚠️ Could not pin input device (status \(status)); using system default")
+        // Resolve the requested device; fall back to the default mic when
+        // no rule applies or the chosen device disappeared (spec behavior).
+        var device: AVCaptureDevice?
+        if let deviceUID {
+            device = AVCaptureDevice(uniqueID: deviceUID)
+            if device == nil {
+                print("⚠️ Chosen mic '\(deviceUID)' not found; using system default")
             }
         }
-
-        let hwFormat = inputNode.inputFormat(forBus: 0)
-        guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0 else {
+        if device == nil { device = AVCaptureDevice.default(for: .audio) }
+        guard let device else {
             throw NSError(domain: "MicCaptureEngine", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "Input device has no valid format"])
+                          userInfo: [NSLocalizedDescriptionKey: "No input device available"])
         }
-        let newConverter = AVAudioConverter(from: hwFormat, to: targetFormat)
+
+        let input = try AVCaptureDeviceInput(device: device)
+        let output = AVCaptureAudioDataOutput()
+        output.audioSettings = Self.outputSettings
+        output.setSampleBufferDelegate(self, queue: sampleQueue)
+
+        let newSession = AVCaptureSession()
+        guard newSession.canAddInput(input), newSession.canAddOutput(output) else {
+            throw NSError(domain: "MicCaptureEngine", code: 2,
+                          userInfo: [NSLocalizedDescriptionKey: "Capture session rejected \(device.localizedName)"])
+        }
+        newSession.addInput(input)
+        newSession.addOutput(output)
+
         let newFile = try AVAudioFile(forWriting: fileURL, settings: targetFormat.settings,
                                       commonFormat: .pcmFormatInt16, interleaved: true)
 
         stateLock.lock()
-        converter = newConverter
         file = newFile
         stateLock.unlock()
 
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { [weak self] buffer, _ in
-            self?.handle(buffer: buffer)
-        }
+        // Synchronous; the session is delivering buffers when this returns.
+        newSession.startRunning()
 
-        do {
-            try engine.start()
-        } catch {
-            inputNode.removeTap(onBus: 0)
-            stateLock.lock()
-            converter = nil
-            file = nil
-            stateLock.unlock()
-            throw error
-        }
-
+        session = newSession
         stateLock.lock()
         isRunning = true
         stateLock.unlock()
     }
 
-    private func handle(buffer: AVAudioPCMBuffer) {
-        // Input level (RMS of the raw buffer) for pause detection.
+    // MARK: - AVCaptureAudioDataOutputSampleBufferDelegate (private queue)
+
+    func captureOutput(_ output: AVCaptureOutput,
+                       didOutput sampleBuffer: CMSampleBuffer,
+                       from connection: AVCaptureConnection) {
+        let frames = CMSampleBufferGetNumSamples(sampleBuffer)
+        guard frames > 0,
+              let pcm = AVAudioPCMBuffer(pcmFormat: targetFormat,
+                                         frameCapacity: AVAudioFrameCount(frames)) else { return }
+        pcm.frameLength = AVAudioFrameCount(frames)
+        let status = CMSampleBufferCopyPCMDataIntoAudioBufferList(
+            sampleBuffer, at: 0, frameCount: Int32(frames),
+            into: pcm.mutableAudioBufferList)
+        guard status == noErr else { return }
+
+        // Input level (RMS) for pause detection.
         var powerDb: Float = -160
-        if let data = buffer.floatChannelData?[0] {
-            let n = Int(buffer.frameLength)
+        if let data = pcm.int16ChannelData?[0] {
             var sum: Float = 0
-            for i in 0..<n { sum += data[i] * data[i] }
-            let rms = n > 0 ? sqrt(sum / Float(n)) : 0
+            for i in 0..<frames {
+                let s = Float(data[i]) / Float(Int16.max)
+                sum += s * s
+            }
+            let rms = frames > 0 ? sqrt(sum / Float(frames)) : 0
             powerDb = 20 * log10(max(rms, 1e-8))
         }
 
         stateLock.lock()
         _currentPowerDb = powerDb
-        let converter = self.converter
-        stateLock.unlock()
-
-        guard let converter else { return }
-        let ratio = targetFormat.sampleRate / buffer.format.sampleRate
-        let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 64
-        guard let out = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else { return }
-
-        var fed = false
-        var convError: NSError?
-        converter.convert(to: out, error: &convError) { _, status in
-            if fed {
-                status.pointee = .noDataNow
-                return nil
-            }
-            fed = true
-            status.pointee = .haveData
-            return buffer
-        }
-        if convError != nil { return }
-
-        stateLock.lock()
-        try? file?.write(from: out)
+        try? file?.write(from: pcm)
         stateLock.unlock()
     }
 
@@ -173,7 +166,7 @@ nonisolated final class MicCaptureEngine {
         stateLock.unlock()
 
         let finished = oldFile?.url
-        // oldFile deallocates here, finalizing the WAV header OFF the tap's lock.
+        // oldFile deallocates here, finalizing the WAV header OFF the delegate's lock.
         return finished
     }
 
@@ -184,19 +177,15 @@ nonisolated final class MicCaptureEngine {
         stateLock.unlock()
         guard running else { return nil }
 
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        session?.stopRunning()
+        session = nil
 
         stateLock.lock()
         let finished = file?.url
         file = nil
-        converter = nil
         isRunning = false
         _currentPowerDb = -160
         stateLock.unlock()
-
-        // The next start() creates its own fresh engine (see start()); doing
-        // it here — mid-CoreAudio-teardown — produced half-dead engines.
 
         return finished
     }

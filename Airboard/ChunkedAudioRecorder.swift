@@ -47,9 +47,9 @@ class ChunkedAudioRecorder: ObservableObject {
         totalDuration = 0
 
         let firstURL = nextChunkURL()
-        let deviceID = MicDeviceManager.shared.resolveActiveDeviceID()
+        let deviceUID = MicDeviceManager.shared.resolvedSelectionUID
         do {
-            try captureEngine.start(deviceID: deviceID, fileURL: firstURL)
+            try captureEngine.start(deviceUID: deviceUID, fileURL: firstURL)
             currentChunkURL = firstURL
             chunkStartTime = Date()
             print("🎬 Starting chunked recording (\(MicDeviceManager.shared.activeMicName))")
