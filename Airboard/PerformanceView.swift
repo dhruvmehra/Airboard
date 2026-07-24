@@ -29,7 +29,7 @@ struct PerformanceView: View {
             .padding(16)
         }
         .frame(width: 380, height: 480)
-        .background(Color(NSColor.windowBackgroundColor))
+        .background(DS.Surface.panel)
     }
 
     // MARK: - Header
@@ -40,7 +40,7 @@ struct PerformanceView: View {
                 .font(.system(size: 24))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.blue, .purple],
+                        colors: [DS.Accent.primary, DS.Accent.command],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -49,11 +49,11 @@ struct PerformanceView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Performance Monitor")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(DS.Label.primary)
 
                 Text("Real-time metrics")
                     .font(.system(size: 11))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DS.Label.secondary)
             }
 
             Spacer()
@@ -68,34 +68,28 @@ struct PerformanceView: View {
             HStack(spacing: 8) {
                 Image(systemName: "memorychip")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.orange)
+                    .foregroundColor(DS.Accent.warning)
 
                 Text("RAM Usage")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(DS.Label.primary)
 
                 Spacer()
 
                 Text("\(formatMemory(monitor.memoryUsageMB)) / \(formatMemory(monitor.totalSystemMemoryMB))")
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundColor(.orange)
+                    .font(DS.Typo.mono(12, .medium))
+                    .foregroundColor(DS.Accent.warning)
             }
 
             // Memory bar with percentage
             VStack(spacing: 4) {
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.gray.opacity(0.15))
+                        RoundedRectangle(cornerRadius: DS.Radius.r3)
+                            .fill(DS.Fill.track)
 
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(
-                                LinearGradient(
-                                    colors: memoryGradientColors,
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
+                        RoundedRectangle(cornerRadius: DS.Radius.r3)
+                            .fill(DS.Accent.primary)
                             .frame(width: geometry.size.width * memoryPercentage)
                     }
                 }
@@ -103,8 +97,8 @@ struct PerformanceView: View {
 
                 HStack {
                     Text("\(Int(memoryPercentage * 100))% of system RAM")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
+                        .font(DS.Typo.rounded(10))
+                        .foregroundColor(DS.Label.secondary)
 
                     Spacer()
                 }
@@ -112,27 +106,14 @@ struct PerformanceView: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.orange.opacity(0.08))
+            RoundedRectangle(cornerRadius: DS.Radius.r10)
+                .fill(DS.Tint.cardOrange)
         )
     }
 
     private var memoryPercentage: Double {
         guard monitor.totalSystemMemoryMB > 0 else { return 0 }
         return min(monitor.memoryUsageMB / monitor.totalSystemMemoryMB, 1.0)
-    }
-
-    private var memoryGradientColors: [Color] {
-        let percentage = memoryPercentage
-        if percentage < 0.3 {
-            return [.green, .green]
-        } else if percentage < 0.5 {
-            return [.green, .yellow]
-        } else if percentage < 0.7 {
-            return [.yellow, .orange]
-        } else {
-            return [.orange, .red]
-        }
     }
 
     // MARK: - Session Metrics
@@ -143,17 +124,17 @@ struct PerformanceView: View {
             HStack(spacing: 8) {
                 Image(systemName: "clock.arrow.circlepath")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.blue)
+                    .foregroundColor(DS.Accent.primary)
 
                 Text("Latest Session")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(DS.Label.primary)
 
                 Spacer()
 
                 Text(session.timestamp, style: .relative)
                     .font(.system(size: 10))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(DS.Label.secondary)
             }
 
             Divider()
@@ -164,14 +145,14 @@ struct PerformanceView: View {
                     icon: "mic.fill",
                     label: "Recording",
                     time: session.recordingDuration,
-                    color: .red
+                    color: DS.Accent.recording
                 )
 
                 compactTimingRow(
                     icon: "waveform",
                     label: "Transcription",
                     time: session.transcriptionTime,
-                    color: .purple
+                    color: DS.Accent.command
                 )
 
                 Divider()
@@ -180,7 +161,7 @@ struct PerformanceView: View {
                     icon: "sum",
                     label: "Total",
                     time: session.totalProcessingTime,
-                    color: .blue,
+                    color: DS.Accent.primary,
                     isBold: true
                 )
             }
@@ -193,11 +174,11 @@ struct PerformanceView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "text.quote")
                             .font(.system(size: 10))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
 
                         Text("Text Sample")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                     }
 
                     compactTextRow(label: "In", text: session.inputText)
@@ -210,8 +191,8 @@ struct PerformanceView: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.blue.opacity(0.08))
+            RoundedRectangle(cornerRadius: DS.Radius.r10)
+                .fill(DS.Tint.cardBlue)
         )
     }
 
@@ -224,12 +205,12 @@ struct PerformanceView: View {
 
             Text(label)
                 .font(.system(size: 12, weight: isBold ? .semibold : .regular))
-                .foregroundColor(.primary)
+                .foregroundColor(DS.Label.primary)
 
             Spacer()
 
             Text(formatTime(time))
-                .font(.system(size: 12, weight: isBold ? .semibold : .medium, design: .monospaced))
+                .font(DS.Typo.mono(12, isBold ? .semibold : .medium))
                 .foregroundColor(color)
         }
     }
@@ -237,20 +218,20 @@ struct PerformanceView: View {
     private func compactTextRow(label: String, text: String) -> some View {
         HStack(alignment: .top, spacing: 6) {
             Text(label)
-                .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundColor(.secondary)
+                .font(DS.Typo.mono(10, .medium))
+                .foregroundColor(DS.Label.secondary)
                 .frame(width: 26, alignment: .leading)
 
             Text(text.prefix(80) + (text.count > 80 ? "..." : ""))
                 .font(.system(size: 10))
-                .foregroundColor(.primary)
+                .foregroundColor(DS.Label.primary)
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(6)
         .background(
-            RoundedRectangle(cornerRadius: 5)
-                .fill(Color.gray.opacity(0.08))
+            RoundedRectangle(cornerRadius: DS.Radius.r5)
+                .fill(DS.Fill.quaternary)
         )
     }
 
@@ -260,22 +241,22 @@ struct PerformanceView: View {
         VStack(spacing: 10) {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.system(size: 32))
-                .foregroundColor(.secondary.opacity(0.5))
+                .foregroundColor(DS.Label.tertiary)
 
             Text("No Session Data")
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.secondary)
+                .foregroundColor(DS.Label.secondary)
 
             Text("Record audio to see metrics")
                 .font(.system(size: 11))
-                .foregroundColor(.secondary.opacity(0.8))
+                .foregroundColor(DS.Label.tertiary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(32)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.gray.opacity(0.05))
+            RoundedRectangle(cornerRadius: DS.Radius.r10)
+                .fill(DS.Fill.quaternary)
         )
     }
 
