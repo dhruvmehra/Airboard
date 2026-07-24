@@ -39,22 +39,22 @@ struct AirboardPopover: View {
                     .font(.system(size: 20))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.blue, .cyan],
+                            colors: [DS.Accent.primary, DS.Palette.cyan],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                
+
                 Text("Airboard")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(DS.Label.primary)
                 
                 Spacer()
                 
                 Button(action: onDismiss) {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 16))
-                        .foregroundStyle(.secondary.opacity(0.6))
+                        .foregroundStyle(DS.Label.tertiary)
                         .symbolRenderingMode(.hierarchical)
                 }
                 .buttonStyle(.plain)
@@ -81,22 +81,22 @@ struct AirboardPopover: View {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(Color.purple.opacity(0.1))
-                            .frame(width: 32, height: 32)
+                            .fill(DS.Tint.purple)
+                            .frame(width: DS.Badge.size, height: DS.Badge.size)
 
                         Image(systemName: "wand.and.stars")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.purple)
+                            .font(.system(size: DS.Badge.glyph, weight: .medium))
+                            .foregroundStyle(DS.Accent.command)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("AI Cleanup")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(DS.Label.primary)
 
                         Text("Grammar")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                     }
 
                     Spacer()
@@ -116,7 +116,7 @@ struct AirboardPopover: View {
                     Button(action: onOpenCleanupSettings) {
                         Image(systemName: "gearshape")
                             .font(.system(size: 12))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                     }
                     .buttonStyle(.plain)
                     .help("Cleanup server settings")
@@ -128,22 +128,22 @@ struct AirboardPopover: View {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(Color.blue.opacity(0.1))
-                            .frame(width: 32, height: 32)
+                            .fill(DS.Tint.blue)
+                            .frame(width: DS.Badge.size, height: DS.Badge.size)
 
                         Image(systemName: "mic.fill")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(Color.blue)
+                            .font(.system(size: DS.Badge.glyph, weight: .medium))
+                            .foregroundStyle(DS.Accent.primary)
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Microphone")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(DS.Label.primary)
 
                         Text(micManager.activeMicName)
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                             .lineLimit(1)
                     }
 
@@ -162,7 +162,7 @@ struct AirboardPopover: View {
                     } label: {
                         Image(systemName: "chevron.up.chevron.down")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                     }
                     .menuStyle(.borderlessButton)
                     .fixedSize()
@@ -176,35 +176,35 @@ struct AirboardPopover: View {
                     HStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(Color.purple.opacity(isHoveringHotkey ? 0.15 : 0.1))
-                                .frame(width: 32, height: 32)
-                            
+                                .fill(DS.Tint.purple)
+                                .frame(width: DS.Badge.size, height: DS.Badge.size)
+
                             Image(systemName: "command.circle.fill")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color.purple)
+                                .font(.system(size: DS.Badge.glyph, weight: .medium))
+                                .foregroundStyle(DS.Accent.command)
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Hotkey")
                                 .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.primary)
+                                .foregroundColor(DS.Label.primary)
                             
                             Text(HotkeyManager.currentHotkeyDisplayName)
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DS.Label.secondary)
                         }
                         
                         Spacer()
                         
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(DS.Label.tertiary)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.primary.opacity(isHoveringHotkey ? 0.04 : 0))
+                        RoundedRectangle(cornerRadius: DS.Radius.r10)
+                            .fill(isHoveringHotkey ? DS.Fill.hover : Color.clear)
                     )
                 }
                 .buttonStyle(.plain)
@@ -215,35 +215,35 @@ struct AirboardPopover: View {
                     HStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(Color.green.opacity(isHoveringPerformance ? 0.15 : 0.1))
-                                .frame(width: 32, height: 32)
+                                .fill(DS.Tint.green)
+                                .frame(width: DS.Badge.size, height: DS.Badge.size)
 
                             Image(systemName: "gauge.with.dots.needle.67percent")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color.green)
+                                .font(.system(size: DS.Badge.glyph, weight: .medium))
+                                .foregroundStyle(DS.Accent.success)
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Performance")
                                 .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.primary)
+                                .foregroundColor(DS.Label.primary)
 
                             Text("View real-time metrics")
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DS.Label.secondary)
                         }
 
                         Spacer()
 
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(DS.Label.tertiary)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.primary.opacity(isHoveringPerformance ? 0.04 : 0))
+                        RoundedRectangle(cornerRadius: DS.Radius.r10)
+                            .fill(isHoveringPerformance ? DS.Fill.hover : Color.clear)
                     )
                 }
                 .buttonStyle(.plain)
@@ -254,35 +254,35 @@ struct AirboardPopover: View {
                     HStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(Color.orange.opacity(isHoveringReport ? 0.15 : 0.1))
-                                .frame(width: 32, height: 32)
-                            
+                                .fill(DS.Tint.orange)
+                                .frame(width: DS.Badge.size, height: DS.Badge.size)
+
                             Image(systemName: "exclamationmark.bubble.fill")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(Color.orange)
+                                .font(.system(size: DS.Badge.glyph, weight: .medium))
+                                .foregroundStyle(DS.Accent.warning)
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Report Issue")
                                 .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.primary)
+                                .foregroundColor(DS.Label.primary)
                             
                             Text("Help improve transcription")
                                 .font(.system(size: 11))
-                                .foregroundColor(.secondary)
+                                .foregroundColor(DS.Label.secondary)
                         }
                         
                         Spacer()
                         
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(DS.Label.tertiary)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.primary.opacity(isHoveringReport ? 0.04 : 0))
+                        RoundedRectangle(cornerRadius: DS.Radius.r10)
+                            .fill(isHoveringReport ? DS.Fill.hover : Color.clear)
                     )
                 }
                 .buttonStyle(.plain)
@@ -294,35 +294,35 @@ struct AirboardPopover: View {
                         HStack(spacing: 12) {
                             ZStack {
                                 Circle()
-                                    .fill(Color.blue.opacity(isHoveringUpdate ? 0.15 : 0.1))
-                                    .frame(width: 32, height: 32)
+                                    .fill(DS.Tint.blue)
+                                    .frame(width: DS.Badge.size, height: DS.Badge.size)
 
                                 Image(systemName: "arrow.triangle.2.circlepath")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(Color.blue)
+                                    .font(.system(size: DS.Badge.glyph, weight: .medium))
+                                    .foregroundStyle(DS.Accent.primary)
                             }
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Check for Updates")
                                     .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(DS.Label.primary)
 
                                 Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")")
                                     .font(.system(size: 11))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(DS.Label.secondary)
                             }
 
                             Spacer()
 
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.tertiary)
+                                .foregroundStyle(DS.Label.tertiary)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
                         .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.primary.opacity(isHoveringUpdate ? 0.04 : 0))
+                            RoundedRectangle(cornerRadius: DS.Radius.r10)
+                                .fill(isHoveringUpdate ? DS.Fill.hover : Color.clear)
                         )
                     }
                     .buttonStyle(.plain)
@@ -335,25 +335,18 @@ struct AirboardPopover: View {
         }
         .frame(width: 280)
         .background(
-            VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.3),
-                                    Color.white.opacity(0.1)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
+            ZStack {
+                VisualEffectBlur(material: .hudWindow, blendingMode: .behindWindow)
+                RoundedRectangle(cornerRadius: DS.Radius.r16, style: .continuous)
+                    .fill(DS.Surface.hud)
+            }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
-        .shadow(color: Color.black.opacity(0.1), radius: 1, x: 0, y: 1)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.r16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.r16, style: .continuous)
+                .strokeBorder(DS.Surface.hudBorder, lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.55), radius: 22, x: 0, y: 16)
         .confirmationDialog(
             "Remove AI Model?",
             isPresented: $showingRemoveConfirm,
@@ -376,22 +369,22 @@ struct AirboardPopover: View {
             HStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(Color.orange.opacity(0.15))
-                        .frame(width: 32, height: 32)
-                    
+                        .fill(DS.Tint.orange)
+                        .frame(width: DS.Badge.size, height: DS.Badge.size)
+
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.orange)
+                        .font(.system(size: DS.Badge.glyph, weight: .medium))
+                        .foregroundStyle(DS.Accent.warning)
                 }
                 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Setup Required")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.primary)
+                        .foregroundColor(DS.Label.primary)
                     
                     Text(permissionStatusText())
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DS.Label.secondary)
                 }
                 
                 Spacer()
@@ -406,12 +399,12 @@ struct AirboardPopover: View {
                     Text("Set Up Permissions")
                         .font(.system(size: 12, weight: .medium))
                 }
-                .foregroundColor(.white)
+                .foregroundColor(DS.Label.onAccent)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)
                 .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color.orange)
+                    RoundedRectangle(cornerRadius: DS.Radius.r8)
+                        .fill(DS.Accent.warning)
                 )
             }
             .buttonStyle(.plain)
@@ -420,13 +413,13 @@ struct AirboardPopover: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.orange.opacity(0.08))
+            RoundedRectangle(cornerRadius: DS.Radius.r12)
+                .fill(DS.Tint.cardOrange)
         )
         .padding(.horizontal, 12)
         .padding(.vertical, 12)
     }
-    
+
     private func permissionStatusText() -> String {
         var missing: [String] = []
         if !SetupWindowController.shared.isMicrophoneGranted {
@@ -448,31 +441,31 @@ struct AirboardPopover: View {
                 HStack(spacing: 10) {
                     ZStack {
                         Circle()
-                            .stroke(Color.blue.opacity(0.2), lineWidth: 3)
-                            .frame(width: 32, height: 32)
-                        
+                            .stroke(DS.Fill.track, lineWidth: 3)
+                            .frame(width: DS.Badge.size, height: DS.Badge.size)
+
                         Circle()
                             .trim(from: 0, to: downloadProgress)
                             .stroke(
-                                Color.blue,
+                                DS.Accent.primary,
                                 style: StrokeStyle(lineWidth: 3, lineCap: .round)
                             )
-                            .frame(width: 32, height: 32)
+                            .frame(width: DS.Badge.size, height: DS.Badge.size)
                             .rotationEffect(.degrees(-90))
-                        
+
                         Text("\(Int(downloadProgress * 100))")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
-                            .foregroundColor(.blue)
+                            .font(DS.Typo.rounded(9, .bold))
+                            .foregroundColor(DS.Accent.primary)
                     }
                     
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Downloading AI Model")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(DS.Label.primary)
                         
                         Text("\(Int(downloadProgress * 500)) of 500 MB")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                     }
                     
                     Spacer()
@@ -481,13 +474,13 @@ struct AirboardPopover: View {
                 // Progress bar
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(Color.blue.opacity(0.15))
-                        
-                        RoundedRectangle(cornerRadius: 3)
+                        RoundedRectangle(cornerRadius: DS.Radius.r3)
+                            .fill(DS.Tint.blue)
+
+                        RoundedRectangle(cornerRadius: DS.Radius.r3)
                             .fill(
                                 LinearGradient(
-                                    colors: [.blue, .cyan],
+                                    colors: [DS.Accent.primary, DS.Palette.cyan],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -500,8 +493,8 @@ struct AirboardPopover: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.blue.opacity(0.06))
+                RoundedRectangle(cornerRadius: DS.Radius.r12)
+                    .fill(DS.Tint.cardBlue)
             )
             
         } else if isModelDownloaded {
@@ -509,22 +502,22 @@ struct AirboardPopover: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.green.opacity(0.15))
-                        .frame(width: 32, height: 32)
+                        .fill(DS.Tint.green)
+                        .frame(width: DS.Badge.size, height: DS.Badge.size)
 
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Color.green)
+                        .font(.system(size: DS.Badge.glyph, weight: .medium))
+                        .foregroundStyle(DS.Accent.success)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Model Ready")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.primary)
+                        .foregroundColor(DS.Label.primary)
 
                     Text("On-device transcription active")
                         .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(DS.Label.secondary)
                 }
 
                 Spacer()
@@ -532,8 +525,8 @@ struct AirboardPopover: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.green.opacity(0.06))
+                RoundedRectangle(cornerRadius: DS.Radius.r12)
+                    .fill(DS.Tint.cardGreen)
             )
 
         } else {
@@ -542,38 +535,38 @@ struct AirboardPopover: View {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(Color.blue.opacity(isHoveringDownload ? 0.15 : 0.1))
-                            .frame(width: 32, height: 32)
-                        
+                            .fill(DS.Tint.blue)
+                            .frame(width: DS.Badge.size, height: DS.Badge.size)
+
                         Image(systemName: "arrow.down.circle.fill")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(Color.blue)
+                            .foregroundStyle(DS.Accent.primary)
                     }
                     
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Download AI Enhancements")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(DS.Label.primary)
                         
                         Text("Better formatting & spacing • 0.5 GB")
                             .font(.system(size: 11))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(DS.Label.secondary)
                     }
                     
                     Spacer()
                     
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(DS.Label.tertiary)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 12)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.primary.opacity(isHoveringDownload ? 0.04 : 0))
+                    RoundedRectangle(cornerRadius: DS.Radius.r12)
+                        .fill(isHoveringDownload ? DS.Fill.hover : Color.clear)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(Color.blue.opacity(0.2), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: DS.Radius.r12)
+                                .strokeBorder(DS.Border.selected, lineWidth: 1)
                         )
                 )
             }
@@ -594,7 +587,7 @@ struct GreenSwitchToggleStyle: ToggleStyle {
             configuration.isOn.toggle()
         } label: {
             Capsule()
-                .fill(configuration.isOn ? Color.green : Color.primary.opacity(0.2))
+                .fill(configuration.isOn ? DS.Accent.success : DS.Fill.track)
                 .frame(width: 34, height: 20)
                 .overlay(
                     Circle()
@@ -631,7 +624,7 @@ struct VisualEffectBlur: NSViewRepresentable {
 
 #Preview {
     ZStack {
-        Color.gray.opacity(0.3)
+        DS.Surface.window
         
         VStack {
             AirboardPopover(
