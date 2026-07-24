@@ -136,6 +136,43 @@ struct MemorySettingsView: View {
 
                     Divider()
 
+                    // ---- Extracted names (acoustic watch-list) ----
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Names")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(DS.Label.primary)
+                        Text("Picked up from your facts — helps Airboard recognize them when you speak. Never sent anywhere.")
+                            .font(.system(size: 10))
+                            .foregroundColor(DS.Label.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if store.data.extractedNames.isEmpty {
+                            Text("No names yet — they appear when you save facts that mention people or companies.")
+                                .font(.system(size: 11))
+                                .foregroundColor(DS.Label.tertiary)
+                        }
+                        ForEach(Array(store.data.extractedNames.enumerated()), id: \.offset) { index, name in
+                            HStack(spacing: 8) {
+                                Text(name)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(DS.Label.primary)
+                                Spacer()
+                                Button {
+                                    store.removeExtractedName(at: index)
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(DS.Label.tertiary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(RoundedRectangle(cornerRadius: DS.Radius.r8)
+                                .fill(DS.Fill.quaternary))
+                        }
+                    }
+
+                    Divider()
+
                     // ---- Sharing ----
                     Toggle(isOn: Binding(
                         get: { store.data.shareWithLLM },
