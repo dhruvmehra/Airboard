@@ -25,12 +25,36 @@ struct MemoryData: Codable, Equatable {
     var glossary: [GlossaryEntry] = []
     var notes: [String] = []
     var shareWithLLM: Bool = true
+    /// Proper names auto-extracted from confirmed facts — acoustic
+    /// watch-list only, never sent to the cleanup LLM.
+    var extractedNames: [String] = []
+
+    init() {}
+
+    // Backward-compatible decoding: memory.json files written before
+    // extractedNames existed must load, not be treated as corrupt —
+    // corrupt-recovery would wipe the user's memories to .bad.
+    private enum CodingKeys: String, CodingKey {
+        case glossary, notes, shareWithLLM, extractedNames
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        glossary = try c.decodeIfPresent([GlossaryEntry].self, forKey: .glossary) ?? []
+        notes = try c.decodeIfPresent([String].self, forKey: .notes) ?? []
+        shareWithLLM = try c.decodeIfPresent(Bool.self, forKey: .shareWithLLM) ?? true
+        extractedNames = try c.decodeIfPresent([String].self, forKey: .extractedNames) ?? []
+    }
 }
 
 final class MemoryStore: ObservableObject {
     static let shared = MemoryStore()
 
     @Published private(set) var data: MemoryData
+
+    /// Monotonic change counter (in-memory only). The biasing engine
+    /// compares it to decide when to rebuild its vocabulary.
+    private(set) var revision: Int = 0
 
     private let fileURL: URL
 
@@ -65,6 +89,7 @@ final class MemoryStore: ObservableObject {
     }
 
     private func save() {
+        revision += 1
         do {
             let enc = JSONEncoder()
             enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -119,6 +144,30 @@ final class MemoryStore: ObservableObject {
 
     func setShareWithLLM(_ on: Bool) {
         data.shareWithLLM = on
+        save()
+    }
+
+    /// Add auto-extracted proper names. Case-insensitive dedup against
+    /// glossary terms and already-extracted names.
+    func addExtractedNames(_ names: [String]) {
+        var changed = false
+        for raw in names {
+            let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty else { continue }
+            let lower = name.lowercased()
+            let inGlossary = data.glossary.contains { $0.term.lowercased() == lower }
+            let alreadyExtracted = data.extractedNames.contains { $0.lowercased() == lower }
+            if !inGlossary && !alreadyExtracted {
+                data.extractedNames.append(name)
+                changed = true
+            }
+        }
+        if changed { save() }
+    }
+
+    func removeExtractedName(at index: Int) {
+        guard data.extractedNames.indices.contains(index) else { return }
+        data.extractedNames.remove(at: index)
         save()
     }
 
