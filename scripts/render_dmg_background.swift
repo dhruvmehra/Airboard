@@ -103,6 +103,19 @@ func render(scale: CGFloat) -> NSBitmapImageRep {
     ring(centerX: 176, dashed: false)  // Airboard.app zone
     ring(centerX: 502, dashed: true)   // Applications zone
 
+    // Label plates: Finder draws icon labels in BLACK on background-picture
+    // DMG windows regardless of system appearance (verified in dark mode),
+    // so the labels need a light surface under them or they vanish into
+    // the dark art. Plates sit exactly where Finder places labels for
+    // 84pt icons centered at y=209.
+    func labelPlate(centerX: CGFloat, width: CGFloat) {
+        let rect = NSRect(x: centerX - width / 2, y: fromTop(253, 20), width: width, height: 20)
+        rgba(233, 234, 238, 0.88).setFill()
+        NSBezierPath(roundedRect: rect, xRadius: 10, yRadius: 10).fill()
+    }
+    labelPlate(centerX: 176, width: 82)    // "Airboard"
+    labelPlate(centerX: 502, width: 108)   // "Applications"
+
     // Blue arrow between the zones (center 339, 209 top coords)
     NSGraphicsContext.current?.saveGraphicsState()
     let arrowGlow = NSShadow()
@@ -134,7 +147,7 @@ func render(scale: CGFloat) -> NSBitmapImageRep {
     instr.draw(at: NSPoint(x: W / 2 - instrSize.width / 2, y: 52))
 
     // Footer: green dot + privacy statline
-    let foot = NSAttributedString(string: "ON-DEVICE VOICE TO TEXT · NOTHING LEAVES YOUR MAC", attributes: [
+    let foot = NSAttributedString(string: "ON-DEVICE SPEECH TO TEXT · OPTIONAL AI CLEANUP", attributes: [
         .font: NSFont.monospacedSystemFont(ofSize: 10.5, weight: .regular),
         .foregroundColor: tx3, .kern: 0.63,
     ])

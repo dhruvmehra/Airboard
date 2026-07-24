@@ -8,6 +8,10 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+### Fixed
+- Installer window labels ("Airboard", "Applications") are now readable: Finder always draws DMG labels in black, so the background art gives them light plates
+- Installer tagline updated to "On-device speech to text · Optional AI cleanup" — accurate now that cleanup can use a remote LLM
+
 ## [1.0.8] - 2026-07-24
 
 ### Added
