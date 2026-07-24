@@ -70,8 +70,10 @@ MemorySettingsView.swift (new)     ← DS-styled window: glossary table,
 - Teach feedback: the floating pill confirms ("Remembered" / "Learned:
   Pype"). Recalled text inserts via the existing TextInserter path, exactly
   like dictation.
-- Spelled-out corrections ("P-Y-P-E") are normalized during teaching (LLM
-  when configured; local letter-joining fallback).
+- Spelled-out corrections ("P-Y-P-E") are normalized during teaching by
+  local letter-joining ("p y p e" / "p-y-p-e" → "Pype"). (Simplified from
+  an earlier LLM-assisted idea during planning — the local join fully
+  covers the case.)
 
 ### Settings
 
