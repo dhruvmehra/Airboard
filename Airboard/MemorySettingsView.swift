@@ -1,19 +1,16 @@
 //
 //  MemorySettingsView.swift
 //
-//  View and edit Airboard's memory: the vocabulary glossary (contextual
-//  spellings — never applied by find-and-replace), personal notes, and the
-//  "Share memory with AI Cleanup" switch. This window is the safe path for
-//  deletion (voice deletion is deliberately not a thing).
+//  Airboard's memory, displayed as-is: the flat list of memory lines from
+//  memory.md, each deletable, plus an add field and the share switch. No
+//  schema, no sections — the file is the truth and this window mirrors it.
 //
 
 import SwiftUI
 
 struct MemorySettingsView: View {
     @ObservedObject private var store = MemoryStore.shared
-    @State private var newTerm = ""
-    @State private var newHeardAs = ""
-    @State private var newNote = ""
+    @State private var newMemory = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,7 +28,7 @@ struct MemorySettingsView: View {
                     Text("Memory")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(DS.Label.primary)
-                    Text("Spellings and facts Airboard remembers — teach by voice in command mode")
+                    Text("Plain lines in memory.md — teach by voice, or edit the file by hand")
                         .font(.system(size: 11))
                         .foregroundColor(DS.Label.secondary)
                 }
@@ -42,147 +39,60 @@ struct MemorySettingsView: View {
             Divider().padding(.horizontal, 12)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    // ---- Glossary ----
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Vocabulary")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(DS.Label.primary)
-                        Text("Applied in context by AI Cleanup — \"the water pipe\" stays \"pipe\"; \"send it to pipe\" becomes \"Pype\".")
-                            .font(.system(size: 10))
-                            .foregroundColor(DS.Label.secondary)
+                VStack(alignment: .leading, spacing: 8) {
+                    if store.memories.isEmpty {
+                        Text("Nothing remembered yet. Hold the command hotkey and say \"remember …\", or add a line below.")
+                            .font(.system(size: 11))
+                            .foregroundColor(DS.Label.tertiary)
                             .fixedSize(horizontal: false, vertical: true)
-                        ForEach(store.data.glossary) { entry in
-                            HStack(spacing: 8) {
-                                Text(entry.term)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(DS.Label.primary)
-                                if !entry.heardAs.isEmpty {
-                                    Text("heard as \"\(entry.heardAs)\"")
-                                        .font(.system(size: 11))
-                                        .foregroundColor(DS.Label.secondary)
-                                }
-                                Spacer()
-                                Button {
-                                    store.removeGlossary(id: entry.id)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(DS.Label.tertiary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal, 10).padding(.vertical, 6)
-                            .background(RoundedRectangle(cornerRadius: DS.Radius.r8)
-                                .fill(DS.Fill.quaternary))
-                        }
+                    }
+                    ForEach(Array(store.memories.enumerated()), id: \.offset) { index, memory in
                         HStack(spacing: 8) {
-                            TextField("Correct spelling (e.g. Pype)", text: $newTerm)
-                                .textFieldStyle(.plain).font(.system(size: 12))
-                                .foregroundColor(DS.Label.primary).dsMemoryFieldChrome()
-                            TextField("Heard as (e.g. pipe)", text: $newHeardAs)
-                                .textFieldStyle(.plain).font(.system(size: 12))
-                                .foregroundColor(DS.Label.primary).dsMemoryFieldChrome()
-                            Button("Add") {
-                                store.addGlossary(term: newTerm, heardAs: newHeardAs)
-                                newTerm = ""; newHeardAs = ""
+                            Text(memory)
+                                .font(.system(size: 12))
+                                .foregroundColor(DS.Label.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer()
+                            Button {
+                                store.removeMemory(at: index)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(DS.Label.tertiary)
                             }
-                            .disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
+                            .buttonStyle(.plain)
                         }
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(RoundedRectangle(cornerRadius: DS.Radius.r8)
+                            .fill(DS.Fill.quaternary))
                     }
 
-                    Divider()
-
-                    // ---- Notes ----
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Facts")
-                            .font(.system(size: 12, weight: .semibold))
+                    HStack(spacing: 8) {
+                        TextField("New memory (e.g. I work at Pype)", text: $newMemory)
+                            .textFieldStyle(.plain).font(.system(size: 12))
                             .foregroundColor(DS.Label.primary)
-                        Text("Free-form notes. Recall by voice: \"write my address\", \"fill in where I work\".")
-                            .font(.system(size: 10))
-                            .foregroundColor(DS.Label.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        ForEach(Array(store.data.notes.enumerated()), id: \.offset) { index, note in
-                            HStack(spacing: 8) {
-                                Text(note)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(DS.Label.primary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                Spacer()
-                                Button {
-                                    store.removeNote(at: index)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(DS.Label.tertiary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .padding(.horizontal, 8).padding(.vertical, 6)
                             .background(RoundedRectangle(cornerRadius: DS.Radius.r8)
-                                .fill(DS.Fill.quaternary))
-                        }
-                        HStack(spacing: 8) {
-                            TextField("New fact (e.g. I work at Pype)", text: $newNote)
-                                .textFieldStyle(.plain).font(.system(size: 12))
-                                .foregroundColor(DS.Label.primary).dsMemoryFieldChrome()
-                            Button("Add") {
-                                store.addNote(newNote)
-                                newNote = ""
-                            }
-                            .disabled(newNote.trimmingCharacters(in: .whitespaces).isEmpty)
-                        }
+                                .fill(DS.Surface.control))
+                            .overlay(RoundedRectangle(cornerRadius: DS.Radius.r8)
+                                .stroke(DS.Border.control, lineWidth: 1))
+                            .onSubmit { addNew() }
+                        Button("Add", action: addNew)
+                            .disabled(newMemory.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
+                    .padding(.top, 4)
 
-                    Divider()
+                    Divider().padding(.vertical, 6)
 
-                    // ---- Extracted names (acoustic watch-list) ----
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Names")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(DS.Label.primary)
-                        Text("Picked up from your facts — AI Cleanup uses them to spell names right in your dictation.")
-                            .font(.system(size: 10))
-                            .foregroundColor(DS.Label.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if store.data.extractedNames.isEmpty {
-                            Text("No names yet — they appear when you save facts that mention people or companies.")
-                                .font(.system(size: 11))
-                                .foregroundColor(DS.Label.tertiary)
-                        }
-                        ForEach(Array(store.data.extractedNames.enumerated()), id: \.offset) { index, name in
-                            HStack(spacing: 8) {
-                                Text(name)
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundColor(DS.Label.primary)
-                                Spacer()
-                                Button {
-                                    store.removeExtractedName(at: index)
-                                } label: {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 10))
-                                        .foregroundColor(DS.Label.tertiary)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .padding(.horizontal, 10).padding(.vertical, 6)
-                            .background(RoundedRectangle(cornerRadius: DS.Radius.r8)
-                                .fill(DS.Fill.quaternary))
-                        }
-                    }
-
-                    Divider()
-
-                    // ---- Sharing ----
                     Toggle(isOn: Binding(
-                        get: { store.data.shareWithLLM },
+                        get: { store.shareWithLLM },
                         set: { store.setShareWithLLM($0) }
                     )) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Share memory with AI Cleanup")
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(DS.Label.primary)
-                            Text("Sends the glossary and facts with cleanup requests so dictation resolves them in context. Off = memory stays entirely on this Mac (voice recall still works).")
+                            Text("Sends these lines with cleanup requests so dictation uses your facts and spellings. Off = memory stays entirely on this Mac (voice recall still works).")
                                 .font(.system(size: 10))
                                 .foregroundColor(DS.Label.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -198,14 +108,9 @@ struct MemorySettingsView: View {
         .frame(width: 480)
         .background(DS.Surface.panel)
     }
-}
 
-/// Field chrome matching CleanupSettingsView's (private there, so mirrored).
-private extension View {
-    func dsMemoryFieldChrome() -> some View {
-        self
-            .padding(.horizontal, 8).padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: DS.Radius.r8).fill(DS.Surface.control))
-            .overlay(RoundedRectangle(cornerRadius: DS.Radius.r8).stroke(DS.Border.control, lineWidth: 1))
+    private func addNew() {
+        store.addMemory(newMemory)
+        newMemory = ""
     }
 }

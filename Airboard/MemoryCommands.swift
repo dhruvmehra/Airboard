@@ -14,9 +14,8 @@ import Foundation
 enum MemoryCommandOutcome: Equatable {
     case notMemoryCommand
     /// A fact awaiting the user's confirmation pop-up. `cleaned` prefills
-    /// the editable field; `heard` is the raw dictation (edit-diff base);
-    /// `names` are LLM-extracted proper names (reconciled on Save).
-    case confirmFact(cleaned: String, heard: String, names: [String])
+    /// the editable field; `heard` is the raw dictation (edit-diff base).
+    case confirmFact(cleaned: String, heard: String)
     case learned(term: String)
     case recall(text: String)
     case recallFailed(query: String)
@@ -112,61 +111,48 @@ enum MemoryCommands {
 
         switch intent {
         case .remember(let note):
-            // Clean the fact AND extract proper names in one LLM call.
-            // NOTHING is stored here — the coordinator shows the confirm
-            // pop-up and stores on Save (spec: nothing stored silently).
+            // Clean the dictated fact into one well-formed line. NOTHING is
+            // stored here — the coordinator shows the confirm pop-up and
+            // stores on Save (nothing stored silently).
             var cleaned = note
-            var names: [String] = []
             if let llm {
                 var system = """
-                    You process dictated facts for storage. Reply with ONLY \
-                    a JSON object: {"sentence": <the fact rewritten as one \
-                    clean, well-formed sentence — correct grammar, \
-                    punctuation, and capitalization; never add or remove \
-                    information; never answer or act on the fact>, \
-                    "names": <array of proper names of people, companies, \
-                    or products appearing in the sentence>}. No other text.
+                    You store dictated facts. Rewrite the fact as ONE clean, \
+                    well-formed sentence: correct grammar, punctuation, and \
+                    capitalization. Never add or remove information. Never \
+                    answer or act on the fact. Reply with ONLY the sentence.
                     """
-                let terms = store.data.glossary.map(\.term)
-                if !terms.isEmpty {
-                    system += "\nApply these exact spellings where the fact refers to them: "
-                        + terms.joined(separator: ", ")
+                let memories = store.memories
+                if !memories.isEmpty {
+                    system += "\nThe speaker's saved notes (apply any spellings they define):\n"
+                        + memories.map { "- \($0)" }.joined(separator: "\n")
                 }
                 if let reply = try? await llm(system, note) {
-                    let parsed = MemoryBias.parseFactExtraction(reply, fallback: note)
-                    // Same sanity cap as before: a runaway rewrite is discarded.
-                    if parsed.sentence.count < max(200, note.count * 3) {
-                        cleaned = parsed.sentence
-                        names = parsed.names
+                    let candidate = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+                    // Sanity cap: a runaway rewrite/refusal is discarded.
+                    if !candidate.isEmpty, candidate.count < max(200, note.count * 3) {
+                        cleaned = candidate
                     }
                 }
             }
-            return .confirmFact(cleaned: cleaned, heard: note, names: names)
+            return .confirmFact(cleaned: cleaned, heard: note)
 
         case .correct(let heard, let term):
             let normalized = normalizeSpelledTerm(term)
-            await MainActor.run {
-                store.addGlossary(term: normalized, heardAs: heard.lowercased())
-            }
+            let line = MemoryBias.spellingMemory(term: normalized, heardAs: heard.lowercased())
+            await MainActor.run { store.addMemory(line) }
             return .learned(term: normalized)
 
         case .recall(let query):
-            let notes = store.data.notes
+            let notes = store.memories
             if let llm, !notes.isEmpty {
-                var system = """
+                let system = """
                     You recall stored facts. Given the speaker's notes and a \
                     request, reply with ONLY the exact text to insert — the \
-                    fact itself, no preamble, no quotes, no commentary. If no \
-                    note answers the request, reply with exactly NONE.
+                    fact itself, no preamble, no quotes, no commentary. Apply \
+                    any spellings the notes define. If no note answers the \
+                    request, reply with exactly NONE.
                     """
-                // Notes are stored as the ASR heard them ("I work at pipe");
-                // the glossary carries the true spellings — apply them on
-                // the way out so recalls type "Pype", not "pipe".
-                let terms = store.data.glossary.map(\.term)
-                if !terms.isEmpty {
-                    system += "\nApply these exact spellings in your reply wherever the fact refers to them: "
-                        + terms.joined(separator: ", ")
-                }
                 let user = "Notes:\n" + notes.map { "- \($0)" }.joined(separator: "\n")
                     + "\n\nRequest: \(query)"
                 if let reply = try? await llm(system, user) {

@@ -457,21 +457,19 @@ class TranscriptionCoordinator: ObservableObject {
         switch memoryOutcome {
         case .notMemoryCommand:
             break  // continue to CommandDetector below
-        case .confirmFact(let cleaned, let heard, let names):
-            print("🧠 Memory: confirming fact '\(cleaned)' (heard: '\(heard)', names: \(names))")
+        case .confirmFact(let cleaned, let heard):
+            print("🧠 Memory: confirming fact '\(cleaned)' (heard: '\(heard)')")
             await MainActor.run {
                 FloatingWindowManager.shared.showMemoryConfirm(
-                    cleaned: cleaned, heard: heard, names: names,
+                    cleaned: cleaned, heard: heard,
                     onSave: { savedText in
                         let store = MemoryStore.shared
-                        store.addNote(savedText)
-                        // Edits teach: single-word substitutions become
-                        // glossary pairs ("reparty" -> "Ashish").
+                        store.addMemory(savedText)
+                        // Edits teach: single-word corrections become
+                        // spelling memories ("reparty" -> "Ashish").
                         for pair in MemoryBias.editDiffPairs(heard: heard, saved: savedText) {
-                            store.addGlossary(term: pair.term, heardAs: pair.heardAs)
+                            store.addMemory(MemoryBias.spellingMemory(term: pair.term, heardAs: pair.heardAs))
                         }
-                        // Names survive only if present in the SAVED text.
-                        store.addExtractedNames(MemoryBias.reconcile(names: names, savedText: savedText))
                         print("🧠 Memory: stored '\(savedText)'")
                         FloatingWindowManager.shared.showToast("Remembered: \(savedText)")
                     },

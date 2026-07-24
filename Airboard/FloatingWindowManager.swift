@@ -642,7 +642,7 @@ class FloatingWindowManager: NSObject {
     private var memoryConfirmWindow: NSPanel?
 
     func showMemoryConfirm(
-        cleaned: String, heard: String, names: [String],
+        cleaned: String, heard: String,
         onSave: @escaping (String) -> Void,
         onCancel: @escaping () -> Void
     ) {
