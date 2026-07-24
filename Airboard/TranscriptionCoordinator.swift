@@ -442,7 +442,46 @@ class TranscriptionCoordinator: ObservableObject {
     
     private func handleCommandMode(text: String) async {
         print("⚡ Processing as COMMAND: \(text)")
-        
+
+        // Memory commands (teach / correct / recall) take precedence over
+        // the regular command table. Non-memory text falls straight through.
+        var llm: ((String, String) async throws -> String)?
+        if TranscriptRefiner.shared.isFullyConfigured {
+            llm = { system, user in
+                try await TranscriptRefiner.shared.complete(system: system, user: user)
+            }
+        }
+        let memoryOutcome = await MemoryCommands.handle(
+            text: text, store: MemoryStore.shared, llm: llm)
+
+        switch memoryOutcome {
+        case .notMemoryCommand:
+            break  // continue to CommandDetector below
+        case .remembered(let note):
+            await MainActor.run {
+                FloatingWindowManager.shared.showCommandExecuted()
+                self.showNotification(title: "Remembered", body: note)
+            }
+            return
+        case .learned(let term):
+            await MainActor.run {
+                FloatingWindowManager.shared.showCommandExecuted()
+                self.showNotification(title: "Learned spelling", body: term)
+            }
+            return
+        case .recall(let recalledText):
+            await MainActor.run {
+                self.insertTextIntoTargetApp(recalledText)
+            }
+            return
+        case .recallFailed(let query):
+            await MainActor.run {
+                self.showNotification(title: "Airboard Memory",
+                                      body: "Nothing remembered about \(query)")
+            }
+            return
+        }
+
         let parsedCommand = CommandDetector.detect(text)
         
         await MainActor.run {

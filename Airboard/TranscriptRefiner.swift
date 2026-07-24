@@ -114,7 +114,19 @@ class TranscriptRefiner {
     ]
 
     func refine(_ text: String) async throws -> String {
-        let output = try await chatCompletion(userMessage: text)
+        // The MEMORY block is appended by code, OUTSIDE the user-editable
+        // custom prompt — customizing the prompt never loses memory, and
+        // turning "Share memory with AI Cleanup" off removes it entirely.
+        // MemoryStore is main-thread-only by contract; refine() runs off
+        // the main actor, so hop for the read.
+        var system = systemPrompt
+        if let memory = await MainActor.run(body: { MemoryStore.shared.promptBlock }) {
+            system += "\n\n" + memory
+        }
+        let output = try await complete(
+            system: system,
+            user: "<dictation>\n\(text)\n</dictation>",
+            maxTokens: 1024)
         // Strip reasoning blocks defensively: if the user picked a "thinking"
         // model variant, its chain-of-thought must never reach the document.
         let deThought = output.replacingOccurrences(
@@ -180,7 +192,9 @@ class TranscriptRefiner {
         return error.localizedDescription
     }
 
-    private func chatCompletion(userMessage: String) async throws -> String {
+    /// One-shot chat completion against the configured server. refine()
+    /// rides on this; memory recall (MemoryCommands) uses it directly.
+    func complete(system: String, user: String, maxTokens: Int = 256) async throws -> String {
         guard isConfigured else { throw RefineError.notConfigured }
 
         // Normalize the base URL: accept values with or without a trailing
@@ -211,10 +225,10 @@ class TranscriptRefiner {
         let body: [String: Any] = [
             "model": modelName,
             "temperature": 0,
-            "max_tokens": 1024,
+            "max_tokens": maxTokens,
             "messages": [
-                ["role": "system", "content": systemPrompt],
-                ["role": "user", "content": "<dictation>\n\(userMessage)\n</dictation>"],
+                ["role": "system", "content": system],
+                ["role": "user", "content": user],
             ],
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
