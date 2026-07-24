@@ -105,10 +105,10 @@ struct AirboardPopover: View {
                         .toggleStyle(GreenSwitchToggleStyle())
                         .labelsHidden()
                         .onChange(of: aiCleanupEnabled) { _, enabled in
-                            // Turning cleanup on with no server configured
-                            // can't do anything yet — take the user straight
-                            // to the setup screen.
-                            if enabled && !TranscriptRefiner.shared.isConfigured {
+                            // Turning cleanup on when it can't actually work
+                            // (no server, or a remote server with no API key)
+                            // takes the user straight to the setup screen.
+                            if enabled && !TranscriptRefiner.shared.isFullyConfigured {
                                 onOpenCleanupSettings()
                             }
                         }

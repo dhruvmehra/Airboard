@@ -48,6 +48,16 @@ class TranscriptRefiner {
             && !modelName.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
+    /// Configured well enough that cleanup can plausibly WORK: URL + model
+    /// present, and an API key stored — unless the server is local (Ollama
+    /// and friends need no key). Drives the toggle's open-setup-on-enable.
+    var isFullyConfigured: Bool {
+        guard isConfigured else { return false }
+        if KeychainHelper.hasAPIKey { return true }
+        let url = serverURL.lowercased()
+        return url.contains("localhost") || url.contains("127.0.0.1") || url.contains(".local")
+    }
+
     private static let instructions = """
         You are a copy editor for dictated text. Rewrite the user's text with:
         - filler words and false starts removed
