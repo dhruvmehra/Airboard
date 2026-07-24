@@ -21,8 +21,13 @@ the user's terms against per-instant acoustic probabilities, and a
 rescorer corrects Parakeet's transcript from ACOUSTIC evidence (their
 benchmark: 99.4% dictionary recall, ~26x real-time, ~130MB peak memory).
 Parakeet remains the transcriber; nothing is replaced.
-API: `CustomVocabularyContext(terms: [CustomVocabularyTerm(text:, weight:,
-aliases:)])` on FluidAudio's sliding-window ASR manager.
+Integration point (corrected during planning, verified against the pinned
+0.15.5 source): the existing batch `AsrManager.transcribe(url)` call stays
+UNCHANGED; biasing is a post-transcribe rescoring pass (`CtcKeywordSpotter`
++ `VocabularyRescorer.ctcTokenRescore` over the transcript's token timings
+and the audio's CTC log-probs) — the exact pattern FluidAudio's own CLI
+uses for files, and per their docs MORE accurate than the streaming-manager
+path. No ASR-manager migration needed; strictly additive.
 
 ## Decisions made during brainstorming
 
