@@ -669,31 +669,27 @@ class FloatingWindowManager: NSObject {
                 y: screen.visibleFrame.maxY - size.height - 60,
                 width: size.width, height: size.height)
 
-            // Key-accepting panel: the card takes typing. .nonactivatingPanel
-            // is deliberately NOT used here.
-            let panel = NSPanel(contentRect: frame,
-                                styleMask: [.titled, .fullSizeContentView],
-                                backing: .buffered, defer: false)
-            panel.titleVisibility = .hidden
-            panel.titlebarAppearsTransparent = true
+            // Spotlight-style presentation: a NON-ACTIVATING panel that can
+            // become key on its own. Activating the app instead (previous
+            // approach) made macOS pull toward Airboard's Space — the card
+            // materialized on the desktop while the user sat in a
+            // full-screen terminal (field bug, twice). This panel joins the
+            // user's CURRENT Space, takes typing, and never switches focus
+            // away from where they are.
+            let panel = KeyableConfirmPanel(contentRect: frame,
+                                            styleMask: [.borderless, .nonactivatingPanel],
+                                            backing: .buffered, defer: false)
             panel.isOpaque = false
             panel.backgroundColor = .clear
+            panel.hasShadow = true
             panel.level = .floating
-            // Follow the user to whatever Space or full-screen app they are
-            // in — without this the card materializes on the desktop Space
-            // only (field bug: "the pop-up appears only on the desktop").
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.hidesOnDeactivate = false   // NSPanel default is true — the silent killer
             panel.isMovableByWindowBackground = true
             panel.isReleasedWhenClosed = false
-            // A confirm card has exactly two exits: Save and Cancel.
-            // Hide the traffic lights the .titled mask would show.
-            panel.standardWindowButton(.closeButton)?.isHidden = true
-            panel.standardWindowButton(.miniaturizeButton)?.isHidden = true
-            panel.standardWindowButton(.zoomButton)?.isHidden = true
             panel.contentView = hosting
             self.memoryConfirmWindow = panel
             panel.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
         }
     }
 
@@ -999,6 +995,12 @@ struct DownloadModalView: View {
             animateGradient = true
         }
     }
+}
+
+/// Borderless non-activating panels refuse key status by default; the
+/// confirm card needs it for typing (Spotlight pattern).
+final class KeyableConfirmPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }
 
 // MARK: - Toast Pill View
