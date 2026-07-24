@@ -76,6 +76,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         UpdaterManager.shared.start()
 
+        // Cleanup API keys moved from one global Keychain item to per-server
+        // items; re-home an existing key under the configured server's host.
+        KeychainHelper.migrateLegacyKeyIfNeeded(
+            currentServerURL: TranscriptRefiner.shared.serverURL)
+
         // Show in Dock (always visible)
         NSApp.setActivationPolicy(.regular)
         

@@ -12,10 +12,28 @@ import SwiftUI
 struct CleanupSettingsView: View {
     @AppStorage("cleanupServerURL") private var serverURL = ""
     @AppStorage("cleanupModelName") private var modelName = ""
+    @AppStorage("aiCleanupEnabled") private var aiCleanupEnabled = false
     @State private var apiKeyField = ""
-    @State private var hasStoredKey = KeychainHelper.hasAPIKey
+    @State private var hasStoredKey = false
     @State private var testResult: String?
     @State private var isTesting = false
+
+    /// Keys are stored per server host; everything key-related in this view
+    /// (save, remove, status) targets the host of the CURRENT server URL.
+    private var currentHost: String { KeychainHelper.host(of: serverURL) }
+
+    private func refreshKeyStatus() {
+        hasStoredKey = KeychainHelper.hasAPIKey(forHost: currentHost)
+    }
+
+    /// The auto-enable moment: the user just made the config workable
+    /// (saved a key or passed a connection test), so flip cleanup on —
+    /// that's what they were trying to do when the toggle sent them here.
+    private func enableCleanupIfReady() {
+        if !aiCleanupEnabled && TranscriptRefiner.shared.isFullyConfigured {
+            aiCleanupEnabled = true
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -36,7 +54,7 @@ struct CleanupSettingsView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(DS.Label.primary)
 
-                    Text("Any OpenAI-compatible server: OpenRouter, Bedrock, Ollama, vLLM")
+                    Text("Any OpenAI-compatible server: Cerebras, OpenRouter, Ollama, vLLM")
                         .font(.system(size: 11))
                         .foregroundColor(DS.Label.secondary)
                 }
@@ -57,7 +75,7 @@ struct CleanupSettingsView: View {
                         .foregroundColor(DS.Label.secondary)
                     Button("Cerebras (fastest)") {
                         serverURL = "https://api.cerebras.ai"
-                        modelName = "llama-3.3-70b"
+                        modelName = "gpt-oss-120b"
                         testResult = nil
                     }
                     .controlSize(.small)
@@ -76,41 +94,69 @@ struct CleanupSettingsView: View {
                     Spacer()
                 }
 
-                TextField("Server URL  (e.g. https://openrouter.ai/api)", text: $serverURL)
+                TextField("Server URL  (e.g. https://api.cerebras.ai)", text: $serverURL)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
                     .foregroundColor(DS.Label.primary)
                     .dsFieldChrome()
-                TextField("Model  (e.g. qwen/qwen3-30b-a3b-instruct-2507)", text: $modelName)
+                TextField("Model  (e.g. gpt-oss-120b)", text: $modelName)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
                     .foregroundColor(DS.Label.primary)
                     .dsFieldChrome()
 
                 HStack(spacing: 8) {
-                    SecureField(hasStoredKey ? "API key saved — type to replace" : "API key (not needed for local servers)",
+                    SecureField(hasStoredKey ? "Type to replace the saved key" : "API key (not needed for local servers)",
                                 text: $apiKeyField)
                         .textFieldStyle(.plain)
                         .font(.system(size: 12))
                         .foregroundColor(DS.Label.primary)
                         .dsFieldChrome()
                     Button("Save") {
-                        KeychainHelper.saveAPIKey(apiKeyField)
+                        KeychainHelper.saveAPIKey(apiKeyField, forHost: currentHost)
                         apiKeyField = ""
-                        hasStoredKey = KeychainHelper.hasAPIKey
+                        refreshKeyStatus()
                         testResult = nil
+                        enableCleanupIfReady()
                     }
                     .buttonStyle(DSPrimaryButtonStyle())
-                    .disabled(apiKeyField.isEmpty)
+                    .disabled(apiKeyField.isEmpty || currentHost.isEmpty)
                     if hasStoredKey {
                         Button("Remove") {
-                            KeychainHelper.deleteAPIKey()
-                            hasStoredKey = false
+                            KeychainHelper.deleteAPIKey(forHost: currentHost)
+                            refreshKeyStatus()
                             testResult = nil
                         }
                         .controlSize(.small)
                     }
                 }
+
+                // Key status — always visible, always names the server the
+                // key belongs to. Keys are per-server: switching the URL
+                // above switches which key (if any) is used.
+                HStack(spacing: 5) {
+                    if currentHost.isEmpty {
+                        Text("Keys are saved per server — enter a server URL first")
+                            .font(.system(size: 11))
+                            .foregroundColor(DS.Label.secondary)
+                    } else if hasStoredKey {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 10))
+                            .foregroundColor(DS.Accent.success)
+                        Text("Key saved for \(currentHost)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(DS.Accent.success)
+                    } else {
+                        Image(systemName: "key.slash")
+                            .font(.system(size: 10))
+                            .foregroundColor(DS.Label.tertiary)
+                        Text("No key saved for \(currentHost)")
+                            .font(.system(size: 11))
+                            .foregroundColor(DS.Label.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.top, -6)
 
                 HStack(spacing: 10) {
                     Button(isTesting ? "Testing…" : "Test connection") {
@@ -120,6 +166,7 @@ struct CleanupSettingsView: View {
                             switch await TranscriptRefiner.shared.testConnection() {
                             case .success:
                                 testResult = "✅ Connected — cleanup is working"
+                                enableCleanupIfReady()
                             case .failure(let error):
                                 testResult = "❌ \(TranscriptRefiner.friendlyMessage(for: error))"
                             }
@@ -154,6 +201,11 @@ struct CleanupSettingsView: View {
         }
         .frame(width: 440)
         .background(DS.Surface.panel)
+        .onAppear(perform: refreshKeyStatus)
+        .onChange(of: serverURL) { _, _ in
+            refreshKeyStatus()
+            testResult = nil
+        }
     }
 }
 

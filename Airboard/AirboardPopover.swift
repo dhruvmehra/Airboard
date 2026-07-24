@@ -105,10 +105,13 @@ struct AirboardPopover: View {
                         .toggleStyle(GreenSwitchToggleStyle())
                         .labelsHidden()
                         .onChange(of: aiCleanupEnabled) { _, enabled in
-                            // Turning cleanup on when it can't actually work
-                            // (no server, or a remote server with no API key)
-                            // takes the user straight to the setup screen.
+                            // The toggle is honest: it can only be ON when
+                            // cleanup can actually work (server + model, and
+                            // an API key for that server unless it's local).
+                            // Otherwise it snaps back off and takes the user
+                            // to setup — which auto-enables on a valid save.
                             if enabled && !TranscriptRefiner.shared.isFullyConfigured {
+                                aiCleanupEnabled = false
                                 onOpenCleanupSettings()
                             }
                         }

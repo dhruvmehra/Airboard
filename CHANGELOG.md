@@ -10,6 +10,12 @@ promotes that section to the released version automatically.
 
 ### Fixed
 - Turning AI Cleanup on now opens the setup window when the API key is missing (not only when the server URL/model are empty)
+- The AI Cleanup toggle no longer stays on when cleanup can't work: it snaps back off until a valid config exists, and turns itself on when you save one
+- API keys are now stored per server: a Cerebras key is never sent to OpenRouter/Ollama when you switch providers (existing key migrates automatically)
+
+### Changed
+- AI Cleanup settings always show which server a key is saved for ("Key saved for api.cerebras.ai"), with a Remove button
+- Cerebras is the default AI Cleanup provider (preset fills gpt-oss-120b)
 
 ### Changed
 - Popover polish per the Airboard design system: "AI Cleanup" title casing, Microphone row uses the semantic blue accent

@@ -49,11 +49,12 @@ class TranscriptRefiner {
     }
 
     /// Configured well enough that cleanup can plausibly WORK: URL + model
-    /// present, and an API key stored — unless the server is local (Ollama
-    /// and friends need no key). Drives the toggle's open-setup-on-enable.
+    /// present, and an API key stored FOR THIS SERVER — unless the server is
+    /// local (Ollama and friends need no key). Drives the toggle's
+    /// open-setup-on-enable.
     var isFullyConfigured: Bool {
         guard isConfigured else { return false }
-        if KeychainHelper.hasAPIKey { return true }
+        if KeychainHelper.hasAPIKey(forHost: KeychainHelper.host(of: serverURL)) { return true }
         let url = serverURL.lowercased()
         return url.contains("localhost") || url.contains("127.0.0.1") || url.contains(".local")
     }
@@ -150,7 +151,10 @@ class TranscriptRefiner {
         request.httpMethod = "POST"
         request.timeoutInterval = 10  // transport cap; orchestrator enforces 6s
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let key = KeychainHelper.readAPIKey(), !key.isEmpty {
+        // Per-host key lookup: only the key saved for THIS server is ever
+        // attached — switching providers can never leak the previous key.
+        if let key = KeychainHelper.readAPIKey(forHost: KeychainHelper.host(of: serverURL)),
+           !key.isEmpty {
             request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
 
