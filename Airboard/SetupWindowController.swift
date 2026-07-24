@@ -141,6 +141,7 @@ class SetupWindowController: NSObject, NSWindowDelegate {
         if !hasCompletedSetup { hasCompletedSetup = true }
         let completion = onComplete
         onComplete = nil
+        window = nil
         completion?()
     }
 }
