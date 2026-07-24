@@ -14,7 +14,12 @@ import CoreAudio
 
 nonisolated final class MicCaptureEngine {
 
-    private let engine = AVAudioEngine()
+    // Recreated after every recording (see stop()): a fresh AUHAL can never
+    // carry a stale device pin, and explicit pinning of the *default* device
+    // is avoided entirely — it made CoreAudio spawn per-process
+    // CADefaultDeviceAggregate ghost devices whose teardown deadlocked
+    // removeTap on the HAL mutex (observed hang, 2026-07-24).
+    private var engine = AVAudioEngine()
     private var converter: AVAudioConverter?
     private let targetFormat = AVAudioFormat(
         commonFormat: .pcmFormatInt16, sampleRate: 16000, channels: 1, interleaved: true)!
@@ -36,8 +41,8 @@ nonisolated final class MicCaptureEngine {
         engine.prepare()
     }
 
-    /// Begin capturing to fileURL. deviceID nil = the CURRENT system default,
-    /// resolved now.
+    /// Begin capturing to fileURL. deviceID nil = follow the system default
+    /// (native AUHAL tracking — safe because every recording uses a fresh engine).
     func start(deviceID: AudioDeviceID?, fileURL: URL) throws {
         stateLock.lock()
         let alreadyRunning = isRunning
@@ -46,14 +51,13 @@ nonisolated final class MicCaptureEngine {
 
         let inputNode = engine.inputNode
 
-        // Setting kAudioOutputUnitProperty_CurrentDevice permanently disables
-        // the AUHAL's built-in default-device tracking, so we must ALWAYS pin
-        // explicitly (resolving "default" fresh each call) rather than only
-        // pinning when a specific device was requested — otherwise a prior
-        // pinned recording would leave the default stuck for the app's lifetime.
-        let pin = deviceID ?? MicDeviceManager.systemDefaultInputDeviceID()
-        if let pin, let audioUnit = inputNode.audioUnit {
-            var device = pin
+        // Pin ONLY when a specific device was requested. The nil case keeps
+        // the AUHAL's native default-device tracking — safe because each
+        // recording gets a FRESH engine (see stop()), so a pin from a prior
+        // recording cannot linger. (Explicitly pinning the default device
+        // spawned CADefaultDeviceAggregate ghosts and a HAL-mutex deadlock.)
+        if let deviceID, let audioUnit = inputNode.audioUnit {
+            var device = deviceID
             let status = AudioUnitSetProperty(
                 audioUnit,
                 kAudioOutputUnitProperty_CurrentDevice,
@@ -178,8 +182,12 @@ nonisolated final class MicCaptureEngine {
         _currentPowerDb = -160
         stateLock.unlock()
 
-        // Re-warm for the next start() so first-word audio isn't clipped by a
-        // cold engine (mirrors the old AVAudioRecorder re-prime-after-stop behavior).
+        // Discard this engine and warm a fresh one: no stale device pin can
+        // survive into the next recording, and CoreAudio teardown state can't
+        // accumulate. prepare() keeps the next start() fast (first-word
+        // clipping guard, mirroring the old re-prime-after-stop behavior).
+        engine = AVAudioEngine()
+        _ = engine.inputNode
         engine.prepare()
 
         return finished

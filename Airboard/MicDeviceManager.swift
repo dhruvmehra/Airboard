@@ -100,6 +100,15 @@ final class MicDeviceManager: ObservableObject {
             guard let uid = Self.stringProperty(id, kAudioDevicePropertyDeviceUID),
                   let name = Self.stringProperty(id, kAudioDevicePropertyDeviceNameCFString) else { continue }
             let transport = Self.transportType(id)
+            // Only real hardware belongs in the picker. Virtual devices
+            // (Zoom's fake mic, loopback drivers) and Aggregate devices
+            // (CoreAudio's internal per-process CADefaultDeviceAggregate-*
+            // ghosts) confuse users, and rules keyed to them poison the
+            // store — a PID-scoped aggregate never exists again.
+            if transport == kAudioDeviceTransportTypeVirtual
+                || transport == kAudioDeviceTransportTypeAggregate {
+                continue
+            }
             let isExternal = transport != kAudioDeviceTransportTypeBuiltIn
             found.append(MicDevice(id: id, uid: uid, name: name, isExternal: isExternal))
         }
