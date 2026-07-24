@@ -30,6 +30,7 @@ class AudioRecorder: ObservableObject {
             print("🎙️ Recording started (\(MicDeviceManager.shared.activeMicName)): \(url.lastPathComponent)")
         } catch {
             print("❌ Recording failed to start: \(error.localizedDescription)")
+            recordingURL = nil
         }
     }
 

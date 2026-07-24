@@ -112,7 +112,7 @@ class ChunkedAudioRecorder: ObservableObject {
             // finalize, and currentChunkURL/currentChunkNumber must stay put.
             // Just retry the rotation watch so a later pause tries again.
             print("⚠️ Chunk rotation failed; continuing current chunk")
-            scheduleChunkRotation()
+            beginSilenceWatch()
             return
         }
 

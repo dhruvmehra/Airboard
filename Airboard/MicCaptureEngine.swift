@@ -36,7 +36,8 @@ nonisolated final class MicCaptureEngine {
         engine.prepare()
     }
 
-    /// Begin capturing to fileURL. deviceID nil = follow the system default.
+    /// Begin capturing to fileURL. deviceID nil = the CURRENT system default,
+    /// resolved now.
     func start(deviceID: AudioDeviceID?, fileURL: URL) throws {
         stateLock.lock()
         let alreadyRunning = isRunning
@@ -45,8 +46,14 @@ nonisolated final class MicCaptureEngine {
 
         let inputNode = engine.inputNode
 
-        if let deviceID, let audioUnit = inputNode.audioUnit {
-            var device = deviceID
+        // Setting kAudioOutputUnitProperty_CurrentDevice permanently disables
+        // the AUHAL's built-in default-device tracking, so we must ALWAYS pin
+        // explicitly (resolving "default" fresh each call) rather than only
+        // pinning when a specific device was requested — otherwise a prior
+        // pinned recording would leave the default stuck for the app's lifetime.
+        let pin = deviceID ?? MicDeviceManager.systemDefaultInputDeviceID()
+        if let pin, let audioUnit = inputNode.audioUnit {
+            var device = pin
             let status = AudioUnitSetProperty(
                 audioUnit,
                 kAudioOutputUnitProperty_CurrentDevice,
@@ -136,12 +143,8 @@ nonisolated final class MicCaptureEngine {
     /// Swap output files mid-capture (hands-free chunk rotation).
     /// Returns the finished file's URL. Capture continues without a gap.
     func rotate(to newURL: URL) -> URL? {
-        var newFile = try? AVAudioFile(forWriting: newURL, settings: targetFormat.settings,
-                                       commonFormat: .pcmFormatInt16, interleaved: true)
-        if newFile == nil {
-            newFile = try? AVAudioFile(forWriting: newURL, settings: targetFormat.settings,
-                                       commonFormat: .pcmFormatInt16, interleaved: true)
-        }
+        let newFile = try? AVAudioFile(forWriting: newURL, settings: targetFormat.settings,
+                                        commonFormat: .pcmFormatInt16, interleaved: true)
         guard let newFile else {
             print("❌ Chunk rotation failed: could not open \(newURL.lastPathComponent); continuing current chunk")
             return nil
@@ -174,6 +177,11 @@ nonisolated final class MicCaptureEngine {
         isRunning = false
         _currentPowerDb = -160
         stateLock.unlock()
+
+        // Re-warm for the next start() so first-word audio isn't clipped by a
+        // cold engine (mirrors the old AVAudioRecorder re-prime-after-stop behavior).
+        engine.prepare()
+
         return finished
     }
 }
