@@ -45,8 +45,8 @@ enum MemoryCommands {
             return .remember(note: cleaned.prefix(1).uppercased() + cleaned.dropFirst())
         }
 
-        for verb in ["correct ", "change "] where lower.hasPrefix(verb) {
-            let rest = String(text.dropFirst(verb.count))
+        if lower.hasPrefix("correct ") {
+            let rest = String(text.dropFirst("correct ".count))
             if let range = rest.range(of: " to ", options: .caseInsensitive) {
                 let heard = String(rest[..<range.lowerBound]).trimmingCharacters(in: .whitespaces)
                 let term = String(rest[range.upperBound...]).trimmingCharacters(in: .whitespaces)
