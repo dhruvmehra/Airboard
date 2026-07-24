@@ -160,12 +160,24 @@ class ParakeetTranscriptionService: ObservableObject {
                 return
             }
 
-            transcription = transcribedText
+            // Acoustic vocabulary biasing: re-check the audio for the
+            // user's memory terms and correct from sound. Inert when the
+            // watch-list is empty; never blocks or fails the dictation.
+            // Runs BEFORE the audio file is deleted — it needs the samples.
+            var finalText = transcribedText
+            if let timings = result.tokenTimings, !timings.isEmpty {
+                if let corrected = await VocabularyBiasingEngine.shared.rescore(
+                    text: transcribedText, tokenTimings: timings, audioURL: audioURL) {
+                    finalText = corrected
+                }
+            }
+
+            transcription = finalText
 
             PerformanceMonitor.shared.finalizeSession()
             isTranscribing = false
 
-            print("✅ Done: \(transcribedText)")
+            print("✅ Done: \(finalText)")
             print("⏱️ \(Int(duration))ms")
 
             deleteAudioFile(at: audioURL)
