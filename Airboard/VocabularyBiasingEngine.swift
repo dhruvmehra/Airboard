@@ -19,6 +19,16 @@ import FluidAudio
 actor VocabularyBiasingEngine {
     static let shared = VocabularyBiasingEngine()
 
+    /// Personal-dictation precision floor. FluidAudio's small-vocab default
+    /// (minSimilarity 0.50, tuned on earnings-call jargon) over-fires on
+    /// conversational speech — with a 1-term list it stamped a name over
+    /// acoustically-adjacent words ("Inakshi" vs "and she…", field bug).
+    /// Their own FDA benchmark shows tightening the gate collapses false
+    /// positives at almost no recall cost. A correction must be
+    /// acoustically CONVINCING: a missed correction is mild, a corrupted
+    /// word is terrible.
+    private static let similarityFloor: Float = 0.65
+
     private var vocab: CustomVocabularyContext?
     private var ctcModels: CtcModels?
     private var spotter: CtcKeywordSpotter?
@@ -49,7 +59,7 @@ actor VocabularyBiasingEngine {
                 logProbs: spotResult.logProbs, frameDuration: spotResult.frameDuration,
                 cbw: vocabConfig.cbw,
                 marginSeconds: ContextBiasingConstants.defaultMarginSeconds,
-                minSimilarity: vocabConfig.minSimilarity)
+                minSimilarity: max(vocabConfig.minSimilarity, Self.similarityFloor))
             if out.wasModified {
                 print("🎯 Vocabulary biasing corrected: '\(text)' -> '\(out.text)'")
                 return out.text
