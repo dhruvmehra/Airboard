@@ -8,6 +8,12 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+### Added
+- Styled DMG installer per the design system: drop-zone layout with drag-to-Applications arrow, version stamp, and privacy line
+
+### Fixed
+- The installer DMG no longer contains a stray copy of itself (1.0.7's disk image showed "Airboard-1.0.7.dmg" inside its own window)
+
 ## [1.0.7] - 2026-07-24
 
 ### Fixed
