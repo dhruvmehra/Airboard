@@ -6,6 +6,22 @@
         <description>Airboard updates</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.8</title>
+            <pubDate>Fri, 24 Jul 2026 12:34:36 +0000</pubDate>
+            <sparkle:version>1.0.8</sparkle:version>
+            <sparkle:shortVersionString>1.0.8</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<pre>
+
+### Added
+- Styled DMG installer per the design system: drop-zone layout with drag-to-Applications arrow, version stamp, and privacy line
+
+### Fixed
+- The installer DMG no longer contains a stray copy of itself (1.0.7's disk image showed "Airboard-1.0.7.dmg" inside its own window)
+</pre>]]></description>
+            <enclosure url="https://github.com/dhruvmehra/Airboard/releases/download/v1.0.8/Airboard-1.0.8.dmg" sparkle:edSignature="dLNqXbFEFeug/U0ghsgzkpgW2sP422J3JIWN/PHtW00V25gwRDqqU9AYm7wZlfHd8PVT+ENWbgcI/498iy/uAw==" length="6601531" type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Version 1.0.7</title>
             <pubDate>Fri, 24 Jul 2026 11:55:33 +0000</pubDate>
             <sparkle:version>1.0.7</sparkle:version>

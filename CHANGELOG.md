@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-07-24
+
 ### Added
 - Styled DMG installer per the design system: drop-zone layout with drag-to-Applications arrow, version stamp, and privacy line
 
