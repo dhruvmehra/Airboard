@@ -49,7 +49,15 @@ nonisolated final class MicCaptureEngine {
         stateLock.unlock()
         guard !alreadyRunning else { return }
 
+        // Fresh engine created NOW, not in stop(): building the next engine
+        // in stop()'s immediate aftermath bound its AUHAL to the device while
+        // CoreAudio was still tearing the previous one down — that engine came
+        // up half-dead and captured ~0.2s regardless of recording length
+        // (field bug: every SECOND dictation produced a 6.7KB file). By the
+        // next hotkey press, teardown has long settled.
+        engine = AVAudioEngine()
         let inputNode = engine.inputNode
+        engine.prepare()
 
         // Pin ONLY when a specific device was requested. The nil case keeps
         // the AUHAL's native default-device tracking — safe because each
@@ -182,13 +190,8 @@ nonisolated final class MicCaptureEngine {
         _currentPowerDb = -160
         stateLock.unlock()
 
-        // Discard this engine and warm a fresh one: no stale device pin can
-        // survive into the next recording, and CoreAudio teardown state can't
-        // accumulate. prepare() keeps the next start() fast (first-word
-        // clipping guard, mirroring the old re-prime-after-stop behavior).
-        engine = AVAudioEngine()
-        _ = engine.inputNode
-        engine.prepare()
+        // The next start() creates its own fresh engine (see start()); doing
+        // it here — mid-CoreAudio-teardown — produced half-dead engines.
 
         return finished
     }
