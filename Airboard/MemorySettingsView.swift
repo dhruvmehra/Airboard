@@ -33,6 +33,15 @@ struct MemorySettingsView: View {
                         .foregroundColor(DS.Label.secondary)
                 }
                 Spacer()
+                Button(action: {
+                    NSWorkspace.shared.open(MemoryStore.defaultURL())
+                }) {
+                    Text("Open File")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(DS.Label.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Open memory.md in your editor — it's just markdown")
             }
             .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 12)
 
@@ -41,10 +50,26 @@ struct MemorySettingsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     if store.memories.isEmpty {
-                        Text("Nothing remembered yet. Hold the command hotkey and say \"remember …\", or add a line below.")
-                            .font(.system(size: 11))
-                            .foregroundColor(DS.Label.tertiary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Nothing remembered yet. Hold your hotkey + ⌘ and just say it:")
+                                .font(.system(size: 11))
+                                .foregroundColor(DS.Label.secondary)
+                            Text("\"Remember that I work at Pype\"")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(DS.Label.tertiary)
+                            Text("\"Correct pipe to Pype\"  —  teaches a spelling")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(DS.Label.tertiary)
+                            Text("\"Write my address\"  —  types a saved fact anywhere")
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(DS.Label.tertiary)
+                            Text("Start with spellings (your company, teammates' names) — facts you save afterwards come out spelled right.")
+                                .font(.system(size: 10))
+                                .foregroundColor(DS.Label.tertiary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.top, 2)
+                        }
+                        .padding(.vertical, 4)
                     }
                     ForEach(Array(store.memories.enumerated()), id: \.offset) { index, memory in
                         HStack(spacing: 8) {

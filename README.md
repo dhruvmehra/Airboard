@@ -62,6 +62,44 @@ Visual feedback (floating indicator): 🔴 recording · 🟠 transcribing · �
 
 The hotkey is configurable from the menu-bar popover.
 
+## Set up your Memory (5 minutes, do this first)
+
+Airboard has a personal memory: plain-language lines it uses to spell your
+words right and to type your facts on command. It lives in a markdown file
+you own (`~/Library/Application Support/com.pype.airboard/memory.md`) —
+view it in the popover → **Memory**, or open the file in any editor.
+
+**Step 1 — teach your spellings first** (hold hotkey + ⌘ and say it):
+
+> "Correct pipe to Pype"
+> "Correct enachi to Inakshi" — or spell it out: "spell it i-n-a-k-s-h-i"
+
+Do this for your company, product names, and the teammates you mention
+daily. Spellings first matters: facts you save afterwards come out spelled
+right automatically.
+
+**Step 2 — save the facts you'll want typed for you:**
+
+> "Remember that I work at Pype"
+> "Remember my work address is …"
+> "Don't forget my GitHub handle is …"
+
+Any phrasing works ("note this…", "keep in mind…"). A small card shows
+each fact before it's saved — **edit anything the mic misheard, then press
+⏎**. Correcting a name in that card teaches the spelling automatically.
+
+**Step 3 — use it:**
+
+- Just dictate: your words come out with your spellings applied in context
+  ("send it to pipe" → "Pype", but "the water pipe" stays "pipe").
+- Recall anywhere: put the cursor in any field, hold hotkey + ⌘, say
+  "write my address" / "fill in where I work" — the fact types itself.
+
+**Privacy:** memory is a local file. The "Share memory with AI Cleanup"
+switch controls whether your lines ride along with cleanup requests to
+your configured LLM; switched off, memory never leaves your Mac (voice
+recall still works, locally).
+
 ## Architecture (high level)
 
 ```
