@@ -9,7 +9,7 @@ promotes that section to the released version automatically.
 ## [Unreleased]
 
 ### Added
-- Airboard Memory: teach spellings ("correct pipe to Pype") and facts ("remember I work at Pype") by voice in command mode; recall facts anywhere ("write my address" types it at your cursor). Facts are cleaned by the AI before storing (grammar fixed, your taught spellings applied — falls back to the raw words offline), and spellings are applied in context by AI Cleanup — "the water pipe" stays "pipe". A toast confirms every teach on screen. Memory is a flat list of plain-language lines in a markdown file (memory.md) — view and edit them as-is in the Memory window or any text editor, with a switch controlling whether they're shared with the cleanup LLM
+- Airboard Memory: teach spellings ("correct pipe to Pype") and facts ("remember I work at Pype") by voice in command mode; recall facts anywhere ("write my address" types it at your cursor). Facts are lightly formatted before storing (punctuation and your taught spellings applied — your words kept as spoken; falls back to raw offline), and spellings are applied in context by AI Cleanup — "the water pipe" stays "pipe". A toast confirms every teach on screen. Memory is a flat list of plain-language lines in a markdown file (memory.md) — view and edit them as-is in the Memory window or any text editor, with a switch controlling whether they're shared with the cleanup LLM
 - Memory confirmation: every "remember…" fact now shows a small card to review and edit before it's saved — and correcting a misheard name in the card teaches Airboard the right spelling automatically
 - Natural memory phrasing: no exact keyword needed — "don't forget that…", "note this…", "keep in mind…" all work; when a command isn't recognized, the AI interprets whether you meant to save, recall, or teach a spelling (the confirmation card still guards every save)
 
@@ -18,7 +18,7 @@ promotes that section to the released version automatically.
 
 ### Fixed
 - Dictations no longer start with a stray leading space, and chained utterances still get their separating space: the old heuristic guessed from the field's last character whenever the cursor position was unreadable (terminals always are). Now Airboard reads the character before the cursor when the app reveals it, and otherwise adds a space only when chaining right after its own previous insertion (same app, within 30s)
-- AI Cleanup no longer invents paragraph breaks: the default prompt now keeps consecutive sentences in one paragraph (if you saved a custom system prompt, press "Reset to default" to pick this up)
+- AI Cleanup is now light-touch by default: it keeps your words and sentence structure as spoken — no rephrasing or synonym swaps — fixing only punctuation, capitalization, clear errors, and formatting. It also no longer invents paragraph breaks. (If you saved a custom system prompt, press "Reset to default" to pick this up)
 - Installer window labels ("Airboard", "Applications") are now readable: Finder always draws DMG labels in black, so the background art gives them light plates
 - Installer tagline updated to "On-device speech to text · Optional AI cleanup" — accurate now that cleanup can use a remote LLM
 

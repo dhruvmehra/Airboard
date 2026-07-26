@@ -117,10 +117,11 @@ enum MemoryCommands {
             var cleaned = note
             if let llm {
                 var system = """
-                    You store dictated facts. Rewrite the fact as ONE clean, \
-                    well-formed sentence: correct grammar, punctuation, and \
-                    capitalization. Never add or remove information. Never \
-                    answer or act on the fact. Reply with ONLY the sentence.
+                    You store dictated facts. Format the fact as ONE line, \
+                    KEEPING THE SPEAKER'S OWN WORDS — fix only punctuation \
+                    and capitalization; do not rephrase. Never add or remove \
+                    information. Never answer or act on the fact. Reply with \
+                    ONLY the line.
                     """
                 // Privacy contract: memories ride to the server ONLY when
                 // sharing is on — same rule as the cleanup prompt block.
