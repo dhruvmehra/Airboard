@@ -6,6 +6,33 @@
         <description>Airboard updates</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.9</title>
+            <pubDate>Sun, 26 Jul 2026 18:34:04 +0000</pubDate>
+            <sparkle:version>1.0.9</sparkle:version>
+            <sparkle:shortVersionString>1.0.9</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<pre>
+
+### Added
+- Airboard Memory: teach spellings ("correct pipe to Pype") and facts ("remember I work at Pype") by voice in command mode; recall facts anywhere ("write my address" types it at your cursor). Facts are lightly formatted before storing (punctuation and your taught spellings applied — your words kept as spoken; falls back to raw offline), and spellings are applied in context by AI Cleanup — "the water pipe" stays "pipe". A toast confirms every teach on screen. Memory is a flat list of plain-language lines in a markdown file (memory.md) — view and edit them as-is in the Memory window or any text editor, with a switch controlling whether they're shared with the cleanup LLM
+- Memory confirmation: every "remember…" fact now shows a small card to review and edit before it's saved — and correcting a misheard name in the card teaches Airboard the right spelling automatically
+- Voice editing in command mode: "delete all", "delete last word", "delete last two sentences", and "scratch that" (erases exactly what Airboard just typed) — works anywhere dictation works
+- Performance window shows your recent dictations with a timing breakdown (audio length, speech-to-text ms, AI cleanup ms) from a local log that never leaves your Mac
+- Anonymous performance telemetry (production builds only): timing numbers and outcome flags go to TelemetryDeck so we can see how fast dictation is across installs — never any text you dictate. "Share anonymous performance stats" in the Performance window turns it off
+- Natural memory phrasing: no exact keyword needed — "don't forget that…", "note this…", "keep in mind…" all work; when a command isn't recognized, the AI interprets whether you meant to save, recall, or teach a spelling (the confirmation card still guards every save)
+
+### Changed
+- Nothing is stored to memory silently anymore — facts always pass through the confirmation card
+
+### Fixed
+- Dictations no longer start with a stray leading space, and chained utterances still get their separating space: the old heuristic guessed from the field's last character whenever the cursor position was unreadable (terminals always are). Now Airboard reads the character before the cursor when the app reveals it, and otherwise adds a space only when chaining right after its own previous insertion (same app, within 30s)
+- AI Cleanup is now light-touch by default: it keeps your words and sentence structure as spoken — no rephrasing or synonym swaps — fixing only punctuation, capitalization, clear errors, and formatting. It also no longer invents paragraph breaks. (If you saved a custom system prompt, press "Reset to default" to pick this up)
+- Installer window labels ("Airboard", "Applications") are now readable: Finder always draws DMG labels in black, so the background art gives them light plates
+- Installer tagline updated to "On-device speech to text · Optional AI cleanup" — accurate now that cleanup can use a remote LLM
+</pre>]]></description>
+            <enclosure url="https://github.com/dhruvmehra/Airboard/releases/download/v1.0.9/Airboard-1.0.9.dmg" sparkle:edSignature="SCa2Vb7LYdJoYvsGyOPD3x+k5HTDBZ2dyP0EoX8cvzI6TvLSeaMTiSwpiu8ixeKnddjitqJWz62i5qcwMQhCCA==" length="6995807" type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Version 1.0.8</title>
             <pubDate>Fri, 24 Jul 2026 12:34:36 +0000</pubDate>
             <sparkle:version>1.0.8</sparkle:version>

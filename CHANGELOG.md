@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-07-27
+
 ### Added
 - Airboard Memory: teach spellings ("correct pipe to Pype") and facts ("remember I work at Pype") by voice in command mode; recall facts anywhere ("write my address" types it at your cursor). Facts are lightly formatted before storing (punctuation and your taught spellings applied — your words kept as spoken; falls back to raw offline), and spellings are applied in context by AI Cleanup — "the water pipe" stays "pipe". A toast confirms every teach on screen. Memory is a flat list of plain-language lines in a markdown file (memory.md) — view and edit them as-is in the Memory window or any text editor, with a switch controlling whether they're shared with the cleanup LLM
 - Memory confirmation: every "remember…" fact now shows a small card to review and edit before it's saved — and correcting a misheard name in the card teaches Airboard the right spelling automatically
