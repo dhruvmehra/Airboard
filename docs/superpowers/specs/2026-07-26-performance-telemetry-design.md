@@ -1,7 +1,7 @@
 # Performance Telemetry + Local Dictation Log — Design
 
 **Date:** 2026-07-26
-**Status:** Approved
+**Status:** Approved — ships in 1.0.9
 
 ## Goal
 
@@ -14,7 +14,7 @@ timing breakdown. No transcript text ever leaves any machine.
 
 | Decision | Choice | Why |
 |---|---|---|
-| Backend | **Supabase (hosted Postgres, free tier) + Metabase run locally when wanted** | User decision (revised from TelemetryDeck): full ownership of the raw data and unrestricted SQL (percentiles included). No ingest server needed — the app POSTs rows to Supabase's auto-generated REST API with an insert-only anon key (Row Level Security); Metabase runs on Dhruv's MacBook via Docker against the Supabase connection string, nothing hosted. TelemetryDeck rejected: floatValue-only charting, no percentiles, limited raw-data access. |
+| Backend | **TelemetryDeck** (hosted, privacy-first app analytics, Swift SDK) — FINAL, decided twice | Purpose-built; dashboards included; zero infrastructure and zero ownership burden ("it's a very small project"). Supabase+Metabase was explored and rejected by the user for the ownership overhead; TelemetryDeck's limits (floatValue-only charting, no percentiles) are accepted. |
 | Consent | Anonymous-by-design, ON by default, visible toggle + README disclosure | Team of 15 gets real numbers day one; open-source users get an honest, discoverable switch. |
 | What is sent | Timing/version numbers ONLY — never transcript text, never file paths, never names | Privacy line of the product. |
 | Which builds send | Production bundle (`com.pype.airboard`) only — dev builds never send | Same pattern as Sparkle updates; dev noise would pollute the stats. |
@@ -24,35 +24,38 @@ timing breakdown. No transcript text ever leaves any machine.
 ## Architecture
 
 ```
-TelemetryService.swift (new, ours — no SDK)
-  One URLSession POST per event to Supabase's auto-generated REST API
-  (PostgREST): POST {url}/rest/v1/events with the public ANON key
-  (insert-only via Row Level Security — the key cannot read or delete).
-  Fire-and-forget off the hot path (detached Task after insertion);
-  failures are dropped silently — telemetry never delays or blocks a
-  dictation. No-ops entirely when: bundle != com.pype.airboard OR
-  toggle off. Config (SUPABASE_URL + anon key) in Info.plist — public
-  write-only values, same class as the Sparkle public key.
+TelemetryService.swift (new)
+  wraps the TelemetryDeck SDK (SPM github.com/TelemetryDeck/SwiftSDK,
+  pin 2.x; init in App init; signal() enqueues to a disk-backed batch
+  queue off the calling thread — natively satisfies the never-block rule).
+  No-ops entirely when: bundle != com.pype.airboard OR toggle off.
 
-  ONE table, one row per event — full SQL freedom (percentiles etc.):
-    events(
-      id bigint identity, created_at timestamptz default now(),
-      event text,               -- 'launch' | 'dictation'
-      install_id uuid,          -- random per install, stored in UserDefaults
-      app_version text, model_version text,
-      mode text,                -- dictation | command | handsfree (null for launch)
-      stt_ms int, llm_ms int,   -- llm_ms null when LLM didn't run
-      llm_outcome text,         -- ok | timeout | error | guarded | skipped | off
-      audio_seconds int
-    )
-  RLS: enable; single policy `allow anon insert` (no select/update/delete
-  for anon). Supabase free tier: 500MB database — years of events at this
-  row size.
+  SDK CONSTRAINT (verified): custom `parameters` are stored as STRINGS and
+  cannot be charted; only the single `floatValue` per signal is
+  aggregatable (mean/min/max/histogram — no percentiles). Therefore one
+  signal per chartable number:
+    - "app.launched"        (no floatValue)        {appVersion, modelVersion}
+    - "dictation.stt"       floatValue = sttMs     {mode, llmOutcome, appVersion}
+    - "dictation.llm"       floatValue = llmMs     {llmOutcome, appVersion}
+                            (sent only when the LLM actually ran)
+  llmOutcome (fixed enum strings, never free text; error bodies never
+  sent): ok | timeout | error | guarded | skipped | off
+    ok = cleanup output used · timeout = 4s budget expired, fallback ·
+    error = transport/HTTP failure, fallback · guarded = refusal/ratio
+    guard discarded output, fallback · skipped = under the 6-word gate ·
+    off = cleanup disabled/unconfigured.
+  Missing/placeholder App ID in Info.plist → TelemetryService no-ops
+  entirely (code ships independent of the account setup).
+  Volume math: 15 users × ~40 dictations/day × ≤2 signals ≈ 36k/month —
+  inside the 50k free tier. Overflow behavior is benign: ingestion pauses
+  until the month resets (no charges); two consecutive over-months
+  auto-upgrade to paid. Revisit sampling if the team grows.
 
-  Dashboards: Supabase SQL editor day one (saved queries provided in the
-  README-adjacent docs); Metabase locally on demand:
-    docker run -d -p 3000:3000 metabase/metabase
-  pointed at the Supabase Postgres connection string. Nothing hosted.
+  Anonymous install ID: random UUID in UserDefaults, fed to the SDK's
+  double-hash anonymization (salted on-device, salted+hashed again
+  server-side; not reconstructable). The SDK auto-attaches device model,
+  OS version, locale/region, screen resolution, and debug/test-run flags —
+  the README disclosure must name these honestly.
         ▲ called from
 TranscriptionCoordinator / ParakeetTranscriptionService / TranscriptPostProcessor
   (the timing numbers already exist as log prints — this routes them)
@@ -74,16 +77,15 @@ PerformanceView (modified)
 
 ## Privacy contract (verbatim for README)
 
-Production builds send anonymous usage rows to a database operated by
-the project maintainers (Supabase-hosted Postgres): timing numbers
-(speech-to-text and cleanup durations in ms), an outcome flag, dictation
-mode, audio length in seconds, app and model versions, and a random
-install identifier (a UUID generated on first launch — no name, email,
-hostname, or hardware ID). Never any transcript text, audio, file names,
-or personal data; the app's database credential can only insert rows,
-never read them. The "Share anonymous performance stats" switch in the
-Performance window turns it off entirely. Debug builds never send
-anything.
+Production builds send anonymous usage signals to TelemetryDeck (a German,
+GDPR-focused analytics service): timing numbers (speech-to-text and
+cleanup durations), outcome flags, app version, plus the SDK's standard
+device context (device model, OS version, locale, screen resolution) and
+a random install identifier that is salted and hashed twice — once on
+your device, once server-side — so it cannot be traced back. Never any
+transcript text, audio, file names, or personal data. The "Share
+anonymous performance stats" switch in the Performance window turns it
+off entirely. Debug builds never send anything.
 
 ## Failure handling
 
@@ -95,8 +97,7 @@ anything.
 
 ## Out of scope
 
-- Hosting Metabase anywhere (local Docker on demand is the model; the
-  Supabase SQL editor covers day one).
+- Custom dashboards/Metabase/SQL (TelemetryDeck's dashboards are the UI).
 - Any transcript-content telemetry, error-body telemetry, or crash
   reporting (separate decision for another day).
 - Historical backfill (stats start at 1.0.9).
@@ -108,24 +109,13 @@ anything.
   line tolerance.
 - Manual (Dhruv): dev build → dictate → Performance window shows the entry
   with STT/LLM split; toggle exists and persists; dev build sends nothing
-  (bundle-id gate — verify no POST in the log). Prod verification
-  post-1.0.9: rows appear in the Supabase table; the provided saved
-  queries (avg/percentile STT + LLM, timeout rate, active installs)
-  return sane numbers; anon key verified insert-only (a SELECT with it
-  must fail).
+  (no TelemetryDeck app ID configured for dev / bundle check — verify via
+  Console/log). Prod verification post-1.0.9: signals appear in the
+  TelemetryDeck dashboard; timing averages chartable.
 - README disclosure present; changelog entry present.
 
-## llm_outcome values (fixed enum strings — no free text, ever)
+## Setup prerequisite (Dhruv, one-time, ~5 min)
 
-ok (cleanup output used) | timeout (4s budget expired, fallback inserted) |
-error (transport/HTTP failure, fallback) | guarded (refusal/ratio guard
-discarded the output, fallback) | skipped (dictation under the 6-word
-gate) | off (cleanup disabled/unconfigured). Error MESSAGES and response
-bodies are never sent — outcomes are single words by construction.
-
-## Setup prerequisite (Dhruv, one-time, ~10 min)
-
-Create a free Supabase project → run the provided SQL (table + RLS
-insert-only policy, delivered in the plan) in the SQL editor → copy the
-project URL and anon key into Info.plist. Both values are public-safe
-(write-only by policy) and fine to commit.
+Create a free TelemetryDeck account + an app entry to get the App ID; the
+ID is a public write-only token and lives in Info.plist (fine to commit —
+same class of value as the Sparkle public key).
