@@ -14,6 +14,8 @@
 Airboard needs to download AI models to your system cache folder for voice transcription</string>
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/dhruvmehra/Airboard/main/appcast.xml</string>
+	<key>TelemetryDeckAppID</key>
+	<string>UNSET</string>
 	<key>SUPublicEDKey</key>
 	<string>y3rnmyaLkgOApyMPaj6Yb7xVEhniTjrecT7AL7BCHQ8=</string>
 	<key>SUEnableAutomaticChecks</key>

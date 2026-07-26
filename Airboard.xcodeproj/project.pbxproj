@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		FA1DA0D10000000000000003 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = FA1DA0D10000000000000002 /* FluidAudio */; };
 		FA1DA0D30000000000000003 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = FA1DA0D30000000000000002 /* Sparkle */; };
+		FA1DA0D40000000000000003 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = FA1DA0D40000000000000002 /* TelemetryDeck */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +44,7 @@
 			files = (
 				FA1DA0D10000000000000003 /* FluidAudio in Frameworks */,
 				FA1DA0D30000000000000003 /* Sparkle in Frameworks */,
+				FA1DA0D40000000000000003 /* TelemetryDeck in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,6 +89,7 @@
 			packageProductDependencies = (
 				FA1DA0D10000000000000002 /* FluidAudio */,
 				FA1DA0D30000000000000002 /* Sparkle */,
+				FA1DA0D40000000000000002 /* TelemetryDeck */,
 			);
 			productName = murmur;
 			productReference = CC26B7F92EDCD31800B10FA0 /* Airboard Dev.app */;
@@ -119,6 +122,7 @@
 			packageReferences = (
 				FA1DA0D10000000000000001 /* XCRemoteSwiftPackageReference "FluidAudio" */,
 				FA1DA0D30000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				FA1DA0D40000000000000001 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CC26B7FA2EDCD31800B10FA0 /* Products */;
@@ -408,6 +412,14 @@
 				version = 2.9.4;
 			};
 		};
+		FA1DA0D40000000000000001 /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -420,6 +432,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FA1DA0D30000000000000001 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		FA1DA0D40000000000000002 /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA1DA0D40000000000000001 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
