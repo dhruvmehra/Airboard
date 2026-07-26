@@ -54,10 +54,10 @@ struct MemorySettingsView: View {
                             Text("Nothing remembered yet. Hold your hotkey + ⌘ and just say it:")
                                 .font(.system(size: 11))
                                 .foregroundColor(DS.Label.secondary)
-                            Text("\"Remember that I work at Pype\"")
+                            Text("\"Remember that I work at Brite\"")
                                 .font(.system(size: 11, design: .monospaced))
                                 .foregroundColor(DS.Label.tertiary)
-                            Text("\"Correct pipe to Pype\"  —  teaches a spelling")
+                            Text("\"Correct bright to Brite\"  —  teaches a spelling")
                                 .font(.system(size: 11, design: .monospaced))
                                 .foregroundColor(DS.Label.tertiary)
                             Text("\"Write my address\"  —  types a saved fact anywhere")
@@ -93,7 +93,7 @@ struct MemorySettingsView: View {
                     }
 
                     HStack(spacing: 8) {
-                        TextField("New memory (e.g. I work at Pype)", text: $newMemory)
+                        TextField("New memory (e.g. I work at Brite)", text: $newMemory)
                             .textFieldStyle(.plain).font(.system(size: 12))
                             .foregroundColor(DS.Label.primary)
                             .padding(.horizontal, 8).padding(.vertical, 6)

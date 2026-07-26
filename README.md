@@ -73,8 +73,8 @@ view it in the popover → **Memory**, or open the file in any editor.
 
 **Step 1 — teach your spellings first** (hold hotkey + ⌘ and say it):
 
-> "Correct pipe to Pype"
-> "Correct enachi to Inakshi" — or spell it out: "spell it i-n-a-k-s-h-i"
+> "Correct bright to Brite"
+> "Correct kate to Cait" — or spell it out: "spell it c-a-i-t"
 
 Do this for your company, product names, and the teammates you mention
 daily. Spellings first matters: facts you save afterwards come out spelled
@@ -82,7 +82,7 @@ right automatically.
 
 **Step 2 — save the facts you'll want typed for you:**
 
-> "Remember that I work at Pype"
+> "Remember that I work at Brite"
 > "Remember my work address is …"
 > "Don't forget my GitHub handle is …"
 
@@ -93,7 +93,8 @@ each fact before it's saved — **edit anything the mic misheard, then press
 **Step 3 — use it:**
 
 - Just dictate: your words come out with your spellings applied in context
-  ("send it to pipe" → "Pype", but "the water pipe" stays "pipe").
+  ("share it with the brite team" → "Brite", but "a bright idea" stays
+  "bright").
 - Recall anywhere: put the cursor in any field, hold hotkey + ⌘, say
   "write my address" / "fill in where I work" — the fact types itself.
 
