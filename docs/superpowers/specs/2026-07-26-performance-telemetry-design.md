@@ -95,7 +95,8 @@ anything.
 
 ## Out of scope
 
-- Custom dashboards/Metabase/SQL (TelemetryDeck's dashboards are the UI).
+- Hosting Metabase anywhere (local Docker on demand is the model; the
+  Supabase SQL editor covers day one).
 - Any transcript-content telemetry, error-body telemetry, or crash
   reporting (separate decision for another day).
 - Historical backfill (stats start at 1.0.9).
@@ -107,9 +108,11 @@ anything.
   line tolerance.
 - Manual (Dhruv): dev build → dictate → Performance window shows the entry
   with STT/LLM split; toggle exists and persists; dev build sends nothing
-  (no TelemetryDeck app ID configured for dev / bundle check — verify via
-  Console/log). Prod verification post-1.0.9: signals appear in the
-  TelemetryDeck dashboard; timing averages chartable.
+  (bundle-id gate — verify no POST in the log). Prod verification
+  post-1.0.9: rows appear in the Supabase table; the provided saved
+  queries (avg/percentile STT + LLM, timeout rate, active installs)
+  return sane numbers; anon key verified insert-only (a SELECT with it
+  must fail).
 - README disclosure present; changelog entry present.
 
 ## llm_outcome values (fixed enum strings — no free text, ever)
