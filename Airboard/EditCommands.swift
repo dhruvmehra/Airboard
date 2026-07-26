@@ -64,6 +64,23 @@ enum EditCommands {
         }
     }
 
+    /// How many characters to erase to remove the last `count` words from
+    /// the tail of `text` (Option+⌫ semantics: the word plus the whitespace
+    /// after it; whitespace before the earliest deleted word is kept).
+    /// Fewer words than requested = erase everything. Used when the app
+    /// hides its text and we edit from our own insertion history.
+    static func wordDeletionLength(text: String, count: Int, cap: Int = 2000) -> Int {
+        let chars = Array(text)
+        var i = chars.count
+        var words = 0
+        while i > 0, words < count {
+            while i > 0, chars[i - 1].isWhitespace { i -= 1 }
+            while i > 0, !chars[i - 1].isWhitespace { i -= 1 }
+            words += 1
+        }
+        return min(chars.count - i, cap)
+    }
+
     /// How many characters to erase to remove the last `count` sentences
     /// from `textBeforeCursor`. A sentence boundary is a terminator
     /// (. ! ? …) followed by whitespace or end. Fewer boundaries than

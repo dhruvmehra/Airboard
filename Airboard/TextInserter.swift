@@ -117,12 +117,42 @@ class TextInserter {
     /// trustworthy signal is our own history: if WE just put text ending
     /// in a word character into this same app, the user is chaining
     /// utterances and needs a separating space.
-    private static var lastInsertion: (pid: pid_t, spaceable: Bool, length: Int, at: Date)?
+    /// `text` accumulates consecutive insertions into the same app (within
+    /// the window) — it's the only ground truth for editing in apps that
+    /// hide their text from AX (terminals). `lastChunkLength` is the size
+    /// of the most recent single insertion, for "scratch that".
+    private static var lastInsertion: (pid: pid_t, spaceable: Bool, text: String, lastChunkLength: Int, at: Date)?
+
+    private static let insertionWindow: TimeInterval = 180
 
     static func recordInsertion(_ text: String) {
         guard let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
               let last = text.last else { return }
-        lastInsertion = (pid, isSpaceable(last), text.count, Date())
+        if let prev = lastInsertion, prev.pid == pid,
+           Date().timeIntervalSince(prev.at) < insertionWindow {
+            lastInsertion = (pid, isSpaceable(last), prev.text + text, text.count, Date())
+        } else {
+            lastInsertion = (pid, isSpaceable(last), text, text.count, Date())
+        }
+    }
+
+    /// Our insertion history for the frontmost app, if fresh.
+    private static func insertionHistory() -> (text: String, lastChunkLength: Int)? {
+        guard let last = lastInsertion,
+              let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              last.pid == pid, !last.text.isEmpty,
+              Date().timeIntervalSince(last.at) < insertionWindow else { return nil }
+        return (last.text, last.lastChunkLength)
+    }
+
+    /// After erasing `deleted` chars from the tail, keep history in sync so
+    /// chained edits ("delete last word" … "delete last sentence") stay right.
+    private static func consumeFromHistory(_ deleted: Int) {
+        guard let h = lastInsertion else { return }
+        let newText = String(h.text.dropLast(deleted))
+        guard let newLast = newText.last else { lastInsertion = nil; return }
+        lastInsertion = (h.pid, isSpaceable(newLast), newText,
+                         max(0, h.lastChunkLength - deleted), Date())
     }
 
     // MARK: - Voice editing (command mode: "delete all", "delete last N
@@ -134,47 +164,82 @@ class TextInserter {
     static func performEdit(_ intent: EditIntent) -> String? {
         guard AXIsProcessTrusted() else { return nil }
 
+        // Command mode means ⌘ (and the hotkey) were physically down moments
+        // ago, and transcription can finish in <100ms. Events posted at the
+        // HID tap combine with hardware modifiers still held — a lingering ⌘
+        // turns our plain ⌫ into ⌘⌫. Let the user's fingers clear first.
+        usleep(150_000)
+
+        // Terminals (Ghostty, cmux) hide their text from AX and give ⌘A /
+        // Option+⌫ non-text-field meanings, so keystroke shortcuts silently
+        // do nothing there. Fallback ground truth: the text WE typed —
+        // erased with plain backspaces, which work everywhere.
+        let history = insertionHistory()
+        let readable = focusedFieldState()
+
         switch intent {
         case .deleteAll:
-            // Select All + delete — works everywhere ⌘A works.
-            _ = pressKey(keyCode: 0, flags: .maskCommand)   // ⌘A
-            usleep(50_000)
-            _ = pressKey(keyCode: 51, flags: [])            // ⌫
-            return "Deleted everything"
+            if readable != nil {
+                // Select All + delete — works everywhere ⌘A means Select All.
+                _ = pressKey(keyCode: 0, flags: .maskCommand)   // ⌘A
+                usleep(50_000)
+                _ = pressKey(keyCode: 51, flags: [])            // ⌫
+                return "Deleted everything"
+            }
+            guard let h = history else {
+                print("🗑️ delete all: field unreadable, no dictation history — refusing")
+                return nil
+            }
+            backspace(times: h.text.count)
+            lastInsertion = nil
+            return "Erased everything I dictated here"
 
         case .deleteWords(let n):
-            // macOS-native word-delete: Option+⌫, n times.
-            for _ in 0..<n {
-                _ = pressKey(keyCode: 51, flags: .maskAlternate)
-                usleep(15_000)
+            if readable != nil {
+                // macOS-native word-delete: Option+⌫, n times.
+                for _ in 0..<n {
+                    _ = pressKey(keyCode: 51, flags: .maskAlternate)
+                    usleep(15_000)
+                }
+                return n == 1 ? "Deleted last word" : "Deleted last \(n) words"
             }
+            guard let h = history else {
+                print("🗑️ delete words: field unreadable, no dictation history — refusing")
+                return nil
+            }
+            let toDelete = EditCommands.wordDeletionLength(text: h.text, count: n)
+            guard toDelete > 0 else { return nil }
+            backspace(times: toDelete)
+            consumeFromHistory(toDelete)
             return n == 1 ? "Deleted last word" : "Deleted last \(n) words"
 
         case .deleteSentences(let n):
-            // Needs to SEE the text: compute exactly how far back the Nth
-            // sentence starts, erase that many characters. If the app hides
-            // its text (terminals), refuse rather than guess.
-            guard let field = focusedFieldState(), field.cursor > 0 else {
-                print("🗑️ delete sentences: field text/cursor unreadable — refusing")
+            // Compute exactly how far back the Nth sentence starts — from
+            // the field's own text when the app exposes it, else from what
+            // we typed. Never guesses.
+            let before: String
+            if let field = readable, field.cursor > 0 {
+                before = String(field.text.prefix(field.cursor))
+            } else if let h = history {
+                before = h.text
+            } else {
+                print("🗑️ delete sentences: field unreadable, no dictation history — refusing")
                 return nil
             }
-            let before = String(field.text.prefix(field.cursor))
             let toDelete = EditCommands.sentenceDeletionLength(textBeforeCursor: before, count: n)
             guard toDelete > 0 else { return nil }
             backspace(times: toDelete)
+            if readable == nil { consumeFromHistory(toDelete) }
             return n == 1 ? "Deleted last sentence" : "Deleted last \(n) sentences"
 
         case .deleteLastInsertion:
             // Erase exactly what Airboard last typed — length is known.
-            guard let last = lastInsertion,
-                  let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
-                  last.pid == pid, last.length > 0,
-                  Date().timeIntervalSince(last.at) < 180 else {
+            guard let h = history, h.lastChunkLength > 0 else {
                 print("🗑️ scratch that: no recent insertion in this app — refusing")
                 return nil
             }
-            backspace(times: last.length)
-            lastInsertion = nil  // can't scratch twice
+            backspace(times: h.lastChunkLength)
+            consumeFromHistory(h.lastChunkLength)
             return "Scratched the last dictation"
         }
     }

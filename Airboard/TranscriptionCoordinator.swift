@@ -504,7 +504,7 @@ class TranscriptionCoordinator: ObservableObject {
                     FloatingWindowManager.shared.showToast(description)
                 } else {
                     FloatingWindowManager.shared.showToast(
-                        "Can't do that here — try \"delete last word\" or \"delete all\"")
+                        "Nothing to delete — dictate something here first")
                 }
             }
             return
