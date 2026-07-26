@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+- Memory examples in the app and README now use neutral placeholder names
+
 ## [1.0.9] - 2026-07-27
 
 ### Added
