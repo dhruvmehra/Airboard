@@ -99,7 +99,7 @@ HotkeyManager (detects key press)
 | UI | `FloatingWindowManager.swift`, `AirboardPopover.swift`, `SetupWindowController.swift`, `DesignSystem.swift` (v2 tokens — all styled views consume these), `OnboardingFlow.swift` (guided first-run flow hosted by `SetupWindowController`) |
 | Settings | `MenuBarManager.swift`, `HotkeySettingsView.swift` |
 | Post-processing | `TranscriptPostProcessor.swift` (orchestrator), `FillerRules.swift`, `TranscriptRefiner.swift` (OpenAI-compatible HTTP client), `CleanupSettingsView.swift`, `KeychainHelper.swift` |
-| Diagnostics | `PerformanceMonitor.swift`, `PerformanceView.swift`, `FeedbackManager.swift` |
+| Diagnostics | `PerformanceMonitor.swift`, `PerformanceView.swift`, `PerformanceLog.swift` (local per-dictation timing jsonl), `TelemetryService.swift` (TelemetryDeck), `FeedbackManager.swift` |
 | Updates | `UpdaterManager.swift` (Sparkle; production bundle only) |
 
 ### Key Enums/Types
@@ -126,5 +126,6 @@ No XCTest target exists. Testing is manual: build, grant permissions, and dictat
 - `aiCleanupEnabled` — AI cleanup toggle (default false; turning it on with no server configured opens the setup window)
 - `cleanupServerURL`, `cleanupModelName` — cleanup endpoint config (API key lives in the Keychain, service `<bundle id>.cleanup` — dev and prod have separate entries)
 - `micRuleByDevice` — per-external-device mic choice (externalDeviceUID → chosenMicUID); no rule = system default
+- `shareAnalytics` — telemetry toggle (default true). Telemetry: TelemetryDeck, prod bundle only, gated on this + `TelemetryDeckAppID` in Info.plist (UNSET = fully inert); signals carry numbers/enums only — never transcript text
 
 Memory lives in `~/Library/Application Support/<bundle id>/memory.md` (NOT UserDefaults) — Claude-style: a FLAT list of plain-language `- ` lines, no schema (a spelling is just a memory that says it's a spelling; the cleanup LLM interprets). Parsed leniently — any `- ` line anywhere is a memory; hand edits can never wipe it. The share flag is a UserDefaults key (`memoryShareWithLLM`), not file content. (An acoustic CTC-biasing layer was built and removed 2026-07-25 — see ParakeetTranscriptionService for why; don't re-add without an offline eval harness.)

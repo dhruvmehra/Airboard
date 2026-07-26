@@ -11,6 +11,8 @@ promotes that section to the released version automatically.
 ### Added
 - Airboard Memory: teach spellings ("correct pipe to Pype") and facts ("remember I work at Pype") by voice in command mode; recall facts anywhere ("write my address" types it at your cursor). Facts are lightly formatted before storing (punctuation and your taught spellings applied — your words kept as spoken; falls back to raw offline), and spellings are applied in context by AI Cleanup — "the water pipe" stays "pipe". A toast confirms every teach on screen. Memory is a flat list of plain-language lines in a markdown file (memory.md) — view and edit them as-is in the Memory window or any text editor, with a switch controlling whether they're shared with the cleanup LLM
 - Memory confirmation: every "remember…" fact now shows a small card to review and edit before it's saved — and correcting a misheard name in the card teaches Airboard the right spelling automatically
+- Performance window shows your recent dictations with a timing breakdown (audio length, speech-to-text ms, AI cleanup ms) from a local log that never leaves your Mac
+- Anonymous performance telemetry (production builds only): timing numbers and outcome flags go to TelemetryDeck so we can see how fast dictation is across installs — never any text you dictate. "Share anonymous performance stats" in the Performance window turns it off
 - Natural memory phrasing: no exact keyword needed — "don't forget that…", "note this…", "keep in mind…" all work; when a command isn't recognized, the AI interprets whether you meant to save, recall, or teach a spelling (the confirmation card still guards every save)
 
 ### Changed

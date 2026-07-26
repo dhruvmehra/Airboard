@@ -119,6 +119,17 @@ See `CLAUDE.md` for a fuller breakdown of the source layout.
 - By default, text never leaves your machine either. If you configure an AI cleanup server, dictated text (not audio) is sent to that server only — use HTTPS for anything beyond your own machines — only while the AI cleanup toggle is on.
 - The model is downloaded once from Hugging Face, then runs fully offline.
 - Optional, opt-in feedback reports (when you tap "Report issue") send only the text/metadata you choose to submit.
+- **Anonymous performance stats**: production builds send anonymous usage
+  signals to TelemetryDeck (a German, GDPR-focused analytics service):
+  timing numbers (speech-to-text and cleanup durations), outcome flags,
+  app version, plus the SDK's standard device context (device model, OS
+  version, locale, screen resolution) and a random install identifier
+  that is salted and hashed twice — once on your device, once server-side —
+  so it cannot be traced back. Never any transcript text, audio, file
+  names, or personal data. The "Share anonymous performance stats" switch
+  in the Performance window turns it off entirely. Debug builds never
+  send anything.
+- Download counts come from the GitHub Releases page — no telemetry involved.
 
 ## License
 
