@@ -322,7 +322,9 @@ class TranscriptionCoordinator: ObservableObject {
                 return
             }
 
-            let cleanedText = await TranscriptPostProcessor.process(text, context: currentContext, mode: .handsFreeChunk)
+            let chunkOutcome = await TranscriptPostProcessor.process(text, context: currentContext, mode: .handsFreeChunk)
+            let cleanedText = chunkOutcome.text
+            recordDictationMetrics(mode: "handsfree", outcome: chunkOutcome)
             print("✅ Chunk \(chunkNumber) FINAL TEXT: '\(cleanedText)'")
 
             // Accumulate text
@@ -410,11 +412,15 @@ class TranscriptionCoordinator: ObservableObject {
         PerformanceMonitor.shared.endTranscription(inputText: text)
 
         let mode = currentMode
-        let cleanedText = await TranscriptPostProcessor.process(
+        let processOutcome = await TranscriptPostProcessor.process(
             text,
             context: currentContext,
             mode: mode == .command ? .command : .dictation
         )
+        let cleanedText = processOutcome.text
+        recordDictationMetrics(
+            mode: mode == .command ? "command" : "dictation",
+            outcome: processOutcome)
         // Keep the RAW transcript for the report-issue flow so cleanup bugs
         // are diagnosable (what the ASR heard vs what was inserted).
         lastTranscribedText = text
@@ -438,6 +444,22 @@ class TranscriptionCoordinator: ObservableObject {
         }
     }
     
+    /// One funnel for every completed dictation: local log always,
+    /// telemetry when its gates allow.
+    private func recordDictationMetrics(mode: String, outcome: ProcessOutcome) {
+        let record = DictationRecord(
+            ts: Date(),
+            mode: mode,
+            audioSeconds: transcriptionService.lastAudioSeconds,
+            sttMs: transcriptionService.lastSttMs,
+            llmMs: outcome.llmMs,
+            llmOutcome: outcome.llmOutcome,
+            words: outcome.text.split(separator: " ").count,
+            preview: String(outcome.text.prefix(40)))
+        PerformanceLog.shared.append(record)
+        TelemetryService.shared.dictationCompleted(record: record)
+    }
+
     // MARK: - Command Mode Handler
     
     private func handleCommandMode(text: String) async {

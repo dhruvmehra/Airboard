@@ -21,6 +21,11 @@ class ParakeetTranscriptionService: ObservableObject {
     private var initializationTask: Task<Void, Never>?
     private var isRetrying = false
 
+    /// Timing of the most recent transcribe() — read by the coordinator's
+    /// metrics recording after the call returns.
+    private(set) var lastSttMs: Int = 0
+    private(set) var lastAudioSeconds: Double = 0
+
     /// Parakeet variant to load. v3 = multilingual (25 languages); switch to .v2
     /// for the English-only bundle (marginally better English recall).
     static let modelVersion = AsrModelVersion.v3
@@ -150,6 +155,8 @@ class ParakeetTranscriptionService: ObservableObject {
 
             let duration = Date().timeIntervalSince(startTime) * 1000
             let transcribedText = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            lastSttMs = Int(duration)
+            lastAudioSeconds = result.duration
 
             print("📝 Raw Parakeet output: '\(transcribedText)' (confidence: \(result.confidence))")
 

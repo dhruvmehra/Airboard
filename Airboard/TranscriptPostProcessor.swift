@@ -17,6 +17,14 @@ enum ProcessingMode {
     case command          // rules only: command parser needs verbatim text
 }
 
+/// What processing did to the transcript — the text plus the timing and
+/// outcome the metrics funnel records (fixed enum strings, never free text).
+struct ProcessOutcome {
+    let text: String
+    let llmMs: Int?           // nil when the LLM didn't run
+    let llmOutcome: String    // ok | timeout | error | guarded | skipped | off
+}
+
 enum TranscriptPostProcessor {
 
     static let llmTimeoutSeconds: Double = 4
@@ -35,14 +43,17 @@ enum TranscriptPostProcessor {
         UserDefaults.standard.object(forKey: "aiCleanupEnabled") as? Bool ?? false
     }
 
-    static func process(_ text: String, context: AppContext?, mode: ProcessingMode) async -> String {
+    static func process(_ text: String, context: AppContext?, mode: ProcessingMode) async -> ProcessOutcome {
         let ruled = FillerRules.clean(text)
 
-        guard mode == .dictation,
-              aiCleanupEnabled,
-              ruled.split(separator: " ").count >= llmMinimumWords,
-              TranscriptRefiner.shared.isConfigured else {
-            return ruled
+        guard mode == .dictation else {
+            return ProcessOutcome(text: ruled, llmMs: nil, llmOutcome: "off")
+        }
+        guard aiCleanupEnabled, TranscriptRefiner.shared.isConfigured else {
+            return ProcessOutcome(text: ruled, llmMs: nil, llmOutcome: "off")
+        }
+        guard ruled.split(separator: " ").count >= llmMinimumWords else {
+            return ProcessOutcome(text: ruled, llmMs: nil, llmOutcome: "skipped")
         }
 
         do {
@@ -50,11 +61,21 @@ enum TranscriptPostProcessor {
             let refined = try await withTimeout(seconds: llmTimeoutSeconds) {
                 try await TranscriptRefiner.shared.refine(ruled)
             }
-            print("⏱️ LLM cleanup: \(Int(Date().timeIntervalSince(startTime) * 1000))ms")
-            return refined
+            let ms = Int(Date().timeIntervalSince(startTime) * 1000)
+            print("⏱️ LLM cleanup: \(ms)ms")
+            return ProcessOutcome(text: refined, llmMs: ms, llmOutcome: "ok")
         } catch {
-            print("⚠️ Cleanup LLM skipped (\(error.localizedDescription)); inserting rules-cleaned text")
-            return ruled
+            let outcome: String
+            switch error {
+            case TranscriptRefiner.RefineError.degenerateOutput:
+                outcome = "guarded"
+            case TranscriptRefiner.RefineError.timeout:
+                outcome = "timeout"
+            default:
+                outcome = "error"
+            }
+            print("⚠️ Cleanup LLM skipped (\(error.localizedDescription)); inserting rules-cleaned text (\(outcome))")
+            return ProcessOutcome(text: ruled, llmMs: nil, llmOutcome: outcome)
         }
     }
 
