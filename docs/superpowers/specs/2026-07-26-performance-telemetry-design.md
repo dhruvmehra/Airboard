@@ -25,15 +25,29 @@ timing breakdown. No transcript text ever leaves any machine.
 
 ```
 TelemetryService.swift (new)
-  wraps the TelemetryDeck SDK; no-ops entirely when:
-  bundle != com.pype.airboard  OR  toggle off
-  Signals:
-    - "app.launched"            {appVersion, modelVersion}
-    - "dictation.completed"     {sttMs, llmMs, llmOutcome: ok|timeout|error|off,
-                                 audioSeconds (rounded Int), mode: dictation|command|handsfree,
-                                 appVersion}
+  wraps the TelemetryDeck SDK (SPM github.com/TelemetryDeck/SwiftSDK,
+  pin 2.x; init in App init; signal() enqueues to a disk-backed batch
+  queue off the calling thread — natively satisfies the never-block rule).
+  No-ops entirely when: bundle != com.pype.airboard OR toggle off.
+
+  SDK CONSTRAINT (verified): custom `parameters` are stored as STRINGS and
+  cannot be charted; only the single `floatValue` per signal is
+  aggregatable (mean/min/max/histogram — no percentiles). Therefore one
+  signal per chartable number:
+    - "app.launched"        (no floatValue)        {appVersion, modelVersion}
+    - "dictation.stt"       floatValue = sttMs     {mode, llmOutcome, appVersion}
+    - "dictation.llm"       floatValue = llmMs     {llmOutcome, appVersion}
+                            (sent only when the LLM actually ran)
+  Volume math: 15 users × ~40 dictations/day × ≤2 signals ≈ 36k/month —
+  inside the 50k free tier. Overflow behavior is benign: ingestion pauses
+  until the month resets (no charges); two consecutive over-months
+  auto-upgrade to paid. Revisit sampling if the team grows.
+
   Anonymous install ID: random UUID in UserDefaults, fed to the SDK's
-  built-in anonymization (never an email/name/hostname).
+  double-hash anonymization (salted on-device, salted+hashed again
+  server-side; not reconstructable). The SDK auto-attaches device model,
+  OS version, locale/region, screen resolution, and debug/test-run flags —
+  the README disclosure must name these honestly.
         ▲ called from
 TranscriptionCoordinator / ParakeetTranscriptionService / TranscriptPostProcessor
   (the timing numbers already exist as log prints — this routes them)
@@ -55,12 +69,15 @@ PerformanceView (modified)
 
 ## Privacy contract (verbatim for README)
 
-Production builds send anonymous usage signals to TelemetryDeck: timing
-numbers (speech-to-text and cleanup durations), outcome flags, audio
-length in seconds, app version, and a random install identifier. Never any
-transcript text, file names, personal data, or network identity. The
-"Share anonymous performance stats" switch in the Performance window turns
-it off entirely. Debug builds never send anything.
+Production builds send anonymous usage signals to TelemetryDeck (a German,
+GDPR-focused analytics service): timing numbers (speech-to-text and
+cleanup durations), outcome flags, app version, plus the SDK's standard
+device context (device model, OS version, locale, screen resolution) and
+a random install identifier that is salted and hashed twice — once on
+your device, once server-side — so it cannot be traced back. Never any
+transcript text, audio, file names, or personal data. The "Share
+anonymous performance stats" switch in the Performance window turns it
+off entirely. Debug builds never send anything.
 
 ## Failure handling
 
