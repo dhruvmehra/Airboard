@@ -60,6 +60,8 @@ Visual feedback (floating indicator): 🔴 recording · 🟠 transcribing · �
 
 **Modes:** hold = dictate · hold + ⌘ = voice command · double-tap = hands-free.
 
+**Voice editing** (hold + ⌘): "delete all" · "delete last word" · "delete last two sentences" · "scratch that" (erases the last dictation).
+
 The hotkey is configurable from the menu-bar popover.
 
 ## Set up your Memory (5 minutes, do this first)

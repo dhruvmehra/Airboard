@@ -117,12 +117,110 @@ class TextInserter {
     /// trustworthy signal is our own history: if WE just put text ending
     /// in a word character into this same app, the user is chaining
     /// utterances and needs a separating space.
-    private static var lastInsertion: (pid: pid_t, spaceable: Bool, at: Date)?
+    private static var lastInsertion: (pid: pid_t, spaceable: Bool, length: Int, at: Date)?
 
     static func recordInsertion(_ text: String) {
         guard let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
               let last = text.last else { return }
-        lastInsertion = (pid, isSpaceable(last), Date())
+        lastInsertion = (pid, isSpaceable(last), text.count, Date())
+    }
+
+    // MARK: - Voice editing (command mode: "delete all", "delete last N
+    // words/sentences", "scratch that")
+
+    /// Execute an edit intent via keystrokes. Returns a short description
+    /// for the feedback toast, or nil when it can't be done here (with the
+    /// reason logged) — never guesses on destructive actions.
+    static func performEdit(_ intent: EditIntent) -> String? {
+        guard AXIsProcessTrusted() else { return nil }
+
+        switch intent {
+        case .deleteAll:
+            // Select All + delete — works everywhere ⌘A works.
+            _ = pressKey(keyCode: 0, flags: .maskCommand)   // ⌘A
+            usleep(50_000)
+            _ = pressKey(keyCode: 51, flags: [])            // ⌫
+            return "Deleted everything"
+
+        case .deleteWords(let n):
+            // macOS-native word-delete: Option+⌫, n times.
+            for _ in 0..<n {
+                _ = pressKey(keyCode: 51, flags: .maskAlternate)
+                usleep(15_000)
+            }
+            return n == 1 ? "Deleted last word" : "Deleted last \(n) words"
+
+        case .deleteSentences(let n):
+            // Needs to SEE the text: compute exactly how far back the Nth
+            // sentence starts, erase that many characters. If the app hides
+            // its text (terminals), refuse rather than guess.
+            guard let field = focusedFieldState(), field.cursor > 0 else {
+                print("🗑️ delete sentences: field text/cursor unreadable — refusing")
+                return nil
+            }
+            let before = String(field.text.prefix(field.cursor))
+            let toDelete = EditCommands.sentenceDeletionLength(textBeforeCursor: before, count: n)
+            guard toDelete > 0 else { return nil }
+            backspace(times: toDelete)
+            return n == 1 ? "Deleted last sentence" : "Deleted last \(n) sentences"
+
+        case .deleteLastInsertion:
+            // Erase exactly what Airboard last typed — length is known.
+            guard let last = lastInsertion,
+                  let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+                  last.pid == pid, last.length > 0,
+                  Date().timeIntervalSince(last.at) < 180 else {
+                print("🗑️ scratch that: no recent insertion in this app — refusing")
+                return nil
+            }
+            backspace(times: last.length)
+            lastInsertion = nil  // can't scratch twice
+            return "Scratched the last dictation"
+        }
+    }
+
+    private static func backspace(times: Int) {
+        for i in 0..<times {
+            _ = pressKey(keyCode: 51, flags: [])
+            if i % 20 == 19 { usleep(20_000) }  // let the app keep up
+        }
+    }
+
+    private static func pressKey(keyCode: CGKeyCode, flags: CGEventFlags) -> TextInsertionError? {
+        guard let down = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true),
+              let up = CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: false) else {
+            return .eventCreationFailed
+        }
+        down.flags = flags
+        up.flags = flags
+        down.post(tap: .cghidEventTap)
+        up.post(tap: .cghidEventTap)
+        return nil
+    }
+
+    /// The focused element's full text and cursor position, when the app
+    /// exposes them honestly (terminals often report cursor 0 — treated
+    /// as unreadable).
+    private static func focusedFieldState() -> (text: String, cursor: Int)? {
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication else { return nil }
+        let app = AXUIElementCreateApplication(frontmostApp.processIdentifier)
+
+        var focusedElement: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(app, kAXFocusedUIElementAttribute as CFString, &focusedElement) == .success,
+              let element = focusedElement else { return nil }
+
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element as! AXUIElement, kAXValueAttribute as CFString, &value) == .success,
+              let text = value as? String, !text.isEmpty else { return nil }
+
+        var selectedRangeValue: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element as! AXUIElement, kAXSelectedTextRangeAttribute as CFString, &selectedRangeValue) == .success,
+              let rangeValue = selectedRangeValue as! AXValue? else { return nil }
+
+        var range = CFRange()
+        guard AXValueGetValue(rangeValue, .cfRange, &range),
+              range.location > 0, range.location <= text.count else { return nil }
+        return (text, range.location)
     }
 
     /// Fallback when the char before the cursor is unknowable: chain-space

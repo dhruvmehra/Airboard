@@ -494,6 +494,22 @@ class TranscriptionCoordinator: ObservableObject {
             text: text, store: MemoryStore.shared, llm: llm)
         if await dispatchMemoryOutcome(memoryOutcome) { return }
 
+        // Voice editing: "delete all", "delete last N words/sentences",
+        // "scratch that" — exact patterns, keystroke-executed, instant.
+        if let editIntent = EditCommands.detect(text) {
+            await MainActor.run {
+                if let description = TextInserter.performEdit(editIntent) {
+                    print("🗑️ Edit: \(description)")
+                    FloatingWindowManager.shared.showCommandExecuted()
+                    FloatingWindowManager.shared.showToast(description)
+                } else {
+                    FloatingWindowManager.shared.showToast(
+                        "Can't do that here — try \"delete last word\" or \"delete all\"")
+                }
+            }
+            return
+        }
+
         let parsedCommand = CommandDetector.detect(text)
         if parsedCommand.isValid {
             print("✅ Valid command detected: \(parsedCommand.type)")

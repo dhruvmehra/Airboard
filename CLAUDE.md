@@ -93,7 +93,7 @@ HotkeyManager (detects key press)
 | Orchestration | `TranscriptionCoordinator.swift` |
 | Input handling | `HotkeyManager.swift` |
 | Text output | `TextInserter.swift` (Accessibility API) |
-| Commands | `CommandDetector.swift`, `CommandExecutor.swift`, `CommandTypes.swift` |
+| Commands | `CommandDetector.swift`, `CommandExecutor.swift`, `CommandTypes.swift`, `EditCommands.swift` (voice deletion: delete all / last N words/sentences / scratch that — executed via TextInserter keystrokes) |
 | Memory | `MemoryStore.swift` (flat list of memory lines, human-editable memory.md in App Support), `MemoryCommands.swift` (voice teach/recall intents), `MemoryBias.swift` (edit-diff spelling learning), `MemoryConfirmView.swift` (fact confirmation card), `MemorySettingsView.swift` |
 | Context | `AppContextDetector.swift` (detects active app type: email, code, messaging, etc.) |
 | UI | `FloatingWindowManager.swift`, `AirboardPopover.swift`, `SetupWindowController.swift`, `DesignSystem.swift` (v2 tokens — all styled views consume these), `OnboardingFlow.swift` (guided first-run flow hosted by `SetupWindowController`) |
