@@ -9,6 +9,8 @@ import SwiftUI
 
 struct PerformanceView: View {
     @ObservedObject private var monitor = PerformanceMonitor.shared
+    @State private var recentRecords: [DictationRecord] = []
+    @State private var shareOn = TelemetryService.shared.sharingEnabled
 
     var body: some View {
         ScrollView {
@@ -25,11 +27,95 @@ struct PerformanceView: View {
                 } else {
                     noSessionView
                 }
+
+                recentDictationsView
+
+                shareToggleView
             }
             .padding(16)
         }
         .frame(width: 380, height: 480)
         .background(DS.Surface.panel)
+        .onAppear { recentRecords = PerformanceLog.shared.recent(10) }
+    }
+
+    // MARK: - Recent dictations (local performance.jsonl)
+
+    private var recentDictationsView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Recent Dictations")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(DS.Label.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if recentRecords.isEmpty {
+                Text("Dictations will appear here with their timing breakdown.")
+                    .font(.system(size: 11))
+                    .foregroundColor(DS.Label.tertiary)
+            }
+            ForEach(Array(recentRecords.enumerated()), id: \.offset) { _, record in
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(Self.relativeFormatter.localizedString(for: record.ts, relativeTo: Date()))
+                            .font(.system(size: 10))
+                            .foregroundColor(DS.Label.tertiary)
+                        Spacer()
+                        Text(record.mode)
+                            .font(DS.Typo.mono(9))
+                            .foregroundColor(DS.Label.tertiary)
+                    }
+                    Text(record.preview)
+                        .font(.system(size: 11))
+                        .foregroundColor(DS.Label.secondary)
+                        .lineLimit(1)
+                    Text(timingLine(for: record))
+                        .font(DS.Typo.mono(10))
+                        .foregroundColor(DS.Label.primary)
+                }
+                .padding(.horizontal, 10).padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: DS.Radius.r8)
+                    .fill(DS.Fill.quaternary))
+            }
+        }
+    }
+
+    private static let relativeFormatter = RelativeDateTimeFormatter()
+
+    private func timingLine(for record: DictationRecord) -> String {
+        var line = String(format: "%.1fs audio · STT %dms", record.audioSeconds, record.sttMs)
+        if let llmMs = record.llmMs {
+            line += " · LLM \(llmMs)ms"
+        } else if record.llmOutcome == "timeout" {
+            line += " · LLM timed out"
+        } else if record.llmOutcome == "error" || record.llmOutcome == "guarded" {
+            line += " · LLM \(record.llmOutcome)"
+        }
+        return line
+    }
+
+    // MARK: - Telemetry share toggle
+
+    private var shareToggleView: some View {
+        Toggle(isOn: Binding(
+            get: { shareOn },
+            set: { on in
+                shareOn = on
+                TelemetryService.shared.setSharingEnabled(on)
+            }
+        )) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Share anonymous performance stats")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(DS.Label.primary)
+                Text("Production builds send timing numbers (STT/LLM ms, outcome, app version) to TelemetryDeck. Never any text you dictate. Debug builds send nothing.")
+                    .font(.system(size: 10))
+                    .foregroundColor(DS.Label.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .toggleStyle(.switch)
+        .tint(DS.Accent.success)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Header
