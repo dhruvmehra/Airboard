@@ -110,13 +110,17 @@ Built fresh per ask by `AssistantService`:
 pi is a Node app (165MB npm package, needs Node ≥22.19) — true embedding
 would take the DMG from 6.7MB to 100MB+ per update. Rejected. Instead:
 
-- First assistant use with pi missing → toast/panel offers **"Set up
-  assistant"** (one click). Airboard runs the official installer
-  (`curl -fsSL https://pi.dev/install.sh | sh` via login shell) with a
-  progress state; the installer handles Node itself. On completion, the
-  pending question is answered.
-- No OpenRouter key stored → toast directs to Airboard settings; one
-  field, saved to Keychain. No `pi login` ever.
+- Setup is one panel with both steps: **"Install assistant engine"**
+  (one click — Airboard runs the official installer,
+  `curl -fsSL https://pi.dev/install.sh | sh`, via login shell with a
+  progress state; the installer handles Node itself) and an **OpenRouter
+  key field**. The key is asked for explicitly during setup even when a
+  cleanup key exists for another provider (e.g. Cerebras) — the assistant
+  always uses OpenRouter in v1. If a Keychain key for `openrouter.ai`
+  already exists (cleanup uses OpenRouter), the field is pre-filled.
+  No `pi login` ever.
+- First assistant use with anything missing → toast pointing at that
+  panel, no spawn attempt.
 - Release gate: `scripts/check_assistant.sh` smoke test (spawn pi with the
   bundled extension, ask "2+2 via calc", expect "4") so a pi update or
   extension-API break fails the release, not the user.
@@ -127,8 +131,7 @@ would take the DMG from 6.7MB to 100MB+ per update. Rejected. Instead:
   the moment the ask dispatches. Answers take 2.5–8s typically
   (probe-measured via OpenRouter; variance is real: same ask 2.7s and
   6.1s). Seconds-scale is accepted by design.
-- Answer → long-dwell toast (~8s, Esc dismisses; dwell scales slightly
-  with length). Toast gains a `duration` parameter.
+- Answer → long-dwell toast (~8s). Toast gains a `duration` parameter.
 - Failure toasts are specific: "Assistant isn't set up yet — click to set
   up" / "Add your OpenRouter key in Settings" / "Assistant timed out" /
   "Couldn't fetch that" / "The assistant can't do that yet".
