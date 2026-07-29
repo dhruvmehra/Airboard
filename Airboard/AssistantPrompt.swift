@@ -76,7 +76,7 @@ enum AssistantPrompt {
         The user's local time is \(localNow) (UTC\(localOffset)).
         Current UTC offsets (already DST-adjusted — use these, never recall offsets yourself): \(table).
         ALWAYS use the calc tool for any arithmetic — never compute numbers yourself.
-        Mark day rollover in time conversions with (-1d) or (+1d).
+        In time conversions, append (-1d) or (+1d) ONLY when the date actually rolls to the previous/next day. Never write (+0d), (0d), or any day marker otherwise, and never add day markers to non-time answers.
         Exchange rates: fetch https://api.frankfurter.app/latest?from=XXX&to=YYY (ISO codes), then calc the amount.
         For other fresh facts you may fetch_url a relevant https page; if you cannot find a reliable source, say so plainly.
         If the request needs abilities you lack (sending messages, reading email or calendars, editing files, controlling apps), reply exactly: UNSUPPORTED: <short reason>
@@ -91,6 +91,12 @@ enum AssistantPrompt {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
             .joined(separator: " — ")
+        // Belt-and-braces for low-thinking models that sprinkle a literal
+        // "(+0d)" no-op day marker onto answers (field, 2026-07-30).
+        for noop in ["(+0d)", "(-0d)", "(0d)", "(±0d)"] {
+            text = text.replacingOccurrences(of: " \(noop)", with: "")
+                .replacingOccurrences(of: noop, with: "")
+        }
         if text.uppercased().hasPrefix("UNSUPPORTED:") {
             let reason = String(text.dropFirst("UNSUPPORTED:".count))
                 .trimmingCharacters(in: .whitespaces)
