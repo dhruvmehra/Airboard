@@ -75,6 +75,12 @@ echo -e "${BLUE}🎨 Step 0: Design-system adoption check${NC}"
     exit 1
 }
 
+# --- Assistant gate: pi + tools extension work end-to-end --------------------
+./scripts/check_assistant.sh || {
+    echo -e "${RED}❌ Assistant check failed — pi or the extension API may be broken${NC}"
+    exit 1
+}
+
 # --- Stamp version into project + changelog ----------------------------------
 echo -e "${BLUE}🏷  Step 1: Set MARKETING_VERSION and CURRENT_PROJECT_VERSION = ${VERSION}${NC}"
 sed -i '' "s/MARKETING_VERSION = [0-9.]*;/MARKETING_VERSION = ${VERSION};/g" "$PBXPROJ"

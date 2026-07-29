@@ -1,0 +1,39 @@
+// Shipped as .txt because Xcode won't copy .ts to Resources; Airboard copies
+// it to assistant-tools.ts at runtime before handing it to pi.
+// Airboard assistant tools — loaded by pi via `-e`. The assistant's ENTIRE
+// reach: exact local arithmetic + HTTPS GET. No fs, no shell, no other tools
+// (Airboard spawns pi with --no-builtin-tools).
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
+
+export default function (pi: ExtensionAPI) {
+  pi.registerTool({
+    name: "calc",
+    label: "Calc",
+    description:
+      "Evaluate an arithmetic expression exactly. ALWAYS use this for any arithmetic — never compute numbers yourself.",
+    parameters: Type.Object({
+      expr: Type.String({ description: "Arithmetic expression, e.g. 500*83.6" }),
+    }),
+    async execute(_id: string, params: { expr: string }) {
+      if (!/^[0-9+\-*/(). ]+$/.test(params.expr)) throw new Error("invalid expression");
+      const v = Function(`"use strict";return (${params.expr})`)();
+      return { content: [{ type: "text", text: String(v) }], details: {} };
+    },
+  });
+  pi.registerTool({
+    name: "fetch_url",
+    label: "Fetch URL",
+    description:
+      "HTTP GET a URL, return body text (truncated to 4000 chars). Use for fresh data like exchange rates.",
+    parameters: Type.Object({
+      url: Type.String({ description: "Full https:// URL" }),
+    }),
+    async execute(_id: string, params: { url: string }, signal: AbortSignal) {
+      if (!params.url.startsWith("https://")) throw new Error("https only");
+      const res = await fetch(params.url, { signal });
+      const text = await res.text();
+      return { content: [{ type: "text", text: text.slice(0, 4000) }], details: {} };
+    },
+  });
+}
