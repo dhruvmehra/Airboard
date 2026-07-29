@@ -15,13 +15,13 @@ fi
 TMP_TS="$(mktemp -d)/assistant-tools.ts"
 cp Airboard/assistant-tools.txt "$TMP_TS"
 
-OUT="$("$PI" -p --no-session --no-extensions --no-skills --no-context-files \
+OUT="$(perl -e 'alarm 90; exec @ARGV' -- "$PI" -p --no-session --no-extensions --no-skills --no-context-files \
     --no-builtin-tools --offline -e "$TMP_TS" \
     --provider openrouter --model "openai/gpt-oss-120b:low" \
-    --system-prompt "Use the calc tool for arithmetic. Reply with the number only." \
+    --system-prompt "Use the calc tool for arithmetic. Reply with ONLY the number, nothing else." \
     "What is 2+2?" </dev/null 2>&1 | tail -1)"
 
-if [[ "$OUT" != *"4"* ]]; then
+if [[ "$OUT" != "4" && "$OUT" != "4." ]]; then
     echo "❌ assistant gate: expected 4, got: $OUT"
     exit 1
 fi
