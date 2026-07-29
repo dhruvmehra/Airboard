@@ -26,6 +26,7 @@ final class AssistantService {
     private static let timeoutSeconds: TimeInterval = 60
 
     private var cachedPiPath: String?
+    private var cachedLoginPath: String?
     private var piPathChecked = false
 
     private init() {}
@@ -39,7 +40,11 @@ final class AssistantService {
         if piPathChecked { return cachedPiPath }
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        proc.arguments = ["-lc", "which pi"]
+        // Also capture the login shell's PATH: pi is a Node script
+        // (#!/usr/bin/env node), and the GUI app's bare PATH has no
+        // /opt/homebrew/bin — spawning pi without the real PATH dies with
+        // "env: node: No such file or directory". (Field bug 2026-07-29.)
+        proc.arguments = ["-lc", "echo \"AIRBOARD_LOGIN_PATH:$PATH\"; which pi"]
         let pipe = Pipe()
         proc.standardOutput = pipe
         proc.standardError = FileHandle.nullDevice
@@ -52,10 +57,13 @@ final class AssistantService {
         // Login-shell startup can echo dotfile noise to stdout before "which"
         // runs; only the LAST non-empty line is trustworthy as the path.
         let rawOutput = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        let out = rawOutput.components(separatedBy: .newlines)
+        let lines = rawOutput.components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-            .last ?? ""
+        if let marker = lines.first(where: { $0.hasPrefix("AIRBOARD_LOGIN_PATH:") }) {
+            cachedLoginPath = String(marker.dropFirst("AIRBOARD_LOGIN_PATH:".count))
+        }
+        let out = lines.filter { !$0.hasPrefix("AIRBOARD_LOGIN_PATH:") }.last ?? ""
         guard proc.terminationStatus == 0, !out.isEmpty, FileManager.default.isExecutableFile(atPath: out) else {
             piPathChecked = true
             return nil
@@ -132,6 +140,13 @@ final class AssistantService {
             question,
         ]
         var env = ProcessInfo.processInfo.environment
+        // Hand the child the user's real login PATH so pi's `env node`
+        // shebang resolves (GUI PATH lacks /opt/homebrew/bin).
+        if let loginPath = cachedLoginPath, !loginPath.isEmpty {
+            env["PATH"] = loginPath
+        } else {
+            env["PATH"] = (env["PATH"] ?? "/usr/bin:/bin") + ":/opt/homebrew/bin:/usr/local/bin"
+        }
         env["OPENROUTER_API_KEY"] = key
         proc.environment = env
 
@@ -153,22 +168,27 @@ final class AssistantService {
         let timedOut = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
             let lock = NSLock()
             var finished = false
-            proc.terminationHandler = { _ in
+            func finish(_ didTimeOut: Bool) {
                 lock.lock(); defer { lock.unlock() }
                 guard !finished else { return }
                 finished = true
-                cont.resume(returning: false)
+                cont.resume(returning: didTimeOut)
             }
+            proc.terminationHandler = { _ in finish(false) }
+            // Foundation never invokes a terminationHandler attached AFTER
+            // the process already exited — a fast-failing pi (e.g. node not
+            // on PATH, exit within ms of run()) would otherwise ghost into
+            // a 60s phantom timeout. (Field bug 2026-07-29.)
+            if !proc.isRunning { finish(false) }
             DispatchQueue.global().asyncAfter(deadline: .now() + Self.timeoutSeconds) {
-                lock.lock(); defer { lock.unlock() }
-                guard !finished else { return }
-                finished = true
-                proc.terminate()
-                // Escalate if terminate() (SIGTERM) doesn't take within 3s.
-                DispatchQueue.global().asyncAfter(deadline: .now() + 3) {
-                    if proc.isRunning { kill(proc.processIdentifier, SIGKILL) }
+                if proc.isRunning {
+                    proc.terminate()
+                    // Escalate if terminate() (SIGTERM) doesn't take within 3s.
+                    DispatchQueue.global().asyncAfter(deadline: .now() + 3) {
+                        if proc.isRunning { kill(proc.processIdentifier, SIGKILL) }
+                    }
                 }
-                cont.resume(returning: true)
+                finish(true)
             }
         }
         if timedOut { return done(.timeout) }
