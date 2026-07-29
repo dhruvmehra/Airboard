@@ -29,7 +29,7 @@
 ### Task 1: Tools extension + release smoke script
 
 **Files:**
-- Create: `Airboard/assistant-tools.ts` (inside the synced group → auto-copied to app Resources)
+- Create: `Airboard/assistant-tools.txt` (inside the synced group → auto-copied to app Resources; `.txt` because Xcode excludes `.ts` from resource copying — verified. Airboard copies it to `assistant-tools.ts` at runtime; pi needs the real extension to transpile)
 - Create: `scripts/check_assistant.sh` (executable)
 - Modify: `build_release.sh` (Step 0 gate, right after the design-system check)
 
@@ -38,10 +38,12 @@
 
 - [ ] **Step 1: Write the extension**
 
-Create `Airboard/assistant-tools.ts`:
+Create `Airboard/assistant-tools.txt`:
 
 ```typescript
 // Airboard assistant tools — loaded by pi via `-e`. The assistant's ENTIRE
+// reach. Shipped as .txt (Xcode won't copy .ts to Resources); Airboard
+// copies this to assistant-tools.ts at runtime before handing it to pi.
 // reach: exact local arithmetic + HTTPS GET. No fs, no shell, no other tools
 // (Airboard spawns pi with --no-builtin-tools).
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -98,8 +100,11 @@ if [[ -z "$PI" ]]; then
     exit 1
 fi
 
+TMP_TS="$(mktemp -d)/assistant-tools.ts"
+cp Airboard/assistant-tools.txt "$TMP_TS"
+
 OUT="$("$PI" -p --no-session --no-extensions --no-skills --no-context-files \
-    --no-builtin-tools --offline -e Airboard/assistant-tools.ts \
+    --no-builtin-tools --offline -e "$TMP_TS" \
     --provider openrouter --model "openai/gpt-oss-120b:low" \
     --system-prompt "Use the calc tool for arithmetic. Reply with the number only." \
     "What is 2+2?" </dev/null 2>&1 | tail -1)"
@@ -131,14 +136,14 @@ In `build_release.sh`, find the Step 0 design-system gate invocation (`scripts/c
 Run:
 ```bash
 xcodebuild -project Airboard.xcodeproj -scheme Airboard -configuration Debug build 2>&1 | grep -E "error:|BUILD"
-ls "/Users/dhruvmehra/Library/Developer/Xcode/DerivedData/Airboard-alcdmmnppzbmcjgtmvqnekbkuqbu/Build/Products/Debug/Airboard Dev.app/Contents/Resources/assistant-tools.ts"
+ls "/Users/dhruvmehra/Library/Developer/Xcode/DerivedData/Airboard-alcdmmnppzbmcjgtmvqnekbkuqbu/Build/Products/Debug/Airboard Dev.app/Contents/Resources/assistant-tools.txt"
 ```
-Expected: `BUILD SUCCEEDED` and the ls path printed (synchronized groups copy unknown file types to Resources). **If ls fails:** stop and report BLOCKED — do not edit project.pbxproj yourself; the controller will decide (fallback design: embed the TS as a Swift string constant written to Application Support at launch).
+Expected: `BUILD SUCCEEDED` and the ls path printed.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Airboard/assistant-tools.ts scripts/check_assistant.sh build_release.sh
+git add Airboard/assistant-tools.txt scripts/check_assistant.sh build_release.sh
 git commit -m "feat: assistant tools extension (calc + fetch_url) and release smoke gate"
 ```
 
@@ -330,7 +335,7 @@ git commit -m "feat: assistant system prompt builder and reply parser (pure, scr
 - Create: `Airboard/AssistantService.swift`
 
 **Interfaces:**
-- Consumes: `AssistantPrompt.systemPrompt(now:)`, `AssistantPrompt.parse(_:)`, `AssistantReply` (Task 2); `KeychainHelper.readAPIKey(forHost:)` (existing); bundle resource `assistant-tools.ts` (Task 1).
+- Consumes: `AssistantPrompt.systemPrompt(now:)`, `AssistantPrompt.parse(_:)`, `AssistantReply` (Task 2); `KeychainHelper.readAPIKey(forHost:)` (existing); bundle resource `assistant-tools.txt` (Task 1 — staged to `assistant-tools.ts` in the workdir before spawn).
 - Produces (Task 4 consumes):
   - `enum AssistantOutcome { case answer(String); case unsupported(String); case needsPi; case needsKey; case timeout; case failure }`
   - `AssistantService.shared.ask(_ question: String) async -> (outcome: AssistantOutcome, durationMs: Int)`
@@ -437,8 +442,18 @@ final class AssistantService {
         guard let key = KeychainHelper.readAPIKey(forHost: Self.openRouterHost), !key.isEmpty else {
             return done(.needsKey)
         }
-        guard let extURL = Bundle.main.url(forResource: "assistant-tools", withExtension: "ts") else {
+        // Bundled as .txt (Xcode won't copy .ts to Resources); pi needs the
+        // real extension to transpile, so stage a .ts copy in our workdir.
+        guard let extSrc = Bundle.main.url(forResource: "assistant-tools", withExtension: "txt") else {
             print("❌ Assistant: bundled extension missing")
+            return done(.failure)
+        }
+        let extTS = workDir().appendingPathComponent("assistant-tools.ts")
+        do {
+            try? FileManager.default.removeItem(at: extTS)
+            try FileManager.default.copyItem(at: extSrc, to: extTS)
+        } catch {
+            print("❌ Assistant: failed to stage extension: \(error)")
             return done(.failure)
         }
 
@@ -448,7 +463,7 @@ final class AssistantService {
         proc.arguments = [
             "-p", "--no-session", "--no-extensions", "--no-skills",
             "--no-context-files", "--no-builtin-tools", "--offline",
-            "-e", extURL.path,
+            "-e", extTS.path,
             "--provider", "openrouter",
             "--model", model,
             // If Step 1 proved the env var insufficient, add: "--api-key", key,
