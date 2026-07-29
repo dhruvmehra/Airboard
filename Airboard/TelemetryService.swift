@@ -64,4 +64,10 @@ final class TelemetryService {
                  floatValue: Double(llmMs))
         }
     }
+
+    func assistantAsked(durationMs: Int, outcome: String) {
+        send("assistant.ask",
+             parameters: ["outcome": outcome, "appVersion": appVersion],
+             floatValue: Double(durationMs))
+    }
 }

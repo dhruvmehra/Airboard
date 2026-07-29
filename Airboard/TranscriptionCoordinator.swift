@@ -460,6 +460,28 @@ class TranscriptionCoordinator: ObservableObject {
         TelemetryService.shared.dictationCompleted(record: record)
     }
 
+    private func recordAssistantMetrics(question: String, outcome: AssistantOutcome, durationMs: Int) {
+        let outcomeString: String
+        switch outcome {
+        case .answer: outcomeString = "ok"
+        case .unsupported: outcomeString = "unsupported"
+        case .needsPi, .needsKey: outcomeString = "setup_missing"
+        case .timeout: outcomeString = "timeout"
+        case .failure: outcomeString = "error"
+        }
+        let record = DictationRecord(
+            ts: Date(),
+            mode: "assistant",
+            audioSeconds: transcriptionService.lastAudioSeconds,
+            sttMs: transcriptionService.lastSttMs,
+            llmMs: durationMs,
+            llmOutcome: outcomeString,
+            words: question.split(separator: " ").count,
+            preview: String(question.prefix(40)))
+        PerformanceLog.shared.append(record)
+        TelemetryService.shared.assistantAsked(durationMs: durationMs, outcome: outcomeString)
+    }
+
     // MARK: - Command Mode Handler
     
     private func handleCommandMode(text: String) async {
@@ -530,19 +552,33 @@ class TranscriptionCoordinator: ObservableObject {
             text: text, store: MemoryStore.shared, llm: llm)
         if await dispatchMemoryOutcome(interpreted) { return }
 
-        print("❓ Could not parse command: \(text)")
+        // Nothing claimed the utterance — hand it to the assistant.
+        print("🤖 Assistant ask: \(text)")
         await MainActor.run {
-            let content = UNMutableNotificationContent()
-            content.title = "Unknown Command"
-            content.body = "Couldn't understand: \(text)"
-            content.sound = .default
-            let request = UNNotificationRequest(
-                identifier: UUID().uuidString,
-                content: content,
-                trigger: nil
-            )
-            UNUserNotificationCenter.current().add(request)
+            FloatingWindowManager.shared.showFloatingIndicator(
+                isRecording: false, isTranscribing: true, isCommandMode: true)
         }
+        let (outcome, durationMs) = await AssistantService.shared.ask(text)
+        await MainActor.run {
+            FloatingWindowManager.shared.showFloatingIndicator(
+                isRecording: false, isTranscribing: false, isCommandMode: false)
+            switch outcome {
+            case .answer(let answer):
+                FloatingWindowManager.shared.showCommandExecuted()
+                FloatingWindowManager.shared.showToast(answer, duration: 8.0)
+            case .unsupported:
+                FloatingWindowManager.shared.showToast("The assistant can't do that yet", duration: 4.0)
+            case .needsPi:
+                FloatingWindowManager.shared.showToast("Assistant isn't set up yet — open Assistant settings", duration: 5.0)
+            case .needsKey:
+                FloatingWindowManager.shared.showToast("Add your OpenRouter key in Assistant settings", duration: 5.0)
+            case .timeout:
+                FloatingWindowManager.shared.showToast("Assistant timed out", duration: 4.0)
+            case .failure:
+                FloatingWindowManager.shared.showToast("Assistant had a problem", duration: 4.0)
+            }
+        }
+        recordAssistantMetrics(question: text, outcome: outcome, durationMs: durationMs)
     }
 
     /// Act on a memory outcome. Returns false for .notMemoryCommand so the

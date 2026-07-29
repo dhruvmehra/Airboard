@@ -591,13 +591,13 @@ class FloatingWindowManager: NSObject {
     // top of the screen, ignoring the mouse, gone in ~2s.
     private var toastWindow: NSPanel?
 
-    func showToast(_ text: String) {
+    func showToast(_ text: String, duration: TimeInterval = 2.0) {
         DispatchQueue.main.async { [weak self] in
-            self?.presentToast(text)
+            self?.presentToast(text, duration: duration)
         }
     }
 
-    private func presentToast(_ text: String) {
+    private func presentToast(_ text: String, duration: TimeInterval) {
         toastWindow?.close()
         toastWindow = nil
         guard let screen = activeScreen else { return }
@@ -624,7 +624,7 @@ class FloatingWindowManager: NSObject {
         panel.orderFrontRegardless()
         toastWindow = panel
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self, weak panel] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self, weak panel] in
             guard let panel, self?.toastWindow === panel else { return }
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.25
