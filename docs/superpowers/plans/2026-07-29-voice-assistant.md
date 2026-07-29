@@ -881,7 +881,7 @@ Add to the Privacy list:
 In the Source Organization table, extend the Commands row (or add an Assistant row):
 
 ```markdown
-| Assistant | `AssistantService.swift` (headless pi spawn), `AssistantPrompt.swift` (pure prompt/parse), `AssistantSettingsView.swift`, `assistant-tools.ts` (pi extension: calc + fetch_url — the assistant's only tools) |
+| Assistant | `AssistantService.swift` (headless pi spawn), `AssistantPrompt.swift` (pure prompt/parse), `AssistantSettingsView.swift`, `assistant-tools.txt` (pi extension: calc + fetch_url — the assistant's only tools; ships as .txt, staged as .ts at runtime) |
 ```
 
 - [ ] **Step 5: Build gate + commit**
