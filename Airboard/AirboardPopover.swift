@@ -16,6 +16,7 @@ struct AirboardPopover: View {
     let onOpenHotkeySettings: () -> Void
     let onOpenCleanupSettings: () -> Void
     let onOpenMemorySettings: () -> Void
+    let onOpenAssistantSettings: () -> Void
     let onOpenPerformance: () -> Void
     let onReportIssue: () -> Void
     let onCheckForUpdates: () -> Void
@@ -26,6 +27,7 @@ struct AirboardPopover: View {
     @State private var isHoveringDownload = false
     @State private var isHoveringHotkey = false
     @State private var isHoveringMemory = false
+    @State private var isHoveringAssistant = false
     @State private var isHoveringPerformance = false
     @State private var isHoveringReport = false
     @State private var isHoveringUpdate = false
@@ -244,6 +246,46 @@ struct AirboardPopover: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { isHoveringMemory = $0 }
+
+                // Assistant Button
+                Button(action: onOpenAssistantSettings) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(DS.Tint.purple)
+                                .frame(width: DS.Badge.size, height: DS.Badge.size)
+
+                            Image(systemName: "sparkles")
+                                .font(.system(size: DS.Badge.glyph, weight: .medium))
+                                .foregroundStyle(DS.Accent.command)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Assistant")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(DS.Label.primary)
+
+                            Text("Voice Q&A setup and model")
+                                .font(.system(size: 11))
+                                .foregroundColor(DS.Label.secondary)
+                                .lineLimit(1)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(DS.Label.tertiary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.Radius.r10)
+                            .fill(isHoveringAssistant ? DS.Fill.hover : Color.clear)
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveringAssistant = $0 }
 
                 // Performance Button
                 Button(action: onOpenPerformance) {
@@ -671,6 +713,7 @@ struct VisualEffectBlur: NSViewRepresentable {
                 onOpenHotkeySettings: {},
                 onOpenCleanupSettings: {},
                 onOpenMemorySettings: {},
+                onOpenAssistantSettings: {},
                 onOpenPerformance: {},
                 onReportIssue: {},
                 onCheckForUpdates: {},

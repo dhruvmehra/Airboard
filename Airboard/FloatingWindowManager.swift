@@ -17,6 +17,7 @@ class FloatingWindowManager: NSObject {
     private var cleanupSettingsWindow: NSWindow?
     private var performanceWindow: NSWindow?
     private var memoryWindow: NSWindow?
+    private var assistantSettingsWindow: NSWindow?
 
     // Auto-hide state
     private var isHidden = false
@@ -279,6 +280,9 @@ class FloatingWindowManager: NSObject {
             onOpenMemorySettings: { [weak self] in
                 self?.handleOpenMemorySettings()
             },
+            onOpenAssistantSettings: { [weak self] in
+                self?.handleOpenAssistantSettings()
+            },
             onOpenPerformance: { [weak self] in
                 self?.handleOpenPerformance()
             },
@@ -408,6 +412,11 @@ class FloatingWindowManager: NSObject {
         showMemorySettingsWindow()
     }
 
+    private func handleOpenAssistantSettings() {
+        hidePopover()
+        showAssistantSettingsWindow()
+    }
+
     private func handleOpenPerformance() {
         hidePopover()
         showPerformanceWindow()
@@ -502,6 +511,33 @@ class FloatingWindowManager: NSObject {
         window.isReleasedWhenClosed = false
 
         memoryWindow = window
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Assistant Settings Window
+
+    private func showAssistantSettingsWindow() {
+        if let existing = assistantSettingsWindow {
+            existing.close()
+            assistantSettingsWindow = nil
+        }
+
+        let view = AssistantSettingsView()
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 360),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Assistant"
+        let hosting = NSHostingView(rootView: view)
+        window.contentView = hosting
+        window.setContentSize(hosting.fittingSize)
+        window.center()
+        window.isReleasedWhenClosed = false
+
+        assistantSettingsWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -707,6 +743,8 @@ class FloatingWindowManager: NSObject {
             self?.performanceWindow = nil
             self?.memoryWindow?.close()
             self?.memoryWindow = nil
+            self?.assistantSettingsWindow?.close()
+            self?.assistantSettingsWindow = nil
             self?.toastWindow?.close()
             self?.toastWindow = nil
             self?.memoryConfirmWindow?.close()
