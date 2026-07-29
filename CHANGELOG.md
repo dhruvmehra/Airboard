@@ -8,6 +8,10 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+- Ask the Assistant: hold hotkey + ⌘ and ask anything — time zones,
+  currency, quick facts. Answers by toast in seconds; one-click setup in
+  the popover (pi engine + OpenRouter key). The assistant can fetch web
+  pages and do exact math, and can never touch your files.
 - Memory examples in the app and README now use neutral placeholder names
 
 ## [1.0.9] - 2026-07-27

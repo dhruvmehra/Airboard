@@ -103,6 +103,21 @@ switch controls whether your lines ride along with cleanup requests to
 your configured LLM; switched off, memory never leaves your Mac (voice
 recall still works, locally).
 
+## Ask the Assistant
+
+Hold hotkey + ⌘ and just ask — anything that isn't a known command goes to
+the assistant:
+
+> "What time is 11 AM IST in PDT and EST?"
+> "Convert 500 dollars to rupees"
+> "What's the latest FluidAudio release?"
+
+The answer appears as a toast. Setup (once, in popover → **Assistant**):
+click **Install** (fetches the [pi](https://pi.dev) engine) and paste an
+[OpenRouter](https://openrouter.ai/keys) API key. The assistant can do
+exact math and fetch web pages — it cannot touch your files, run commands,
+or control apps, and says so honestly when asked to.
+
 ## Architecture (high level)
 
 ```
@@ -122,6 +137,10 @@ See `CLAUDE.md` for a fuller breakdown of the source layout.
 - By default, text never leaves your machine either. If you configure an AI cleanup server, dictated text (not audio) is sent to that server only — use HTTPS for anything beyond your own machines — only while the AI cleanup toggle is on.
 - The model is downloaded once from Hugging Face, then runs fully offline.
 - Optional, opt-in feedback reports (when you tap "Report issue") send only the text/metadata you choose to submit.
+- Assistant questions (hold hotkey + ⌘, unmatched speech only) are sent as
+  text to OpenRouter under your own API key, and the assistant may fetch
+  public web pages to answer. Nothing is sent unless you ask it something;
+  saved memories are never included.
 - **Anonymous performance stats**: production builds send anonymous usage
   signals to TelemetryDeck (a German, GDPR-focused analytics service):
   timing numbers (speech-to-text and cleanup durations), outcome flags,
