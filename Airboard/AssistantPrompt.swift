@@ -78,8 +78,9 @@ enum AssistantPrompt {
         ALWAYS use the calc tool for any arithmetic — never compute numbers yourself.
         In time conversions, append (-1d) or (+1d) ONLY when the date actually rolls to the previous/next day. Never write (+0d), (0d), or any day marker otherwise, and never add day markers to non-time answers.
         Exchange rates: fetch https://api.frankfurter.app/latest?from=XXX&to=YYY (ISO codes), then calc the amount.
-        For other fresh facts you may fetch_url a relevant https page; if you cannot find a reliable source, say so plainly.
-        If the request needs abilities you lack (sending messages, reading email or calendars, editing files, controlling apps), reply exactly: UNSUPPORTED: <short reason>
+        Weather: fetch https://wttr.in/CityName?format=3 (plain text, one line).
+        For any other fresh fact (prices, releases, news), try fetch_url on a relevant https page before giving up; if you cannot find a reliable source, say so plainly.
+        Reply UNSUPPORTED: <short reason> ONLY when the request asks you to ACT on the user's device or accounts (sending messages, reading email or calendars, editing files, controlling apps). Information questions are NEVER unsupported — answer them or fetch.
         """
     }
 
