@@ -252,6 +252,14 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
 
+        // New session — same as startRecordingWithMode. Without this,
+        // hands-free sessions started mid-ask are invisible to the
+        // generation guards: the post-ask indicator restore would stomp
+        // the live hands-free indicator, and the (unrelated) stale deferred
+        // block from the ask's own dictation could fire against a
+        // generation hands-free never claimed.
+        sessionGeneration += 1
+
         // Capture target app and context
         targetApp = NSWorkspace.shared.frontmostApplication
         targetAppPID = targetApp?.processIdentifier
@@ -403,6 +411,14 @@ class TranscriptionCoordinator: ObservableObject {
     // MARK: - Process Transcription
     
     private func processTranscription(audioURL: URL) async {
+        // Snapshot THIS session's own generation before any await in this
+        // function. Sampling it later (e.g. after handleCommandMode, which
+        // can await an up-to-60s assistant ask) would read whatever session
+        // is current AT THAT POINT — which could be a newer session B that
+        // started mid-ask, not this session's own identity — and the +0.8s
+        // guard below would then wrongly pass and reset B's still-live state.
+        let gen = await MainActor.run { self.sessionGeneration }
+
         await transcriptionService.transcribe(audioURL: audioURL)
         
         if let error = transcriptionService.error {
@@ -449,13 +465,14 @@ class TranscriptionCoordinator: ObservableObject {
         }
         
         await MainActor.run {
-            // Snapshot this session's generation before scheduling — if a
-            // new session starts before this fires, the counter will have
-            // moved on and this stale block becomes a no-op instead of
-            // wiping out the new session's state (or, when nothing new
-            // started, this is always still our own session so it must run
-            // unconditionally to actually clear isTranscribing).
-            let gen = self.sessionGeneration
+            // `gen` was captured at the very top of this function, before
+            // handleCommandMode/handleDictationMode ran — it is THIS
+            // session's own identity, not whatever session happens to be
+            // current after a long assistant ask. If a newer session has
+            // since started, the counter will have moved on and this stale
+            // block becomes a no-op instead of wiping out the new session's
+            // state; otherwise (this is still the current session) it must
+            // run unconditionally to actually clear isTranscribing.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                 guard gen == self.sessionGeneration else { return }
                 FloatingWindowManager.shared.hideFloatingIndicator()
