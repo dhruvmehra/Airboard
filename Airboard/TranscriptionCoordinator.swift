@@ -41,6 +41,14 @@ class TranscriptionCoordinator: ObservableObject {
 
     private var hasCompletedFirstTranscription = false
 
+    // Bumped every time a new recording session starts. Deferred/async work
+    // tied to an older session captures its generation up front and checks
+    // it before touching shared state — a flag-based guard (isRecording/
+    // isTranscribing) can't tell "my own session is still in flight" apart
+    // from "a newer session started," which bricked recording after a
+    // normal dictation (see commit b391f13 postmortem).
+    private var sessionGeneration = 0
+
     // Chunked recording state
     private var accumulatedText: String = ""
     private var processingChunks: Set<Int> = []
@@ -143,9 +151,13 @@ class TranscriptionCoordinator: ObservableObject {
             return
         }
         
+        // New session — invalidate any deferred cleanup/indicator work still
+        // in flight from a previous session.
+        sessionGeneration += 1
+
         // Set the mode
         currentMode = mode
-        
+
         // Capture the target app NOW, before recording starts
         targetApp = NSWorkspace.shared.frontmostApplication
         targetAppPID = targetApp?.processIdentifier
@@ -437,11 +449,15 @@ class TranscriptionCoordinator: ObservableObject {
         }
         
         await MainActor.run {
+            // Snapshot this session's generation before scheduling — if a
+            // new session starts before this fires, the counter will have
+            // moved on and this stale block becomes a no-op instead of
+            // wiping out the new session's state (or, when nothing new
+            // started, this is always still our own session so it must run
+            // unconditionally to actually clear isTranscribing).
+            let gen = self.sessionGeneration
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                // A new recording/transcription may already be underway
-                // (e.g. started during a long assistant ask) — don't hide
-                // its indicator or wipe its state out from under it.
-                guard !self.isRecording && !self.isTranscribing else { return }
+                guard gen == self.sessionGeneration else { return }
                 FloatingWindowManager.shared.hideFloatingIndicator()
                 self.resetState()
             }
@@ -567,12 +583,15 @@ class TranscriptionCoordinator: ObservableObject {
         // instead of silently no-opping against a stale "still busy" state.
         // The floating indicator above stays as assistant-visual feedback;
         // this only clears the gate `startRecordingWithMode` checks.
-        await MainActor.run { self.isTranscribing = false }
+        let gen = await MainActor.run { () -> Int in
+            self.isTranscribing = false
+            return self.sessionGeneration
+        }
         let (outcome, durationMs) = await AssistantService.shared.ask(text)
         await MainActor.run {
             // A new session may have started while we awaited the ask —
             // don't stomp its indicator with "nothing happening" state.
-            if !self.isRecording && !self.isTranscribing {
+            if gen == self.sessionGeneration {
                 FloatingWindowManager.shared.showFloatingIndicator(
                     isRecording: false, isTranscribing: false, isCommandMode: false)
             }

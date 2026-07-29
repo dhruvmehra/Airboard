@@ -104,14 +104,18 @@ final class AssistantService {
             print("❌ Assistant: bundled extension missing")
             return done(.failure)
         }
-        let extTS = workDir().appendingPathComponent("assistant-tools.ts")
+        // Unique per-call filename — two concurrent asks (e.g. session B
+        // starting while A's ask is still in flight) must not race on a
+        // shared assistant-tools.ts (one's remove+copy could clobber the
+        // other's staged file mid-read, producing a spurious .failure).
+        let extTS = workDir().appendingPathComponent("assistant-tools-\(UUID().uuidString).ts")
         do {
-            try? FileManager.default.removeItem(at: extTS)
             try FileManager.default.copyItem(at: extSrc, to: extTS)
         } catch {
             print("❌ Assistant: failed to stage extension: \(error)")
             return done(.failure)
         }
+        defer { try? FileManager.default.removeItem(at: extTS) }
 
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: pi)
