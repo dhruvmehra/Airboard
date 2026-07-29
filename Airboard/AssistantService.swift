@@ -8,7 +8,6 @@
 //
 
 import Foundation
-import AppKit
 
 enum AssistantOutcome {
     case answer(String)
@@ -27,14 +26,17 @@ final class AssistantService {
     private static let timeoutSeconds: TimeInterval = 60
 
     private var cachedPiPath: String?
+    private var piPathChecked = false
 
     private init() {}
 
     // MARK: - Status (settings UI + preflight)
 
     /// Resolve pi via a login shell — GUI apps don't inherit shell PATH.
+    /// Caches both success AND failure so repeated calls while pi is missing
+    /// don't re-spawn a blocking login shell on every isPiInstalled()/ask().
     private func piPath() -> String? {
-        if let cached = cachedPiPath { return cached }
+        if piPathChecked { return cachedPiPath }
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
         proc.arguments = ["-lc", "which pi"]
@@ -42,16 +44,26 @@ final class AssistantService {
         proc.standardOutput = pipe
         proc.standardError = FileHandle.nullDevice
         proc.standardInput = FileHandle.nullDevice
-        guard (try? proc.run()) != nil else { return nil }
+        guard (try? proc.run()) != nil else {
+            piPathChecked = true
+            return nil
+        }
         proc.waitUntilExit()
         let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        guard proc.terminationStatus == 0, !out.isEmpty, FileManager.default.isExecutableFile(atPath: out) else { return nil }
+        guard proc.terminationStatus == 0, !out.isEmpty, FileManager.default.isExecutableFile(atPath: out) else {
+            piPathChecked = true
+            return nil
+        }
         cachedPiPath = out
+        piPathChecked = true
         return out
     }
 
-    func invalidatePiPathCache() { cachedPiPath = nil }
+    func invalidatePiPathCache() {
+        cachedPiPath = nil
+        piPathChecked = false
+    }
     func isPiInstalled() -> Bool { piPath() != nil }
     func hasKey() -> Bool { KeychainHelper.hasAPIKey(forHost: Self.openRouterHost) }
 
@@ -116,13 +128,18 @@ final class AssistantService {
 
         let stdout = Pipe()
         proc.standardOutput = stdout
-        proc.standardError = Pipe()          // keep pi's stderr out of our log noise
+        proc.standardError = FileHandle.nullDevice  // keep pi's stderr out of our log noise (and unread pipe from filling/blocking)
         proc.standardInput = FileHandle.nullDevice  // CRITICAL: open stdin = infinite hang
 
         do { try proc.run() } catch {
             print("❌ Assistant: failed to spawn pi: \(error)")
             return done(.failure)
         }
+
+        // CRITICAL: drain stdout concurrently with waiting for termination — if
+        // pi writes more than the kernel pipe buffer, the child blocks writing
+        // and never exits unless someone is reading stdout in the meantime.
+        let readTask = Task.detached { stdout.fileHandleForReading.readDataToEndOfFile() }
 
         let timedOut = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
             let lock = NSLock()
@@ -138,12 +155,16 @@ final class AssistantService {
                 guard !finished else { return }
                 finished = true
                 proc.terminate()
+                // Escalate if terminate() (SIGTERM) doesn't take within 3s.
+                DispatchQueue.global().asyncAfter(deadline: .now() + 3) {
+                    if proc.isRunning { kill(proc.processIdentifier, SIGKILL) }
+                }
                 cont.resume(returning: true)
             }
         }
         if timedOut { return done(.timeout) }
 
-        let raw = String(data: stdout.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let raw = String(data: await readTask.value, encoding: .utf8) ?? ""
         guard proc.terminationStatus == 0 else {
             print("❌ Assistant: pi exited \(proc.terminationStatus): \(raw.prefix(300))")
             return done(.failure)
