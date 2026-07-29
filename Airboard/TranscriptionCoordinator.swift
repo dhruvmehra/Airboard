@@ -438,6 +438,10 @@ class TranscriptionCoordinator: ObservableObject {
         
         await MainActor.run {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                // A new recording/transcription may already be underway
+                // (e.g. started during a long assistant ask) — don't hide
+                // its indicator or wipe its state out from under it.
+                guard !self.isRecording && !self.isTranscribing else { return }
                 FloatingWindowManager.shared.hideFloatingIndicator()
                 self.resetState()
             }
@@ -558,10 +562,20 @@ class TranscriptionCoordinator: ObservableObject {
             FloatingWindowManager.shared.showFloatingIndicator(
                 isRecording: false, isTranscribing: true, isCommandMode: true)
         }
+        // Asks can take up to ~60s (timeout). Clear the recording-lock flag
+        // now so a hotkey press during the ask starts a fresh dictation
+        // instead of silently no-opping against a stale "still busy" state.
+        // The floating indicator above stays as assistant-visual feedback;
+        // this only clears the gate `startRecordingWithMode` checks.
+        await MainActor.run { self.isTranscribing = false }
         let (outcome, durationMs) = await AssistantService.shared.ask(text)
         await MainActor.run {
-            FloatingWindowManager.shared.showFloatingIndicator(
-                isRecording: false, isTranscribing: false, isCommandMode: false)
+            // A new session may have started while we awaited the ask —
+            // don't stomp its indicator with "nothing happening" state.
+            if !self.isRecording && !self.isTranscribing {
+                FloatingWindowManager.shared.showFloatingIndicator(
+                    isRecording: false, isTranscribing: false, isCommandMode: false)
+            }
             switch outcome {
             case .answer(let answer):
                 FloatingWindowManager.shared.showCommandExecuted()

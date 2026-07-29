@@ -49,8 +49,13 @@ final class AssistantService {
             return nil
         }
         proc.waitUntilExit()
-        let out = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        // Login-shell startup can echo dotfile noise to stdout before "which"
+        // runs; only the LAST non-empty line is trustworthy as the path.
+        let rawOutput = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let out = rawOutput.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .last ?? ""
         guard proc.terminationStatus == 0, !out.isEmpty, FileManager.default.isExecutableFile(atPath: out) else {
             piPathChecked = true
             return nil

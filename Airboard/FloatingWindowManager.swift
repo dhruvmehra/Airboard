@@ -1057,7 +1057,9 @@ struct ToastPillView: View {
             Text(text)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(DS.Label.primary)
-                .lineLimit(2)
+                .lineLimit(4)
+                .frame(maxWidth: 560)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
