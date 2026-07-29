@@ -51,13 +51,13 @@ enum AssistantPrompt {
         ("HST (Honolulu)", "Pacific/Honolulu"),
     ]
 
-    static func offsetString(secondsFromGMT: Int) -> String {
+    nonisolated static func offsetString(secondsFromGMT: Int) -> String {
         let sign = secondsFromGMT < 0 ? "-" : "+"
         let s = abs(secondsFromGMT)
         return String(format: "%@%02d:%02d", sign, s / 3600, (s % 3600) / 60)
     }
 
-    static func systemPrompt(now: Date = Date(), localZone: TimeZone = .current) -> String {
+    nonisolated static func systemPrompt(now: Date = Date(), localZone: TimeZone = .current) -> String {
         let table = zones.compactMap { zone -> String? in
             guard let tz = TimeZone(identifier: zone.identifier) else { return nil }
             return "\(zone.label)=\(offsetString(secondsFromGMT: tz.secondsFromGMT(for: now)))"
@@ -84,7 +84,7 @@ enum AssistantPrompt {
     }
 
     /// Normalize pi's stdout into a toast-ready reply.
-    static func parse(_ raw: String) -> AssistantReply {
+    nonisolated static func parse(_ raw: String) -> AssistantReply {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return .empty }
         text = text.components(separatedBy: .newlines)
