@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-10-06
+
 - Ask the Assistant: hold hotkey + ⌘ and ask anything — time zones,
   currency, quick facts. Answers by toast in seconds; one-click setup in
   the popover (pi engine + OpenRouter key). The assistant can fetch web

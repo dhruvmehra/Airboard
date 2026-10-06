@@ -6,6 +6,26 @@
         <description>Airboard updates</description>
         <language>en</language>
         <item>
+            <title>Version 1.0.10</title>
+            <pubDate>Tue, 06 Oct 2026 22:58:32 +0000</pubDate>
+            <sparkle:version>1.0.10</sparkle:version>
+            <sparkle:shortVersionString>1.0.10</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[<pre>
+
+- Ask the Assistant: hold hotkey + ⌘ and ask anything — time zones,
+  currency, quick facts. Answers by toast in seconds; one-click setup in
+  the popover (pi engine + OpenRouter key). The assistant can fetch web
+  pages and do exact math, and can never touch your files.
+- Memory examples in the app and README now use neutral placeholder names
+- Fixed: long dictations sometimes came out as only the last sentence.
+  Saying "I mean", "no wait" or "scratch that" anywhere made cleanup throw
+  away everything before it. That self-correction rule is gone; cleanup
+  now only removes filler sounds (um, uh, hmm).
+</pre>]]></description>
+            <enclosure url="https://github.com/dhruvmehra/Airboard/releases/download/v1.0.10/Airboard-1.0.10.dmg" sparkle:edSignature="PwF30zy1U0DHUn4Qh8ckvsOtq2tiG9bAmYiiK/ZC+Ga+42y09iQrNpmVYoVJP8kLWTIwvS7cAdkbuzklvgDYCA==" length="7023679" type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Version 1.0.9</title>
             <pubDate>Sun, 26 Jul 2026 18:34:04 +0000</pubDate>
             <sparkle:version>1.0.9</sparkle:version>
