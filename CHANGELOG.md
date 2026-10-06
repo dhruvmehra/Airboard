@@ -13,6 +13,10 @@ promotes that section to the released version automatically.
   the popover (pi engine + OpenRouter key). The assistant can fetch web
   pages and do exact math, and can never touch your files.
 - Memory examples in the app and README now use neutral placeholder names
+- Fixed: long dictations sometimes came out as only the last sentence.
+  Saying "I mean", "no wait" or "scratch that" anywhere made cleanup throw
+  away everything before it. That self-correction rule is gone; cleanup
+  now only removes filler sounds (um, uh, hmm).
 
 ## [1.0.9] - 2026-07-27
 
