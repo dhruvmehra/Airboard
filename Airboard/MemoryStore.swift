@@ -4,8 +4,11 @@
 //  Airboard's memory, Claude-style: a flat list of plain-language lines in
 //  a human-editable markdown file. No schema, no fields — a spelling is
 //  just a memory that says it's a spelling; the cleanup LLM reads the
-//  lines and applies them in context. NOTHING here is ever applied by
-//  local find-and-replace.
+//  lines and applies them in context. ONE exception (2026-10-07): lines in
+//  the exact SpellingRule shape ("X" is the correct spelling — often heard
+//  as "Y".) are also applied locally by VocabularyLearning, and only when
+//  a decision model agrees in context (or as an exact match when it can't
+//  be reached). Every other line stays LLM-only.
 //
 //  File: ~/Library/Application Support/<bundle id>/memory.md
 //  Foundation-only on purpose: compiles standalone for scratch tests.

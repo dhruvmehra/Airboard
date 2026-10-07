@@ -109,6 +109,10 @@ struct MemorySettingsView: View {
 
                     Divider().padding(.vertical, 6)
 
+                    VocabularySettingsSection()
+
+                    Divider().padding(.vertical, 6)
+
                     Toggle(isOn: Binding(
                         get: { store.shareWithLLM },
                         set: { store.setShareWithLLM($0) }

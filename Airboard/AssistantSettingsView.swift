@@ -67,7 +67,7 @@ struct AssistantSettingsView: View {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { keySaved = false }
                     }
                 }
-                Text("Get one at openrouter.ai/keys. Used only for assistant questions.")
+                Text("Get one at openrouter.ai/keys. Used for assistant questions and vocabulary learning.")
                     .font(.system(size: 10))
                     .foregroundColor(DS.Label.tertiary)
             }

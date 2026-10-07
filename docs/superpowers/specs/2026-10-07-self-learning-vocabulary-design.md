@@ -291,3 +291,28 @@ Sound-code fixtures (original Metaphone, spaces stripped):
 - Acoustic keyword spotting as a second candidate source, only with an
   offline eval harness of recorded utterances.
 - Fact learning (#8), grammar/punctuation (#3, #5).
+
+## Implementation notes (2026-10-07, plan stage)
+
+- **Session "no" cache dropped.** Decision answers are context-dependent
+  ("store it in the cloud" no, "ask cloud to…" yes), so caching a "no"
+  per (span, term) would block later correct answers. Calls stay bounded
+  by the 5-candidate cap and per-term screen verdicts.
+- **Hands-free chunks** apply confirmed exact rules only (no network) —
+  live chunks must stay instant. **Command mode** is untouched (the
+  command parser needs verbatim text).
+- **Emails, URLs, paths, dotted names** are never candidates.
+- **One concrete `DecisionClient`, no protocol yet.** The swappable seam
+  is that single type; extract a `DecisionEngine` protocol when the second
+  implementation (fine-tuned local Gemma) exists — not before.
+- **No "Test key" button.** Save only; a bad key shows up as `nokey` /
+  `timeout` outcomes in the Performance log on the next dictation with a
+  learned word.
+- **Offline / no key:** only confirmed *multi-word* exact phrases apply
+  ("bright AI", "a lisha"). A single-word rule ("bright" → "Brite") needs
+  the engine's context check, or "a bright idea" would become "a Brite
+  idea" whenever the network drops. (Supersedes "exact confirmed rules
+  only" in the error-handling table above.)
+- **Eval gate:** `scripts/vocab-eval` — zero false positives and ≥85%
+  overall on synthetic cases. Pre-plan runs: 40/44 and 39/44, 0 false
+  positives, p50 ≈180–200ms.

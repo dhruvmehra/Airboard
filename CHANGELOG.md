@@ -8,6 +8,12 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+- Airboard now learns your names and terms. Fix a misheard word right
+  after dictating (or let it notice names on your screen) and a small card
+  asks to remember it — ignore it and it's kept. From then on the word is
+  written correctly, but only where it fits ("Ask bright AI" → Brite AI;
+  "a bright idea" stays). Uses your own OpenRouter key; each check sends
+  one sentence and one word. Toggle in Memory settings.
 ## [1.0.10] - 2026-10-06
 
 - Ask the Assistant: hold hotkey + ⌘ and ask anything — time zones,
