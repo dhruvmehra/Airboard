@@ -123,6 +123,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 MenuBarManager.shared.rebuildMenu()
                 // Nudge the user toward dictation after long typing stretches
                 TypingActivityMonitor.shared.start()
+                // Self-learning vocabulary: screen-term harvester (needs
+                // Accessibility, granted by now).
+                VocabularyLearning.shared.start()
             }
         }
         

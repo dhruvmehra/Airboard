@@ -154,6 +154,7 @@ class TranscriptionCoordinator: ObservableObject {
         // New session — invalidate any deferred cleanup/indicator work still
         // in flight from a previous session.
         sessionGeneration += 1
+        VocabularyLearning.shared.recordingStarted()
 
         // Set the mode
         currentMode = mode
@@ -492,7 +493,9 @@ class TranscriptionCoordinator: ObservableObject {
             llmMs: outcome.llmMs,
             llmOutcome: outcome.llmOutcome,
             words: outcome.text.split(separator: " ").count,
-            preview: String(outcome.text.prefix(40)))
+            preview: String(outcome.text.prefix(40)),
+            vocabMs: outcome.vocabMs,
+            vocabOutcome: outcome.vocabOutcome)
         PerformanceLog.shared.append(record)
         TelemetryService.shared.dictationCompleted(record: record)
     }
@@ -698,13 +701,13 @@ class TranscriptionCoordinator: ObservableObject {
     private func insertTextIntoTargetApp(_ text: String) {
         guard let targetPID = targetAppPID else {
             print("⚠️ No target app captured, inserting into frontmost app")
-            handleInsertionResult(TextInserter.insertText(text, context: currentContext))
+            handleInsertionResult(TextInserter.insertText(text, context: currentContext), inserted: text)
             return
         }
 
         guard let targetApp = targetApp, !targetApp.isTerminated else {
             print("⚠️ Target app is no longer running, inserting into frontmost app")
-            handleInsertionResult(TextInserter.insertText(text, context: currentContext))
+            handleInsertionResult(TextInserter.insertText(text, context: currentContext), inserted: text)
             return
         }
 
@@ -737,17 +740,21 @@ class TranscriptionCoordinator: ObservableObject {
         }
 
         let result = TextInserter.insertText(text, context: currentContext)
-        handleInsertionResult(result)
+        handleInsertionResult(result, inserted: text)
 
         if case .success = result {
             print("✅ Text inserted into: \(targetApp.localizedName ?? "Unknown")")
         }
     }
 
-    private func handleInsertionResult(_ result: Result<Void, TextInsertionError>) {
+    private func handleInsertionResult(_ result: Result<Void, TextInsertionError>, inserted text: String) {
         switch result {
         case .success:
-            break // Success is handled by caller
+            // Vocabulary learning: queue "Did you mean" cards, watch the
+            // field for a quick fix the user makes to what we typed.
+            if let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier {
+                VocabularyLearning.shared.didInsert(text, pid: pid)
+            }
         case .failure(let error):
             print("❌ Text insertion failed: \(error)")
 

@@ -23,6 +23,8 @@ struct ProcessOutcome {
     let text: String
     let llmMs: Int?           // nil when the LLM didn't run
     let llmOutcome: String    // ok | timeout | error | guarded | skipped | off
+    var vocabMs: Int? = nil   // decision-engine time; nil = not called
+    var vocabOutcome: String = "off"  // off | none | nokey | ok | applied | timeout
 }
 
 enum TranscriptPostProcessor {
@@ -46,6 +48,21 @@ enum TranscriptPostProcessor {
     static func process(_ text: String, context: AppContext?, mode: ProcessingMode) async -> ProcessOutcome {
         let ruled = FillerRules.clean(text)
 
+        // Learned spellings: dictation asks the decision engine (≤350ms);
+        // hands-free chunks apply confirmed exact rules only (instant);
+        // command mode stays verbatim for the command parser.
+        guard mode != .command else {
+            return ProcessOutcome(text: ruled, llmMs: nil, llmOutcome: "off")
+        }
+        let vocab = await VocabularyLearning.shared.process(ruled, useEngine: mode == .dictation)
+        var outcome = await refine(vocab.text, mode: mode)
+        outcome.vocabMs = vocab.ms
+        outcome.vocabOutcome = vocab.outcome
+        return outcome
+    }
+
+    /// The optional remote LLM pass (unchanged behavior).
+    private static func refine(_ ruled: String, mode: ProcessingMode) async -> ProcessOutcome {
         guard mode == .dictation else {
             return ProcessOutcome(text: ruled, llmMs: nil, llmOutcome: "off")
         }

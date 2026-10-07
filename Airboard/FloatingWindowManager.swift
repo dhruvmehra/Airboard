@@ -614,7 +614,7 @@ class FloatingWindowManager: NSObject {
     /// mouse pointer. NSScreen.main follows keyboard focus and lands on
     /// the wrong display for HUDs (field bug: confirm card appeared on
     /// another monitor while dictating into Ghostty).
-    private var activeScreen: NSScreen? {
+    var activeScreen: NSScreen? {
         let mouse = NSEvent.mouseLocation
         return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
     }
