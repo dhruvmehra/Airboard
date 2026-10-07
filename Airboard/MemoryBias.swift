@@ -31,7 +31,7 @@ enum MemoryBias {
     /// The memory line a spelling correction is stored as — one shared
     /// phrasing so voice teaching and card edits produce identical lines.
     static func spellingMemory(term: String, heardAs: String) -> String {
-        "\"\(term)\" is the correct spelling — often heard as \"\(heardAs)\"."
+        SpellingRule(term: term, heardAs: heardAs).memoryLine
     }
 
     /// A classified command-mode intent from the LLM interpreter.
