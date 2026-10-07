@@ -43,6 +43,7 @@ struct VocabularySettingsSection: View {
                     } else {
                         KeychainHelper.saveAPIKey(trimmed, forHost: AssistantService.openRouterHost)
                     }
+                    VocabularyLearning.shared.keyChanged()
                     keySaved = true
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { keySaved = false }
                 }

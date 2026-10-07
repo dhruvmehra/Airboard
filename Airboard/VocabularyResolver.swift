@@ -25,18 +25,19 @@ nonisolated enum VocabularyResolver {
         let suggestions: [Candidate]   // screen terms Jev believed: "Did you mean…?"
     }
 
-    /// answers are keyed by candidate index ("q0", "q1", …).
+    /// answers are keyed by Candidate.pairKey — one answer covers every
+    /// occurrence of that (span, term) pair.
     static func resolve(text: String, candidates: [Candidate], answers: [String: Double]?) -> Result {
         var replacements: [(Range<String.Index>, String)] = []
         var suggestions: [Candidate] = []
-        for (i, c) in candidates.enumerated() {
+        for c in candidates {
             guard let answers else {
                 if c.source == .rule && c.exact && c.span.split(separator: " ").count >= 2 {
                     replacements.append((c.range, c.term))
                 }
                 continue
             }
-            let p = answers["q\(i)"] ?? 0
+            let p = answers[c.pairKey] ?? 0
             switch c.source {
             case .rule where p >= applyThreshold:
                 replacements.append((c.range, c.term))

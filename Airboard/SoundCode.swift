@@ -102,7 +102,10 @@ nonisolated enum SoundCode {
     static func soundsAlike(_ a: String, _ b: String) -> Bool {
         guard !a.isEmpty, !b.isEmpty else { return false }
         if a == b { return true }
-        guard min(a.count, b.count) >= 4 else { return false }
+        let la = a.count, lb = b.count
+        // One edit apart needs lengths within 1 — skip the DP otherwise
+        // (the candidate scan calls this for every window × every term).
+        guard min(la, lb) >= 4, abs(la - lb) <= 1 else { return false }
         return editDistance(a, b) <= 1
     }
 

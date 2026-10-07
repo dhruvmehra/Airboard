@@ -5,7 +5,8 @@
 //  inserted: "bright AI is hiring" -> "Brite AI is hiring" gives
 //  (heard: "bright", corrected: "Brite"). Handles 2-words-to-1
 //  ("a lisha" -> "Alisha"). Anything bigger than a 3-word swap,
-//  or outside our insertion, teaches nothing.
+//  or outside our insertion, or one that doesn't sound like what was
+//  heard, teaches nothing.
 //  Foundation-only: compiles standalone for scratch tests.
 //
 
@@ -67,6 +68,33 @@ nonisolated enum EditDiff {
             return (0...(big.count - small.count)).contains { Array(big[$0..<($0 + small.count)]) == small }
         }
         if contains(hw, cw) || contains(cw, hw) { return nil }
+
+        // A real spelling fix sounds like what was heard ("bright" -> "Brite",
+        // "a lisha" -> "Alisha"). Unrelated words replacing ours — a chat
+        // field cleared after send and new text typed — are not a fix.
+        let soundsSame = SoundCode.soundsAlike(SoundCode.code(heard), SoundCode.code(corrected))
+        let spellingClose = SoundCode.editDistance(heard.lowercased(), corrected.lowercased())
+            <= max(2, heard.count / 3)
+        guard soundsSame || spellingClose else { return nil }
         return Correction(heard: heard, corrected: corrected)
     }
+
+    /// Where `span` sits inside OUR insertion in the field: the last
+    /// occurrence of `inserted`, then `span` as whole words within it. nil
+    /// if the insertion is gone or the span only appears inside a word —
+    /// so a "Did you mean" fix can never edit the user's other text
+    /// ("kate" in "skate").
+    static func spanRange(span: String, inserted: String, field: String) -> Range<String.Index>? {
+        guard !span.isEmpty, let ins = field.range(of: inserted, options: .backwards) else { return nil }
+        var searchEnd = ins.upperBound
+        while let r = field.range(of: span, options: [.backwards, .caseInsensitive], range: ins.lowerBound..<searchEnd) {
+            let beforeOK = r.lowerBound == field.startIndex || !isWordChar(field[field.index(before: r.lowerBound)])
+            let afterOK = r.upperBound == field.endIndex || !isWordChar(field[r.upperBound])
+            if beforeOK && afterOK { return r }
+            searchEnd = r.lowerBound
+        }
+        return nil
+    }
+
+    private static func isWordChar(_ c: Character) -> Bool { c.isLetter || c.isNumber || c == "'" }
 }

@@ -12,24 +12,61 @@ import Foundation
 
 nonisolated struct VocabularyCacheData: Codable, Equatable {
     var termCounts: [String: Int] = [:]     // term as seen -> sightings
+    var lastSeen: [String: Date] = [:]      // term as seen -> last sighting
     var termVerdicts: [String: Bool] = [:]  // lowercased term -> real term?
     var rejected: Set<String> = []          // pairKey: Undo / No — never ask again
     var snoozedUntil: [String: Date] = [:]  // pairKey: ignored "Did you mean"
 
     static let maxTerms = 500
+    static let maxVerdicts = 2000
     static let minSightings = 3
     static let snooze: TimeInterval = 7 * 24 * 3600
+
+    init() {}
+
+    /// Tolerant decoding: a field added later never wipes the cache.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        termCounts = try c.decodeIfPresent([String: Int].self, forKey: .termCounts) ?? [:]
+        lastSeen = try c.decodeIfPresent([String: Date].self, forKey: .lastSeen) ?? [:]
+        termVerdicts = try c.decodeIfPresent([String: Bool].self, forKey: .termVerdicts) ?? [:]
+        rejected = try c.decodeIfPresent(Set<String>.self, forKey: .rejected) ?? []
+        snoozedUntil = try c.decodeIfPresent([String: Date].self, forKey: .snoozedUntil) ?? [:]
+    }
 
     static func pairKey(heard: String, term: String) -> String {
         CandidateFinder.normalize(heard) + "→" + CandidateFinder.normalize(term)
     }
 
-    mutating func addSightings(_ terms: [String]) {
-        for t in terms { termCounts[t, default: 0] += 1 }
-        guard termCounts.count > Self.maxTerms else { return }
-        let keep = termCounts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
-            .prefix(Self.maxTerms)
-        termCounts = Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0.value) })
+    /// Count sightings. Over the cap, evict judged junk first, then the
+    /// least recently seen — so a full cache keeps learning new terms
+    /// instead of freezing on whatever filled it first.
+    mutating func addSightings(_ terms: [String], now: Date) {
+        for t in terms {
+            termCounts[t, default: 0] += 1
+            lastSeen[t] = now
+        }
+        if termCounts.count > Self.maxTerms {
+            let fresh = Set(terms)
+            let order = termCounts.keys.sorted { a, b in
+                let ja = termVerdicts[a.lowercased()] == false, jb = termVerdicts[b.lowercased()] == false
+                if ja != jb { return ja }                       // junk first
+                let fa = fresh.contains(a), fb = fresh.contains(b)
+                if fa != fb { return !fa }                      // just-seen last
+                let la = lastSeen[a] ?? .distantPast, lb = lastSeen[b] ?? .distantPast
+                if la != lb { return la < lb }                  // oldest first
+                return a < b
+            }
+            for k in order.prefix(termCounts.count - Self.maxTerms) {
+                termCounts[k] = nil
+                lastSeen[k] = nil
+            }
+        }
+        snoozedUntil = snoozedUntil.filter { $0.value > now }
+        if termVerdicts.count > Self.maxVerdicts {
+            let live = Set(termCounts.keys.map { $0.lowercased() })
+            termVerdicts = termVerdicts.filter { live.contains($0.key) }
+        }
     }
 
     /// Seen often enough and judged a real term.

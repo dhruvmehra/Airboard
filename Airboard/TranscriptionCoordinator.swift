@@ -260,6 +260,7 @@ class TranscriptionCoordinator: ObservableObject {
         // block from the ask's own dictation could fire against a
         // generation hands-free never claimed.
         sessionGeneration += 1
+        VocabularyLearning.shared.recordingStarted()
 
         // Capture target app and context
         targetApp = NSWorkspace.shared.frontmostApplication
@@ -757,6 +758,7 @@ class TranscriptionCoordinator: ObservableObject {
             }
         case .failure(let error):
             print("❌ Text insertion failed: \(error)")
+            VocabularyLearning.shared.insertionFailed()
 
             switch error {
             case .accessibilityPermissionDenied:

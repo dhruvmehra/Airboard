@@ -2,9 +2,10 @@
 //  TermExtractor.swift
 //
 //  Pulls candidate names/terms out of on-screen text for the harvester:
-//  capitalized words not starting a sentence, CamelCase ("TypeScript",
-//  "iPhone"), dotted tech names ("CLAUDE.md"), and runs of 2-3 such words
-//  ("Claude Code"). Over-collects on purpose — the decision engine filters
+//  capitalized words not starting a sentence, name-shaped CamelCase
+//  ("TypeScript", "iPhone"), and runs of 2-3 such words ("Claude Code").
+//  Never digits, dotted names, or secret-like strings — every harvested
+//  term may be sent to the decision model. Over-collects on purpose — the decision engine filters
 //  junk before anything is suggested. Foundation-only.
 //
 
@@ -56,17 +57,44 @@ nonisolated enum TermExtractor {
     }
 
     static func isCapitalized(_ w: String) -> Bool {
-        guard let f = w.first, f.isUppercase, w.count > 1 else { return false }
+        guard let f = w.first, f.isUppercase, w.count > 1, w.count <= maxTermLength else { return false }
         return w.dropFirst().allSatisfy { $0.isLowercase || $0 == "'" }
     }
 
-    /// CamelCase / inner capitals ("TypeScript", "iPhone") or dotted ("CLAUDE.md").
+    /// Longer than this is a sentence fragment, path, or secret — not a name.
+    static let maxTermLength = 20
+
+    /// CamelCase with a name-like shape: "TypeScript", "GitHub", "iPhone",
+    /// "OpenAI". Never harvested (they'd be sent to the decision model):
+    /// anything with digits or symbols, dotted names (files, domains —
+    /// "layoffs.xlsx"), and secret-like strings whose case pattern breaks
+    /// into many fragments ("wJalrXUtnFEMI").
     static func isTechy(_ w: String) -> Bool {
-        let letters = w.filter(\.isLetter)
-        guard letters.count >= 3 else { return false }
-        if w.contains(".") { return true }
+        guard w.count >= 3, w.count <= maxTermLength,
+              w.allSatisfy({ $0.isLetter && $0.isASCII }) else { return false }
         let innerUpper = w.dropFirst().contains(where: \.isUppercase)
-        let hasLower = w.contains(where: \.isLowercase)
-        return innerUpper && hasLower
+        guard innerUpper, w.contains(where: \.isLowercase) else { return false }
+        // Split into case pieces: "Type|Script", "i|Phone", "Open|AI".
+        var pieces: [String] = []
+        var cur = ""
+        let chars = Array(w)
+        for (i, c) in chars.enumerated() {
+            let prevLower = i > 0 && chars[i - 1].isLowercase
+            let nextLower = i + 1 < chars.count && chars[i + 1].isLowercase
+            let prevUpper = i > 0 && chars[i - 1].isUppercase
+            if c.isUppercase && (prevLower || (prevUpper && nextLower)) && !cur.isEmpty {
+                pieces.append(cur); cur = ""
+            }
+            cur.append(c)
+        }
+        if !cur.isEmpty { pieces.append(cur) }
+        // Name-like: 2-3 pieces; only the first may be a single letter
+        // ("iPhone"); an all-caps piece is an acronym of 2-4 letters ("AI").
+        guard (2...3).contains(pieces.count) else { return false }
+        for (i, p) in pieces.enumerated() {
+            if p.count == 1 && i > 0 { return false }
+            if p.allSatisfy(\.isUppercase) && p.count > 4 { return false }
+        }
+        return true
     }
 }

@@ -1,11 +1,13 @@
 //
 //  VocabularyHarvester.swift
 //
-//  Every ~30s, reads the frontmost app's window text (never secure
-//  fields, never Airboard itself, never while recording) and counts
-//  candidate terms into VocabularyCache. Terms seen 3+ times get one
-//  decision-engine check ("real name/term, or junk?"), cached forever.
-//  Everything stays on this Mac except that one word per check.
+//  Every ~30s — only when vocabulary learning is on AND a key is set —
+//  reads the frontmost app's window text (never secure fields, never
+//  Airboard itself, never while recording) and counts candidate terms into
+//  VocabularyCache. The Accessibility walk runs OFF the main thread with a
+//  100ms per-call timeout and aborts when a recording starts, so it can
+//  never delay a hotkey press. Terms seen 3+ times get one decision-engine
+//  check ("real name/term, or junk?"), cached.
 //
 
 import AppKit
@@ -17,6 +19,13 @@ final class VocabularyHarvester {
     static let judgePerTick = 5
     private var timer: Timer?
     private var judging = false
+    private var walking = false
+    private let walkQueue = DispatchQueue(label: "com.pype.airboard.vocab-harvest", qos: .utility)
+
+    /// Set on the main thread, read by the background walk.
+    private let stopFlag = AbortFlag()
+
+    var isRunning: Bool { timer != nil }
 
     func start() {
         guard timer == nil else { return }
@@ -28,19 +37,35 @@ final class VocabularyHarvester {
     func stop() {
         timer?.invalidate()
         timer = nil
+        stopFlag.set(true)
     }
 
+    /// A recording is starting: abandon any walk in flight.
+    func abortWalk() { stopFlag.set(true) }
+
     private func tick() {
-        guard VocabularyLearning.shared.isEnabled,
+        guard !walking,
+              VocabularyLearning.shared.isEnabled,
+              VocabularyLearning.shared.client() != nil,
               !TranscriptionCoordinator.shared.isRecording,
               let app = NSWorkspace.shared.frontmostApplication,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
-        let text = AXText.windowText(pid: app.processIdentifier)
-        let terms = TermExtractor.terms(in: text)
-        if !terms.isEmpty {
-            VocabularyCache.shared.update { $0.addSightings(terms) }
+        let pid = app.processIdentifier
+        walking = true
+        let flag = stopFlag
+        flag.set(false)
+        walkQueue.async { [weak self] in
+            let text = AXText.windowText(pid: pid, shouldStop: { flag.value })
+            let terms = flag.value ? [] : TermExtractor.terms(in: text)
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.walking = false
+                if !terms.isEmpty {
+                    VocabularyCache.shared.update { $0.addSightings(terms, now: Date()) }
+                }
+                self.judgePending()
+            }
         }
-        judgePending()
     }
 
     private func judgePending() {
@@ -71,4 +96,12 @@ final class VocabularyHarvester {
             }
         }
     }
+}
+
+/// A thread-safe boolean the off-main walk polls.
+nonisolated final class AbortFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _value = false
+    var value: Bool { lock.lock(); defer { lock.unlock() }; return _value }
+    func set(_ v: Bool) { lock.lock(); _value = v; lock.unlock() }
 }
