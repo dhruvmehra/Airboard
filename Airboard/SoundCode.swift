@@ -96,12 +96,24 @@ nonisolated enum SoundCode {
         return out
     }
 
-    /// Same sound, or — for codes of 4+ sounds — one sound apart
+    /// Same sound; or the same once half-vowels (Y/W/H) are ignored, when
+    /// 3+ sounds remain; or — for codes of 4+ sounds — one sound apart
     /// ("super base" SPRBS ~ "Supabase" SPBS). Short codes must match
     /// exactly: one edit on "PP" would match nearly anything.
     static func soundsAlike(_ a: String, _ b: String) -> Bool {
         guard !a.isEmpty, !b.isEmpty else { return false }
         if a == b { return true }
+        // Half-vowels drift with how a word is split: "Bright Eye" = BRTY
+        // (the y of "eye" is consonantal) but "Brite AI" = BRT (all-vowel
+        // words add nothing). Compare without Y/W/H too — only when 3+
+        // sounds remain, so short codes stay exact (field bug 2026-10-07).
+        // (Allocation only when a half-vowel is present — this runs for
+        // every window × term in the candidate scan.)
+        let half: (Character) -> Bool = { $0 == "Y" || $0 == "W" || $0 == "H" }
+        if a.contains(where: half) || b.contains(where: half) {
+            let sa = a.filter { !half($0) }, sb = b.filter { !half($0) }
+            if sa.count >= 3 && sa == sb { return true }
+        }
         let la = a.count, lb = b.count
         // One edit apart needs lengths within 1 — skip the DP otherwise
         // (the candidate scan calls this for every window × every term).

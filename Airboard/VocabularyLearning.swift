@@ -155,7 +155,7 @@ final class VocabularyLearning {
     }
 
     func didInsert(_ text: String, pid: pid_t) {
-        guard isEnabled else { return }
+        guard isEnabled else { print("🧠 Learn: vocabulary learning is off — not watching"); return }
         if !pendingSuggestions.isEmpty, let field = AXText.focusedElement(pid: pid) {
             for card in pendingSuggestions {
                 suggestionContext[VocabularyCacheData.pairKey(heard: card.heard, term: card.term)] =
@@ -165,23 +165,27 @@ final class VocabularyLearning {
         }
         pendingSuggestions = []
         showNextCard()
-        guard client() != nil else { return }
+        guard client() != nil else { print("🧠 Learn: no OpenRouter key — not watching"); return }
         CorrectionWatcher.shared.observe(inserted: text, pid: pid) { [weak self] correction in
             self?.considerEdit(correction, sentence: text)
         }
     }
 
     private func considerEdit(_ c: EditDiff.Correction, sentence: String) {
-        guard !VocabularyCache.shared.data.isBlocked(heard: c.heard, term: c.corrected, now: Date()),
-              let client = client() else { return }
+        guard !VocabularyCache.shared.data.isBlocked(heard: c.heard, term: c.corrected, now: Date()) else {
+            print("🧠 Learn: pair was rejected/snoozed before — no card"); return
+        }
+        guard let client = client() else { print("🧠 Learn: no OpenRouter key — no card"); return }
         let known = SpellingRule.rules(from: MemoryStore.shared.memories).contains {
             CandidateFinder.normalize($0.heardAs) == CandidateFinder.normalize(c.heard) && $0.term == c.corrected
         }
-        guard !known else { return }
+        guard !known else { print("🧠 Learn: already a confirmed rule — no card"); return }
         Task {
             let q = DecisionQuestion.spellingFix(id: "q0", sentence: sentence, heard: c.heard, corrected: c.corrected)
             let a = await client.ask(state: q.state, questions: [q], deadline: Self.backgroundDeadline)
-            guard let p = a?["q0"], p >= VocabularyResolver.suggestThreshold else { return }
+            guard let p = a?["q0"] else { print("🧠 Learn: decision engine gave no answer (timeout/error)"); return }
+            print("🧠 Learn: spelling-fix confidence \(String(format: "%.2f", p)) (needs ≥ \(VocabularyResolver.suggestThreshold))")
+            guard p >= VocabularyResolver.suggestThreshold else { return }
             await MainActor.run {
                 self.queue.enqueue(VocabularyCard(kind: .learned, heard: c.heard, term: c.corrected))
                 self.showNextCard()
@@ -192,7 +196,11 @@ final class VocabularyLearning {
     // MARK: - Cards
 
     private func showNextCard() {
-        guard let card = queue.next(now: Date(), isRecording: TranscriptionCoordinator.shared.isRecording) else { return }
+        guard let card = queue.next(now: Date(), isRecording: TranscriptionCoordinator.shared.isRecording) else {
+            if !queue.pending.isEmpty { print("🧠 Cards: \(queue.pending.count) waiting (one showing, recording, or hourly limit)") }
+            return
+        }
+        print("🧠 Cards: showing \(card.kind == .learned ? "Learned" : "Did you mean") card")
         VocabularyCardPresenter.shared.show(card) { [weak self] choice in
             self?.resolve(card, choice)
         }
