@@ -528,35 +528,6 @@ class TranscriptionCoordinator: ObservableObject {
     private func handleCommandMode(text: String) async {
         print("⚡ Processing as COMMAND: \(text)")
 
-        // Memory commands (teach / correct / recall) take precedence over
-        // the regular command table. Non-memory text falls straight through.
-        var llm: ((String, String) async throws -> String)?
-        if TranscriptRefiner.shared.isFullyConfigured {
-            // 6s deadline per call (same discipline as the cleanup path):
-            // command mode can chain two calls (classify → recall), and a
-            // hung server must not freeze the pill for the transport's
-            // full 10s each.
-            llm = { system, user in
-                try await withThrowingTaskGroup(of: String.self) { group in
-                    group.addTask {
-                        try await TranscriptRefiner.shared.complete(system: system, user: user)
-                    }
-                    group.addTask {
-                        try await Task.sleep(nanoseconds: 6_000_000_000)
-                        throw TranscriptRefiner.RefineError.timeout
-                    }
-                    guard let first = try await group.next() else {
-                        throw TranscriptRefiner.RefineError.timeout
-                    }
-                    group.cancelAll()
-                    return first
-                }
-            }
-        }
-        let memoryOutcome = await MemoryCommands.handle(
-            text: text, store: MemoryStore.shared, llm: llm)
-        if await dispatchMemoryOutcome(memoryOutcome) { return }
-
         // Voice editing: "delete all", "delete last N words/sentences",
         // "scratch that" — exact patterns, keystroke-executed, instant.
         if let editIntent = EditCommands.detect(text) {
@@ -584,14 +555,6 @@ class TranscriptionCoordinator: ObservableObject {
             }
             return
         }
-
-        // Nothing matched exactly — one LLM pass interprets the utterance
-        // before giving up. Any phrasing of "save this" ("don't forget…",
-        // "note that…", "keep in mind…") becomes a memory intent; the
-        // confirmation card remains the guard against misreads.
-        let interpreted = await MemoryCommands.classify(
-            text: text, store: MemoryStore.shared, llm: llm)
-        if await dispatchMemoryOutcome(interpreted) { return }
 
         // Nothing claimed the utterance — hand it to the assistant.
         print("🤖 Assistant ask: \(text)")
@@ -625,7 +588,7 @@ class TranscriptionCoordinator: ObservableObject {
             case .needsPi:
                 FloatingWindowManager.shared.showToast("Assistant isn't set up yet — open Assistant settings", duration: 5.0)
             case .needsKey:
-                FloatingWindowManager.shared.showToast("Add your OpenRouter key in Assistant settings", duration: 5.0)
+                FloatingWindowManager.shared.showToast("Add your OpenRouter key — Airboard menu → OpenRouter key", duration: 5.0)
             case .timeout:
                 FloatingWindowManager.shared.showToast("Assistant timed out", duration: 4.0)
             case .failure:
@@ -633,58 +596,6 @@ class TranscriptionCoordinator: ObservableObject {
             }
         }
         recordAssistantMetrics(question: text, outcome: outcome, durationMs: durationMs)
-    }
-
-    /// Act on a memory outcome. Returns false for .notMemoryCommand so the
-    /// caller can keep interpreting the utterance.
-    private func dispatchMemoryOutcome(_ outcome: MemoryCommandOutcome) async -> Bool {
-        switch outcome {
-        case .notMemoryCommand:
-            return false
-        case .confirmFact(let cleaned, let heard):
-            print("🧠 Memory: confirming fact '\(cleaned)' (heard: '\(heard)')")
-            await MainActor.run {
-                FloatingWindowManager.shared.showMemoryConfirm(
-                    cleaned: cleaned, heard: heard,
-                    onSave: { savedText in
-                        let store = MemoryStore.shared
-                        store.addMemory(savedText)
-                        // Edits teach: single-word corrections become
-                        // spelling memories ("reparty" -> "Ashish").
-                        for pair in MemoryBias.editDiffPairs(heard: heard, saved: savedText) {
-                            store.addMemory(MemoryBias.spellingMemory(term: pair.term, heardAs: pair.heardAs))
-                        }
-                        print("🧠 Memory: stored '\(savedText)'")
-                        FloatingWindowManager.shared.showToast("Remembered: \(savedText)")
-                    },
-                    onCancel: {
-                        print("🧠 Memory: confirmation cancelled")
-                    })
-            }
-            return true
-        case .learned(let term):
-            print("🧠 Memory: learned spelling '\(term)'")
-            await MainActor.run {
-                FloatingWindowManager.shared.showCommandExecuted()
-                FloatingWindowManager.shared.showToast("Learned spelling: \(term)")
-                self.showNotification(title: "Learned spelling", body: term)
-            }
-            return true
-        case .recall(let recalledText):
-            print("🧠 Memory: recall inserting '\(recalledText)'")
-            await MainActor.run {
-                self.insertTextIntoTargetApp(recalledText)
-            }
-            return true
-        case .recallFailed(let query):
-            print("🧠 Memory: recall failed for '\(query)'")
-            await MainActor.run {
-                FloatingWindowManager.shared.showToast("Nothing remembered about \(query)")
-                self.showNotification(title: "Airboard Memory",
-                                      body: "Nothing remembered about \(query)")
-            }
-            return true
-        }
     }
 
     // MARK: - Dictation Mode Handler

@@ -2,7 +2,7 @@
 //  SpellingRule.swift
 //
 //  The one memory line that is applied locally: a confirmed spelling.
-//  Format (the exact string MemoryBias.spellingMemory produces):
+//  Format:
 //    "Brite AI" is the correct spelling — often heard as "bright AI".
 //  Every other memory line is NOT a rule and stays LLM-only.
 //  Foundation-only: compiles standalone for scratch tests.
@@ -14,9 +14,7 @@ nonisolated struct SpellingRule: Equatable, Hashable {
     let term: String     // correct spelling, e.g. "Brite AI"
     let heardAs: String  // how Parakeet writes it, e.g. "bright AI"
 
-    /// The memory line for this rule — one shared phrasing with
-    /// MemoryBias.spellingMemory, so card saves and voice teaching
-    /// produce identical lines.
+    /// The memory line for this rule — the one phrasing parse() reads back.
     var memoryLine: String {
         "\"\(term)\" is the correct spelling — often heard as \"\(heardAs)\"."
     }

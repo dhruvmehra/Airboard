@@ -8,12 +8,20 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+- One place for your OpenRouter key: popover → **OpenRouter key**. The
+  Assistant and Vocabulary screens just show whether it's set.
+- Removed AI Cleanup (cloud grammar rewrite) and the Memory voice
+  commands ("remember…", "write my…"). Airboard is going fully local;
+  grammar comes back later, rebuilt on-device. The Memory screen is now
+  **Vocabulary**: the words Airboard has learned about you. Older memory
+  notes stay untouched in memory.md.
 - Airboard now learns your names and terms. Fix a misheard word right
   after dictating (or let it notice names on your screen) and a small card
   asks to remember it — ignore it and it's kept. From then on the word is
   written correctly, but only where it fits ("Ask bright AI" → Brite AI;
   "a bright idea" stays). Uses your own OpenRouter key; each check sends
-  one sentence and one word. Toggle in Memory settings.
+  one sentence and one word. Toggle in popover → Vocabulary.
+
 ## [1.0.10] - 2026-10-06
 
 - Ask the Assistant: hold hotkey + ⌘ and ask anything — time zones,

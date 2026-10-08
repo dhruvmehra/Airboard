@@ -12,7 +12,7 @@ A lightweight macOS voice transcription app. Press a hotkey, speak, and your wor
 - **🎤 Pick your mic**: choose which microphone Airboard records from — remembered per headset, so connecting Bluetooth earphones never silently downgrades your transcription quality
 - **✨ Auto-insert**: Text appears directly where your cursor is, via the Accessibility API
 - **🔄 Auto-updates**: production builds keep themselves current in the background (Sparkle; updates are EdDSA-signed and notarized)
-- **🪄 AI cleanup (optional)**: point Airboard at any OpenAI-compatible endpoint — your own Ollama, a team server, or a cloud API — and dictation comes back with grammar fixed, paragraphs added, and spoken points formatted as bullet/numbered lists. Does nothing until you configure a server; filler words ("um", "uh") are always removed locally either way. See [docs/cleanup-server-recipes.md](docs/cleanup-server-recipes.md).
+- **🧠 Learns your vocabulary**: fix a misheard name after dictating, or let it notice names on your screen — a small card asks before saving, and from then on it's written right *where it fits* ("ask bright AI" → Brite AI; "a bright idea" stays). Filler words ("um", "uh") are always removed locally.
 
 ## Requirements
 
@@ -64,44 +64,27 @@ Visual feedback (floating indicator): 🔴 recording · 🟠 transcribing · �
 
 The hotkey is configurable from the menu-bar popover.
 
-## Set up your Memory (5 minutes, do this first)
+## Your vocabulary
 
-Airboard has a personal memory: plain-language lines it uses to spell your
-words right and to type your facts on command. It lives in a markdown file
-you own (`~/Library/Application Support/com.pype.airboard/memory.md`) —
-view it in the popover → **Memory**, or open the file in any editor.
+Airboard learns the names and terms you use. Two ways:
 
-**Step 1 — teach your spellings first** (hold hotkey + ⌘ and say it):
+- **Fix it once.** Dictate, then correct a misheard word by hand (e.g.
+  "bright" → "Brite"). A card asks **"Learned: bright → Brite"** — ignore
+  it to keep, or click Undo.
+- **It notices your screen.** Names that keep appearing in your apps
+  become suggestions: after dictating, a card asks **"Did you mean
+  Parakeet?"**.
 
-> "Correct bright to Brite"
-> "Correct kate to Cait" — or spell it out: "spell it c-a-i-t"
+Learned words are applied in context — a decision model checks each one
+("ask bright AI" → "Brite AI", "a bright idea" stays). See or delete them
+in the popover → **Vocabulary**. They live in a markdown file you own:
+`~/Library/Application Support/com.pype.airboard/memory.md`.
 
-Do this for your company, product names, and the teammates you mention
-daily. Spellings first matters: facts you save afterwards come out spelled
-right automatically.
-
-**Step 2 — save the facts you'll want typed for you:**
-
-> "Remember that I work at Brite"
-> "Remember my work address is …"
-> "Don't forget my GitHub handle is …"
-
-Any phrasing works ("note this…", "keep in mind…"). A small card shows
-each fact before it's saved — **edit anything the mic misheard, then press
-⏎**. Correcting a name in that card teaches the spelling automatically.
-
-**Step 3 — use it:**
-
-- Just dictate: your words come out with your spellings applied in context
-  ("share it with the brite team" → "Brite", but "a bright idea" stays
-  "bright").
-- Recall anywhere: put the cursor in any field, hold hotkey + ⌘, say
-  "write my address" / "fill in where I work" — the fact types itself.
-
-**Privacy:** memory is a local file. The "Share memory with AI Cleanup"
-switch controls whether your lines ride along with cleanup requests to
-your configured LLM; switched off, memory never leaves your Mac (voice
-recall still works, locally).
+**Setup:** popover → **OpenRouter key** → paste a key from
+[openrouter.ai/keys](https://openrouter.ai/keys). This is the only place
+the key is set; it powers vocabulary decisions and the assistant (both
+will move on-device). Without a key, only confirmed multi-word spellings
+apply and nothing reads your screen.
 
 ## Ask the Assistant
 
@@ -112,9 +95,9 @@ the assistant:
 > "Convert 500 dollars to rupees"
 > "What's the latest FluidAudio release?"
 
-The answer appears as a toast. Setup (once, in popover → **Assistant**):
-click **Install** (fetches the [pi](https://pi.dev) engine) and paste an
-[OpenRouter](https://openrouter.ai/keys) API key. The assistant can do
+The answer appears as a toast. Setup (once): popover → **Assistant** →
+**Install** (fetches the [pi](https://pi.dev) engine), and set your key in
+popover → **OpenRouter key**. The assistant can do
 exact math and fetch web pages — it cannot touch your files, run commands,
 or control apps, and says so honestly when asked to.
 
@@ -134,16 +117,15 @@ See `CLAUDE.md` for a fuller breakdown of the source layout.
 ## Privacy
 
 - Audio never leaves your machine — speech recognition is fully local.
-- By default, text never leaves your machine either. If you configure an AI cleanup server, dictated text (not audio) is sent to that server only — use HTTPS for anything beyond your own machines — only while the AI cleanup toggle is on.
+- Vocabulary learning (only with your OpenRouter key set): when a dictated sentence may contain a learned word, that one sentence and the candidate word are sent to OpenRouter for a yes/no decision; when a new word is learned, the edited words are; and harvested screen words are checked one at a time. Never audio, files, screen dumps, or your vocabulary file. Screen text is read locally and never sent; password fields are never read.
 - The model is downloaded once from Hugging Face, then runs fully offline.
 - Optional, opt-in feedback reports (when you tap "Report issue") send only the text/metadata you choose to submit.
 - Assistant questions (hold hotkey + ⌘, unmatched speech only) are sent as
   text to OpenRouter under your own API key, and the assistant may fetch
-  public web pages to answer. Nothing is sent unless you ask it something;
-  saved memories are never included.
+  public web pages to answer. Nothing is sent unless you ask it something.
 - **Anonymous performance stats**: production builds send anonymous usage
   signals to TelemetryDeck (a German, GDPR-focused analytics service):
-  timing numbers (speech-to-text and cleanup durations), outcome flags,
+  timing numbers (speech-to-text durations), outcome flags,
   app version, plus the SDK's standard device context (device model, OS
   version, locale, screen resolution) and a random install identifier
   that is salted and hashed twice — once on your device, once server-side —

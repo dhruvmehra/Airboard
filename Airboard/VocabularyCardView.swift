@@ -2,7 +2,7 @@
 //  VocabularyCardView.swift
 //
 //  The vocabulary confirm card. MUST NOT take focus: the user keeps
-//  typing while it's up (unlike MemoryConfirmView, which is key-accepting).
+//  typing while it's up.
 //  Non-activating, never-key panel; buttons accept the first click.
 //  Ignored for 8s → .ignored (Learned = Keep, Did you mean = snooze).
 //

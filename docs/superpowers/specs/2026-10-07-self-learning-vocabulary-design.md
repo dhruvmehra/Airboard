@@ -316,3 +316,16 @@ Sound-code fixtures (original Metaphone, spaces stripped):
 - **Eval gate:** `scripts/vocab-eval` — zero false positives and ≥85%
   overall on synthetic cases. Pre-plan runs: 40/44 and 39/44, 0 false
   positives, p50 ≈180–200ms.
+
+## Product change (2026-10-07, after implementation)
+
+- **AI Cleanup and the Memory voice commands were removed.** Airboard is
+  heading fully local, with decision models as the "decision rails"
+  (Jev now, a local model later). The `memory.md` file stays as the store
+  for confirmed spellings; the popover's Memory screen became
+  **Vocabulary**. The "Share memory with AI Cleanup" setting is gone.
+- **One place for the OpenRouter key:** popover → **OpenRouter key**
+  (`OpenRouterKeyView`). Assistant and Vocabulary only show its status.
+  This supersedes "Settings shows whether it's set and lets the user set
+  it from either screen" above.
+
