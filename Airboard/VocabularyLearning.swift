@@ -147,6 +147,12 @@ final class VocabularyLearning {
         CorrectionWatcher.shared.cancel()
         VocabularyHarvester.shared.abortWalk()
         pendingSuggestions = []
+        // The dictation target is in front now: ask an Electron app to expose
+        // its text while the user speaks (it takes ~2s), so the watcher can
+        // read the field after insertion. Async, once per process.
+        if isEnabled, let app = NSWorkspace.shared.frontmostApplication {
+            AXText.enableWebAccessibility(for: app)
+        }
     }
 
     /// The text never landed — its suggestions must not attach elsewhere.

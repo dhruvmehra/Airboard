@@ -21,6 +21,8 @@ final class CorrectionWatcher {
     func observe(inserted: String, pid: pid_t, onCorrection: @escaping (EditDiff.Correction) -> Void) {
         generation += 1
         let gen = generation
+        // Usually already done at recording start; a no-op after the first call.
+        if let app = NSRunningApplication(processIdentifier: pid) { AXText.enableWebAccessibility(for: app) }
         // Snapshot once the insertion has landed (paste restores the
         // clipboard at 0.5s; typed text is already there).
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in

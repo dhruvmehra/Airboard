@@ -51,6 +51,9 @@ final class VocabularyHarvester {
               let app = NSWorkspace.shared.frontmostApplication,
               app.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
         let pid = app.processIdentifier
+        // Electron apps hide their text until asked (once per process; the
+        // first walk may still see little — the next tick will not).
+        AXText.enableWebAccessibility(for: app)
         walking = true
         let flag = stopFlag
         flag.set(false)

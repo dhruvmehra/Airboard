@@ -110,9 +110,86 @@ enum AXText {
         return String(parts.joined(separator: "\n").prefix(maxChars))
     }
 
+    // MARK: - Electron accessibility opt-in
+
+    /// Electron apps (Slack, Notion, Linear, Discord, Obsidian, Claude…)
+    /// keep their web content OUT of the accessibility tree until an
+    /// assistive client sets `AXManualAccessibility = true` on the
+    /// application element — until then the focused field and window text
+    /// are unreadable and nothing is learned. Measured (scripts/ax-probe):
+    /// an Electron 44 app went from 14 AX nodes / no focused element to
+    /// 401 nodes / a readable focused AXTextArea ~2s after the set.
+    ///
+    /// - Electron debounces the request by 2s on the app's main run loop,
+    ///   and that timer was only seen to fire while the app was frontmost —
+    ///   so call this when the target app is in front (recording start),
+    ///   as early as possible. Once on, it stays on for the process.
+    /// - Electron's getter for the attribute reports false even when on, so
+    ///   we keep our own once-per-process record instead of reading it.
+    /// - Electron apps only (Electron Framework.framework in the bundle):
+    ///   native apps and Chromium browsers reject the attribute anyway.
+    /// - AXEnhancedUserInterface is deliberately NOT set: it is the
+    ///   VoiceOver signal that breaks window-manager move/resize animations,
+    ///   and Electron routes it to the same code path as this attribute.
+    /// - VS Code-family editors are skipped: they can switch into "screen
+    ///   reader optimized" mode when accessibility support turns on.
+    ///
+    /// Never blocks the caller: the bundle check and the one AX call run
+    /// on a utility queue with the 100ms messaging timeout.
+    nonisolated static func enableWebAccessibility(for app: NSRunningApplication) {
+        let pid = app.processIdentifier
+        guard pid != ProcessInfo.processInfo.processIdentifier, pid > 0 else { return }
+        let key = "\(pid)-\(app.launchDate?.timeIntervalSinceReferenceDate ?? 0)"
+        let bundleURL = app.bundleURL
+        let bundleID = app.bundleIdentifier ?? "?"
+        guard ElectronAXRegistry.shared.claim(key) else { return }   // once per process
+        ElectronAXRegistry.queue.async {
+            guard let bundleURL, isElectron(bundleURL), !electronSkipList.contains(bundleID) else { return }
+            let ok = AXUIElementSetAttributeValue(appElement(pid: pid), "AXManualAccessibility" as CFString,
+                                                  kCFBooleanTrue) == .success
+            if ok {
+                print("🧩 AX: enabled Electron accessibility for \(bundleID)")
+            } else {
+                ElectronAXRegistry.shared.release(key)   // app busy/hung — retry on a later call
+                print("🧩 AX: could not enable Electron accessibility for \(bundleID)")
+            }
+        }
+    }
+
+    /// Editors whose UI changes when accessibility support turns on.
+    nonisolated static let electronSkipList: Set<String> = [
+        "com.microsoft.VSCode", "com.microsoft.VSCodeInsiders", "com.vscodium",
+        "com.todesktop.230313mzl4w4u92",   // Cursor
+        "com.exafunction.windsurf",
+    ]
+
+    nonisolated static func isElectron(_ bundleURL: URL) -> Bool {
+        FileManager.default.fileExists(atPath: bundleURL
+            .appendingPathComponent("Contents/Frameworks/Electron Framework.framework").path)
+    }
+
     nonisolated static func string(_ el: AXUIElement, _ attr: String) -> String? {
         var v: CFTypeRef?
         guard AXUIElementCopyAttributeValue(el, attr as CFString, &v) == .success else { return nil }
         return v as? String
+    }
+}
+
+/// Which app processes we've already asked to expose their web content.
+/// Keyed by pid + launch date so a recycled pid is a new process.
+nonisolated final class ElectronAXRegistry: @unchecked Sendable {
+    static let shared = ElectronAXRegistry()
+    static let queue = DispatchQueue(label: "com.pype.airboard.ax-enable", qos: .utility)
+    private let lock = NSLock()
+    private var claimed: Set<String> = []
+
+    /// True the first time a key is seen (the caller should act).
+    func claim(_ key: String) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return claimed.insert(key).inserted
+    }
+
+    func release(_ key: String) {
+        lock.lock(); claimed.remove(key); lock.unlock()
     }
 }

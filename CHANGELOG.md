@@ -8,6 +8,10 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+- Vocabulary learning now works in Electron apps (Slack, Notion, Linear,
+  Discord, Obsidian…): Airboard asks them to expose their text to
+  Accessibility when you start dictating into them. VS Code-family editors
+  are left alone.
 - One place for your OpenRouter key: popover → **OpenRouter key**. The
   Assistant and Vocabulary screens just show whether it's set.
 - Removed AI Cleanup (cloud grammar rewrite) and the Memory voice
