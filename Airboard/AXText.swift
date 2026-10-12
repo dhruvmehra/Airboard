@@ -24,7 +24,7 @@ enum AXText {
         return app
     }
 
-    static func focusedElement(pid: pid_t) -> AXUIElement? {
+    nonisolated static func focusedElement(pid: pid_t) -> AXUIElement? {
         let app = appElement(pid: pid)
         var focused: CFTypeRef?
         guard AXUIElementCopyAttributeValue(app, kAXFocusedUIElementAttribute as CFString, &focused) == .success,

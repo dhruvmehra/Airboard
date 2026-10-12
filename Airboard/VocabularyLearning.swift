@@ -144,7 +144,9 @@ final class VocabularyLearning {
     // MARK: - After insertion
 
     func recordingStarted() {
-        CorrectionWatcher.shared.cancel()
+        // Earlier insertions stay watched — back-to-back dictation is the
+        // norm, and people fix names after re-reading.
+        CorrectionWatcher.shared.recordingStarted()
         VocabularyHarvester.shared.abortWalk()
         pendingSuggestions = []
     }
@@ -165,21 +167,33 @@ final class VocabularyLearning {
         }
         pendingSuggestions = []
         showNextCard()
-        guard client() != nil else { print("🧠 Learn: no OpenRouter key — not watching"); return }
-        CorrectionWatcher.shared.observe(inserted: text, pid: pid) { [weak self] correction in
-            self?.considerEdit(correction, sentence: text)
+        // Watched with or without a key: without one, the stricter local
+        // gate in considerEdit decides.
+        CorrectionWatcher.shared.observe(inserted: text, pid: pid) { lesson in
+            VocabularyLearning.shared.considerEdit(lesson.correction, sentence: lesson.sentence, fixed: lesson.fixed)
         }
     }
 
-    private func considerEdit(_ c: EditDiff.Correction, sentence: String) {
+    private func considerEdit(_ c: EditDiff.Correction, sentence: String, fixed: String) {
+        guard isEnabled else { return }
         guard !VocabularyCache.shared.data.isBlocked(heard: c.heard, term: c.corrected, now: Date()) else {
             print("🧠 Learn: pair was rejected/snoozed before — no card"); return
         }
-        guard let client = client() else { print("🧠 Learn: no OpenRouter key — no card"); return }
         let known = SpellingRule.rules(from: MemoryStore.shared.memories).contains {
             CandidateFinder.normalize($0.heardAs) == CandidateFinder.normalize(c.heard) && $0.term == c.corrected
         }
         guard !known else { print("🧠 Learn: already a confirmed rule — no card"); return }
+        guard let client = client() else {
+            // No decision model: only an unmistakable name fix (sounds
+            // alike + capitalised + not a common word) becomes a card.
+            guard CorrectionWatchPolicy.passesLocalGate(c, fixed: fixed) else {
+                print("🧠 Learn: no key — local gate said not a name fix"); return
+            }
+            print("🧠 Learn: no key — local gate passed")
+            queue.enqueue(VocabularyCard(kind: .learned, heard: c.heard, term: c.corrected))
+            showNextCard()
+            return
+        }
         Task {
             let q = DecisionQuestion.spellingFix(id: "q0", sentence: sentence, heard: c.heard, corrected: c.corrected)
             let a = await client.ask(state: q.state, questions: [q], deadline: Self.backgroundDeadline)

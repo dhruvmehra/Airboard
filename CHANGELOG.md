@@ -8,6 +8,11 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+- Fixing a misheard name now teaches Airboard for a full minute after you
+  dictate — even if you keep dictating, switch apps briefly, or fix two
+  names. Works without an OpenRouter key too (then only clear name fixes,
+  like "bright" → "Brite", become a card).
+
 - One place for your OpenRouter key: popover → **OpenRouter key**. The
   Assistant and Vocabulary screens just show whether it's set.
 - Removed AI Cleanup (cloud grammar rewrite) and the Memory voice
