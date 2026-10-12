@@ -12,7 +12,10 @@ promotes that section to the released version automatically.
   dictate — even if you keep dictating, switch apps briefly, or fix two
   names. Works without an OpenRouter key too (then only clear name fixes,
   like "bright" → "Brite", become a card).
-
+- Vocabulary learning now works in Electron apps (Slack, Notion, Linear,
+  Discord, Obsidian…): Airboard asks them to expose their text to
+  Accessibility when you start dictating into them. VS Code-family editors
+  are left alone.
 - One place for your OpenRouter key: popover → **OpenRouter key**. The
   Assistant and Vocabulary screens just show whether it's set.
 - Removed AI Cleanup (cloud grammar rewrite) and the Memory voice

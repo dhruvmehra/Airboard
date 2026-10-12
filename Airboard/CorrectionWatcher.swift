@@ -57,6 +57,8 @@ nonisolated final class CorrectionWatcher: @unchecked Sendable {
     /// captured 0.3s later, once a paste has settled.
     func observe(inserted: String, pid: pid_t, onLesson: @escaping @MainActor @Sendable (Lesson) -> Void) {
         setFront(pid)
+        // Usually already done at recording start; a no-op after the first call.
+        if let app = NSRunningApplication(processIdentifier: pid) { AXText.enableWebAccessibility(for: app) }
         queue.asyncAfter(deadline: .now() + 0.3) { [self] in
             self.onLesson = onLesson
             start(inserted: inserted, pid: pid)
