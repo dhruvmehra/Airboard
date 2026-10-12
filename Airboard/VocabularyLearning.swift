@@ -166,8 +166,8 @@ final class VocabularyLearning {
         pendingSuggestions = []
         showNextCard()
         guard client() != nil else { print("🧠 Learn: no OpenRouter key — not watching"); return }
-        CorrectionWatcher.shared.observe(inserted: text, pid: pid) { [weak self] correction in
-            self?.considerEdit(correction, sentence: text)
+        CorrectionWatcher.shared.observe(inserted: text, pid: pid) { [weak self] corrections in
+            for c in corrections { self?.considerEdit(c, sentence: text) }
         }
     }
 

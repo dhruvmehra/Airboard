@@ -2,10 +2,11 @@
 //  CorrectionWatcher.swift
 //
 //  After an insertion, re-reads the SAME field at ~2s, 5s and 10s. If the
-//  user fixed a word or two inside what we typed, hands the correction to
-//  VocabularyLearning. Stops on app switch, focus moving to another field
-//  (a chat box cleared after send is not "a fix"), a new recording, a
-//  learned correction, or an unreadable/secure field (terminals: nothing).
+//  user fixed a word or two inside what we typed (one name or several,
+//  even if they kept typing), hands the corrections to VocabularyLearning.
+//  Stops on app switch, focus moving to another field (a chat box cleared
+//  after send is not "a fix"), a new recording, a learned correction, or
+//  an unreadable/secure field (terminals: nothing).
 //
 
 import AppKit
@@ -18,7 +19,7 @@ final class CorrectionWatcher {
 
     func cancel() { generation += 1 }
 
-    func observe(inserted: String, pid: pid_t, onCorrection: @escaping (EditDiff.Correction) -> Void) {
+    func observe(inserted: String, pid: pid_t, onCorrections: @escaping ([EditDiff.Correction]) -> Void) {
         generation += 1
         let gen = generation
         // Snapshot once the insertion has landed (paste restores the
@@ -54,10 +55,11 @@ final class CorrectionWatcher {
                         print("👀 Watcher @\(t)s: field unreadable"); return
                     }
                     if after == before { print("👀 Watcher @\(t)s: no change yet"); return }
-                    if let c = EditDiff.correction(before: before, after: after, inserted: inserted) {
-                        print("👀 Watcher @\(t)s: correction found (\(c.heard.split(separator: " ").count)→\(c.corrected.split(separator: " ").count) words)")
-                        self.generation += 1   // one lesson per insertion
-                        onCorrection(c)
+                    let found = EditDiff.corrections(before: before, after: after, inserted: inserted)
+                    if !found.isEmpty {
+                        print("👀 Watcher @\(t)s: \(found.count) correction(s) found")
+                        self.generation += 1   // one round of lessons per insertion
+                        onCorrections(found)
                     } else {
                         print("👀 Watcher @\(t)s: field changed, but not a small sound-alike fix inside our text")
                     }
