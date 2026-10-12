@@ -26,6 +26,9 @@ promotes that section to the released version automatically.
   written correctly, but only where it fits ("Ask bright AI" → Brite AI;
   "a bright idea" stays). Uses your own OpenRouter key; each check sends
   one sentence and one word. Toggle in popover → Vocabulary.
+- Learning now catches more of your fixes: two names fixed in one
+  dictation, a fix followed by more typing, and names with symbols
+  (AT&T, C++, snake_case) — while still ignoring rewrites and grammar edits.
 
 ## [1.0.10] - 2026-10-06
 
