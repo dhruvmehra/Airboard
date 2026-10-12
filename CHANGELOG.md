@@ -21,6 +21,13 @@ promotes that section to the released version automatically.
   written correctly, but only where it fits ("Ask bright AI" → Brite AI;
   "a bright idea" stays). Uses your own OpenRouter key; each check sends
   one sentence and one word. Toggle in popover → Vocabulary.
+- Spell a name out loud and Airboard gets it right: "Tell Inakshi, I N A K
+  S H I, that…" types "Tell Inakshi that…", and a card offers to remember
+  the spelling. Works in any app, including terminals. Saying "that's
+  spelled B R I T E" right after a dictation teaches the same way.
+  Re-dictating a name after "scratch that", or a follow-up like "sorry,
+  Vercel, not for sell", can also suggest a spelling (checked with your
+  OpenRouter key first).
 
 ## [1.0.10] - 2026-10-06
 

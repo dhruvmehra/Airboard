@@ -534,6 +534,7 @@ class TranscriptionCoordinator: ObservableObject {
             await MainActor.run {
                 if let description = TextInserter.performEdit(editIntent) {
                     print("🗑️ Edit: \(description)")
+                    VocabularyLearning.shared.voiceEdited()
                     FloatingWindowManager.shared.showCommandExecuted()
                     FloatingWindowManager.shared.showToast(description)
                 } else {

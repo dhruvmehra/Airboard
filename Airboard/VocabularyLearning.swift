@@ -7,6 +7,9 @@
 //    context. +0ms when the text holds no candidate.
 //  - didInsert(): queues "Did you mean" cards and starts the
 //    CorrectionWatcher on the field we just typed into.
+//  - learnFromTranscripts(): learning that needs no field reading
+//    (RedictationLearner) — spelled-out letters, follow-up corrections,
+//    re-dictation — from the last few transcripts, kept in memory only.
 //  - cards: Keep/Undo (Learned; ignored = Keep), Yes/No (Did you mean;
 //    ignored = snoozed). Keep/Yes write a SpellingRule line to memory.md.
 //  Spec: docs/superpowers/specs/2026-10-07-self-learning-vocabulary-design.md
@@ -34,6 +37,14 @@ final class VocabularyLearning {
     /// insertion so they can never attach to unrelated text.
     private var pendingSuggestions: [VocabularyCard] = []
     private var queue = VocabularyCardQueue()
+
+    /// Spelled-letter pairs from the CURRENT dictation, waiting for its
+    /// insertion (same lifecycle as pendingSuggestions).
+    private var pendingLearned: [LearnedPair] = []
+    /// The last few inserted transcripts, for cross-dictation learning.
+    /// Memory only — never written to disk, never logged.
+    private var recentTurns: [TranscriptTurn] = []
+    static let maxRecentTurns = 4
 
     /// Where a "Did you mean" card's word lives: the field we typed into,
     /// what we typed, and when. "Yes" fixes in place only inside that
@@ -81,8 +92,14 @@ final class VocabularyLearning {
 
     /// useEngine=false (hands-free chunks): exact confirmed rules only,
     /// no network — live chunks must stay instant.
-    func process(_ text: String, useEngine: Bool) async -> VocabOutcome {
-        guard isEnabled else { return VocabOutcome(text: text, ms: nil, outcome: "off") }
+    func process(_ raw: String, useEngine: Bool) async -> VocabOutcome {
+        guard isEnabled else { return VocabOutcome(text: raw, ms: nil, outcome: "off") }
+        // "Tell Anakshi, I N A K S H I, that…" → "Tell Inakshi that…": the
+        // user spelled it, so this dictation gets the spelling now (local,
+        // ~0ms). Learning the rule still waits for the Keep/Undo card.
+        let spelled = RedictationLearner.spelledRewrite(raw)
+        pendingLearned = spelled.pairs
+        let text = spelled.text
         let rules = SpellingRule.rules(from: MemoryStore.shared.memories)
         let client = useEngine ? client() : nil
         let now = Date()
@@ -147,11 +164,20 @@ final class VocabularyLearning {
         CorrectionWatcher.shared.cancel()
         VocabularyHarvester.shared.abortWalk()
         pendingSuggestions = []
+        pendingLearned = []
     }
 
     /// The text never landed — its suggestions must not attach elsewhere.
     func insertionFailed() {
         pendingSuggestions = []
+        pendingLearned = []
+    }
+
+    /// A voice edit ("scratch that", "delete last …") just erased our last
+    /// insertion — a following re-dictation is more likely a correction.
+    func voiceEdited() {
+        guard !recentTurns.isEmpty else { return }
+        recentTurns[recentTurns.count - 1].scratched = true
     }
 
     func didInsert(_ text: String, pid: pid_t) {
@@ -165,29 +191,59 @@ final class VocabularyLearning {
         }
         pendingSuggestions = []
         showNextCard()
+        learnFromTranscripts(text, pid: pid)
         guard client() != nil else { print("🧠 Learn: no OpenRouter key — not watching"); return }
         CorrectionWatcher.shared.observe(inserted: text, pid: pid) { [weak self] correction in
             self?.considerEdit(correction, sentence: text)
         }
     }
 
+    /// Spelled letters, follow-ups, re-dictation: compare this insertion
+    /// with the ones just before it. Works where the field can't be read.
+    private func learnFromTranscripts(_ text: String, pid: pid_t) {
+        let now = Date()
+        let turn = TranscriptTurn(text: text, at: now, pid: pid)
+        let pairs = pendingLearned + RedictationLearner.detect(current: turn, previous: recentTurns)
+        pendingLearned = []
+        recentTurns = Array((recentTurns.filter { now.timeIntervalSince($0.at) <= RedictationLearner.window } + [turn])
+            .suffix(Self.maxRecentTurns))
+        guard !pairs.isEmpty else { return }
+        print("🧠 Learn: \(pairs.count) pair(s) from transcripts (\(pairs.map(\.kind.rawValue).joined(separator: ",")))")
+        for p in pairs {
+            considerPair(heard: p.heard, corrected: p.corrected, sentence: p.sentence,
+                         groundTruth: p.strength >= RedictationLearner.directCardStrength)
+        }
+    }
+
     private func considerEdit(_ c: EditDiff.Correction, sentence: String) {
-        guard !VocabularyCache.shared.data.isBlocked(heard: c.heard, term: c.corrected, now: Date()) else {
+        considerPair(heard: c.heard, corrected: c.corrected, sentence: sentence, groundTruth: false)
+    }
+
+    /// groundTruth (the user spelled it out) → Keep/Undo card directly.
+    /// Otherwise the decision model must agree it's a spelling fix first.
+    /// Either way nothing is learned until the card resolves.
+    private func considerPair(heard: String, corrected: String, sentence: String, groundTruth: Bool) {
+        guard !VocabularyCache.shared.data.isBlocked(heard: heard, term: corrected, now: Date()) else {
             print("🧠 Learn: pair was rejected/snoozed before — no card"); return
         }
-        guard let client = client() else { print("🧠 Learn: no OpenRouter key — no card"); return }
         let known = SpellingRule.rules(from: MemoryStore.shared.memories).contains {
-            CandidateFinder.normalize($0.heardAs) == CandidateFinder.normalize(c.heard) && $0.term == c.corrected
+            CandidateFinder.normalize($0.heardAs) == CandidateFinder.normalize(heard) && $0.term == corrected
         }
         guard !known else { print("🧠 Learn: already a confirmed rule — no card"); return }
+        if groundTruth {
+            queue.enqueue(VocabularyCard(kind: .learned, heard: heard, term: corrected))
+            showNextCard()
+            return
+        }
+        guard let client = client() else { print("🧠 Learn: no OpenRouter key — no card"); return }
         Task {
-            let q = DecisionQuestion.spellingFix(id: "q0", sentence: sentence, heard: c.heard, corrected: c.corrected)
+            let q = DecisionQuestion.spellingFix(id: "q0", sentence: sentence, heard: heard, corrected: corrected)
             let a = await client.ask(state: q.state, questions: [q], deadline: Self.backgroundDeadline)
             guard let p = a?["q0"] else { print("🧠 Learn: decision engine gave no answer (timeout/error)"); return }
             print("🧠 Learn: spelling-fix confidence \(String(format: "%.2f", p)) (needs ≥ \(VocabularyResolver.suggestThreshold))")
             guard p >= VocabularyResolver.suggestThreshold else { return }
             await MainActor.run {
-                self.queue.enqueue(VocabularyCard(kind: .learned, heard: c.heard, term: c.corrected))
+                self.queue.enqueue(VocabularyCard(kind: .learned, heard: heard, term: corrected))
                 self.showNextCard()
             }
         }
