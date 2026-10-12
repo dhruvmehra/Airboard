@@ -29,6 +29,10 @@ promotes that section to the released version automatically.
 - Learning now catches more of your fixes: two names fixed in one
   dictation, a fix followed by more typing, and names with symbols
   (AT&T, C++, snake_case) — while still ignoring rewrites and grammar edits.
+- Spell a name out loud and Airboard gets it right: "Tell Inakshi, I N A K
+  S H I, that…" types "Tell Inakshi that…", and a card offers to remember
+  the spelling. Works in any app, including terminals. Saying "that's
+  spelled B R I T E" right after a dictation teaches the same way.
 
 ## [1.0.10] - 2026-10-06
 
