@@ -4,9 +4,10 @@
 //  "How it sounds" codes for candidate finding (original Metaphone,
 //  Lawrence Philips 1990). Two spellings with the same code probably
 //  sound alike: "bright AI" = "Brite AI" = BRT, "for sell" = "Vercel" = FRSL.
-//  A matching code is only a QUESTION for the decision engine — never a
-//  replacement on its own. Foundation-only: compiles standalone for
-//  scratch tests.
+//  A matching code makes a CANDIDATE; whether it is replaced is
+//  VocabularyResolver's call (locally for a confirmed rule heard as a
+//  non-dictionary word, else the decision engine or a strong local
+//  signal). Foundation-only: compiles standalone for scratch tests.
 //
 
 import Foundation
@@ -96,43 +97,72 @@ nonisolated enum SoundCode {
         return out
     }
 
-    /// Same sound; or the same once half-vowels (Y/W/H) are ignored, when
-    /// 3+ sounds remain; or — for codes of 4+ sounds — one sound apart
+    /// The same sound: identical codes, or identical once half-vowels
+    /// (Y/W/H) are ignored with 3+ sounds left. Half-vowels drift with how
+    /// a word is split: "Bright Eye" = BRTY (the y of "eye" is consonantal)
+    /// but "Brite AI" = BRT (all-vowel words add nothing) — field bug
+    /// 2026-10-07. Short codes stay exact ("Pype" PP, "Mehra" MR).
+    static func sameSound(_ a: String, _ b: String) -> Bool {
+        guard !a.isEmpty, !b.isEmpty else { return false }
+        if a == b { return true }
+        // Allocation only when a half-vowel is present — this runs for
+        // every window × term in the candidate scan.
+        let half: (Character) -> Bool = { $0 == "Y" || $0 == "W" || $0 == "H" }
+        guard a.contains(where: half) || b.contains(where: half) else { return false }
+        let sa = a.filter { !half($0) }, sb = b.filter { !half($0) }
+        return sa.count >= 3 && sa == sb
+    }
+
+    /// The same sound, or — for codes of 4+ sounds — one sound apart
     /// ("super base" SPRBS ~ "Supabase" SPBS). Short codes must match
     /// exactly: one edit on "PP" would match nearly anything.
     static func soundsAlike(_ a: String, _ b: String) -> Bool {
+        if sameSound(a, b) { return true }
         guard !a.isEmpty, !b.isEmpty else { return false }
-        if a == b { return true }
-        // Half-vowels drift with how a word is split: "Bright Eye" = BRTY
-        // (the y of "eye" is consonantal) but "Brite AI" = BRT (all-vowel
-        // words add nothing). Compare without Y/W/H too — only when 3+
-        // sounds remain, so short codes stay exact (field bug 2026-10-07).
-        // (Allocation only when a half-vowel is present — this runs for
-        // every window × term in the candidate scan.)
-        let half: (Character) -> Bool = { $0 == "Y" || $0 == "W" || $0 == "H" }
-        if a.contains(where: half) || b.contains(where: half) {
-            let sa = a.filter { !half($0) }, sb = b.filter { !half($0) }
-            if sa.count >= 3 && sa == sb { return true }
-        }
         let la = a.count, lb = b.count
         // One edit apart needs lengths within 1 — skip the DP otherwise
         // (the candidate scan calls this for every window × every term).
         guard min(la, lb) >= 4, abs(la - lb) <= 1 else { return false }
-        return editDistance(a, b) <= 1
+        return withinOneEdit(a, b)
+    }
+
+    /// editDistance(a, b) <= 1, without the DP or allocation (codes are
+    /// ASCII; the candidate scan calls this for many window × term pairs).
+    static func withinOneEdit(_ a: String, _ b: String) -> Bool {
+        let x = a.utf8, y = b.utf8
+        let (s, l) = x.count <= y.count ? (x, y) : (y, x)
+        guard l.count - s.count <= 1 else { return false }
+        var i = s.startIndex, j = l.startIndex, edits = 0
+        while i < s.endIndex && j < l.endIndex {
+            if s[i] == l[j] { i = s.index(after: i); j = l.index(after: j); continue }
+            edits += 1
+            if edits > 1 { return false }
+            if s.count == l.count { i = s.index(after: i) }  // substitution
+            j = l.index(after: j)                            // (or insertion in the longer)
+        }
+        return edits + l.distance(from: j, to: l.endIndex) + s.distance(from: i, to: s.endIndex) <= 1
+    }
+
+    /// The code with half-vowels (Y/W/H) removed — sameSound's key.
+    static func withoutHalfVowels(_ code: String) -> String {
+        code.contains(where: { $0 == "Y" || $0 == "W" || $0 == "H" })
+            ? code.filter { $0 != "Y" && $0 != "W" && $0 != "H" } : code
     }
 
     static func editDistance(_ a: String, _ b: String) -> Int {
         let x = Array(a), y = Array(b)
         if x.isEmpty { return y.count }
         if y.isEmpty { return x.count }
+        // Two reused rows (hot: the candidate scan and learning gates).
         var prev = Array(0...y.count)
+        var cur = [Int](repeating: 0, count: y.count + 1)
         for i in 1...x.count {
-            var cur = [i] + Array(repeating: 0, count: y.count)
+            cur[0] = i
             for j in 1...y.count {
                 cur[j] = min(prev[j] + 1, cur[j - 1] + 1,
                              prev[j - 1] + (x[i - 1] == y[j - 1] ? 0 : 1))
             }
-            prev = cur
+            swap(&prev, &cur)
         }
         return prev[y.count]
     }
