@@ -153,5 +153,21 @@
   {"cat": "neg-adversarial", "before": "Sounds good, talk soon", "inserted": "Sounds good, talk soon", "after": "Sounds good. Talk soon!", "expected": []},
   {"cat": "neg-adversarial", "before": "ping the design team", "inserted": "ping the design team", "after": "Ping the Design team", "expected": []},
   {"cat": "neg-adversarial", "before": "I met Rohan at the event", "inserted": "I met Rohan at the event", "after": "I met Rohan and Rohit at the event", "expected": []},
-  {"cat": "neg-adversarial", "before": "ship the build to QA", "inserted": "ship the build to QA", "after": "ship the build to QA and Ops", "expected": []}
+  {"cat": "neg-adversarial", "before": "ship the build to QA", "inserted": "ship the build to QA", "after": "ship the build to QA and Ops", "expected": []},
+  {"cat": "names", "before": "I work at pipe and we are hiring.", "inserted": "I work at pipe and we are hiring.", "after": "I work at Pype and we are hiring.", "expected": [{"heard": "pipe", "corrected": "Pype"}]},
+  {"cat": "names", "before": "Pipe is growing fast this quarter.", "inserted": "Pipe is growing fast this quarter.", "after": "Pype is growing fast this quarter.", "expected": [{"heard": "Pipe", "corrected": "Pype"}]},
+  {"cat": "names", "before": "this is druv mera from the sales team", "inserted": "this is druv mera from the sales team", "after": "this is Dhruv Mehra from the sales team", "expected": [{"heard": "druv mera", "corrected": "Dhruv Mehra"}]},
+  {"cat": "names", "before": "Please forward it to druv's inbox today.", "inserted": "Please forward it to druv's inbox today.", "after": "Please forward it to Dhruv's inbox today.", "expected": [{"heard": "druv's", "corrected": "Dhruv's"}]},
+  {"cat": "names", "before": "Please forward it to druv’s inbox today.", "inserted": "Please forward it to druv’s inbox today.", "after": "Please forward it to Dhruv’s inbox today.", "expected": [{"heard": "druv’s", "corrected": "Dhruv’s"}]},
+  {"cat": "names", "before": "My surname is Mehta, not Sharma.", "inserted": "My surname is Mehta, not Sharma.", "after": "My surname is Mehra, not Sharma.", "expected": [{"heard": "Mehta", "corrected": "Mehra"}]},
+  {"cat": "names", "before": "Mr Meyra will join the call.", "inserted": "Mr Meyra will join the call.", "after": "Mr Mehra will join the call.", "expected": [{"heard": "Meyra", "corrected": "Mehra"}]},
+  {"cat": "names", "before": "My name is Drew and I run sales.", "inserted": "My name is Drew and I run sales.", "after": "My name is Dhruv and I run sales.", "expected": [{"heard": "Drew", "corrected": "Dhruv"}]},
+  {"cat": "names", "before": "Dhruva will send the invoice.", "inserted": "Dhruva will send the invoice.", "after": "Dhruv will send the invoice.", "expected": [{"heard": "Dhruva", "corrected": "Dhruv"}]},
+  {"cat": "names", "before": "Thanks, Druv Mera", "inserted": "Thanks, Druv Mera", "after": "Thanks, Dhruv Mehra", "expected": [{"heard": "Druv Mera", "corrected": "Dhruv Mehra"}]},
+  {"cat": "neg-names", "before": "the water pipe burst last night", "inserted": "the water pipe burst last night", "after": "the water pipes burst last night", "expected": []},
+  {"cat": "neg-names", "before": "pipe the output into grep", "inserted": "pipe the output into grep", "after": "Pipe the output into grep", "expected": []},
+  {"cat": "neg-names", "before": "walk through the door", "inserted": "walk through the door", "after": "walk Dhruv the door", "expected": []},
+  {"cat": "neg-names", "before": "Their team is ready.", "inserted": "Their team is ready.", "after": "There team is ready.", "expected": []},
+  {"cat": "neg-names", "before": "I met Mark yesterday.", "inserted": "I met Mark yesterday.", "after": "I met Mike yesterday.", "expected": []},
+  {"cat": "neg-names", "before": "Drew a diagram of the flow.", "inserted": "Drew a diagram of the flow.", "after": "Drawn a diagram of the flow.", "expected": []}
 ]

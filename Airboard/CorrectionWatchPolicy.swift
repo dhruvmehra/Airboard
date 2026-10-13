@@ -394,20 +394,53 @@ nonisolated struct CorrectionWatchPolicy {
     /// 4. at the start of our text a capital proves nothing, so a lone
     ///    word there that is one letter off the heard word with the same
     ///    first 3 letters reads as a typo fix, not a name.
-    static func passesLocalGate(_ c: EditDiff.Correction, fixed: String) -> Bool {
-        guard SoundCode.soundsAlike(SoundCode.code(c.heard), SoundCode.code(c.corrected)) else { return false }
+    /// With `isOrdinaryWord` (the system dictionary, lowercase): when every
+    /// word the user changed is NOT an ordinary word, a close spelling
+    /// (same first letter, 1 letter off; 2 for 7+ letters) counts like a
+    /// sound-alike — short codes must match exactly, so "Mehta" (MT) →
+    /// "Mehra" (MR) failed rule 1 — and rule 4 is skipped (a typo fix
+    /// lands on a dictionary word). nil = the original sound-only gate.
+    static func passesLocalGate(_ c: EditDiff.Correction, fixed: String,
+                                isOrdinaryWord: ((String) -> Bool)? = nil) -> Bool {
+        let novel = isOrdinaryWord.map { changedWordsAreNovel(c, isOrdinaryWord: $0) } ?? false
+        guard SoundCode.soundsAlike(SoundCode.code(c.heard), SoundCode.code(c.corrected))
+                || (novel && closeSpelling(c.heard, c.corrected)) else { return false }
         let words = c.corrected.split(separator: " ")
         guard !words.isEmpty,
               words.allSatisfy({ $0.contains { $0.isUppercase || $0.isNumber } }),
               !words.allSatisfy({ commonWords.contains($0.lowercased().trimmingCharacters(in: .punctuationCharacters)) })
         else { return false }
-        if fixed.hasPrefix(c.corrected) && words.count == 1 {
+        if !novel && fixed.hasPrefix(c.corrected) && words.count == 1 {
             let w = words[0]
             let innerCap = w.dropFirst().contains { $0.isUppercase || $0.isNumber }
             if !innerCap && w.lowercased().prefix(3) == c.heard.lowercased().prefix(3)
                 && SoundCode.editDistance(w.lowercased(), c.heard.lowercased()) <= 1 { return false }
         }
         return true
+    }
+
+    /// Every corrected word the user actually changed is not an ordinary
+    /// word ("Pype", "Dhruv", "Brite" — not "Mark", "Pipe"): not in
+    /// `commonWords` nor the dictionary (lowercase; a trailing 's ignored).
+    static func changedWordsAreNovel(_ c: EditDiff.Correction, isOrdinaryWord: (String) -> Bool) -> Bool {
+        let edge = CharacterSet(charactersIn: ".,!?;:\"“”‘()[]{}…")
+        let heard = Set(c.heard.lowercased().split(separator: " ").map { $0.trimmingCharacters(in: edge) })
+        let changed = c.corrected.split(separator: " ").map { $0.trimmingCharacters(in: edge) }
+            .filter { !$0.isEmpty && !heard.contains($0.lowercased()) }
+        return !changed.isEmpty && changed.allSatisfy { !isOrdinary($0, isOrdinaryWord) }
+    }
+
+    static func isOrdinary(_ word: String, _ isOrdinaryWord: (String) -> Bool) -> Bool {
+        var w = word.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
+        if w.hasSuffix("'s") { w.removeLast(2) }
+        return commonWords.contains(w) || isOrdinaryWord(w)
+    }
+
+    /// 1 letter off (2 for 7+ letters), same first letter: "Mehta" → "Mehra".
+    static func closeSpelling(_ a: String, _ b: String) -> Bool {
+        let x = String(a.lowercased().filter { $0.isLetter }), y = String(b.lowercased().filter { $0.isLetter })
+        guard x.count >= 3, y.count >= 3, x.first == y.first else { return false }
+        return SoundCode.editDistance(x, y) <= (max(x.count, y.count) >= 7 ? 2 : 1)
     }
 
     /// Common words and the homophones people fix for grammar, not

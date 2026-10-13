@@ -294,6 +294,18 @@ nonisolated enum EditDiff {
                 if SoundCode.editDistance(h, c) <= max(2, h.count / 3) { return true }
             }
         }
+        // A name that keeps the heard sounds and adds one at the end:
+        // "Drew" (TR) → "Dhruv" (TRF), how Parakeet writes the name for
+        // many voices. One word each, same first letter, the fix no shorter
+        // (a half-typed "Bri" for "bright" is not a lesson); short codes
+        // still never match one sound off anywhere else. Whether it is
+        // learned is RuleLearning's call (needs a confirmed term or the
+        // decision model) — this only stops it being dropped as a rewrite.
+        if heardWords == 1, correctedWords == 1, corrected.count >= heard.count,
+           let h0 = heard.lowercased().first, h0 == corrected.lowercased().first {
+            let hc = SoundCode.code(heard), cc = SoundCode.code(corrected)
+            if hc.count >= 2, cc.count == hc.count + 1, cc.hasPrefix(hc) { return true }
+        }
         return false
     }
 

@@ -22,6 +22,11 @@
 //  "I Nak S H I"; truncated "B-R-I-T-" (trailing hyphen = cut off). Spoken
 //  acronyms come back merged ("API", "USA", "SDK") — so a merged caps word
 //  counts as a spelling only right after a sound-alike word.
+//  Second probe (2026-10-12, Pype / Mehra / Dhruv, 5 voices): the final E
+//  is often dropped ("PYP", "p yp" for P Y P E), a vowelless chunk can end
+//  the letters ("pipe, p yp, not pipe"), a comma splits two spelled names
+//  ("D-H-R-U-V, M-E-H-R-A" → "Dhruv Mehra"), and spelled DHRUV can come
+//  back as the word "Dhruv," between commas — never a target itself.
 //
 //  Pure, Foundation-only: compiles standalone for the offline eval.
 //
@@ -148,6 +153,9 @@ nonisolated enum RedictationLearner {
         let first: Int, last: Int   // token indices
         let letters: String         // lowercased
         let merged: Bool            // one caps word ("DHRUV") — acronym-shaped
+        /// Letter offsets where a comma split the letters into words
+        /// ("D-H-R-U-V, M-E-H-R-A" → [5]); empty unless every piece has 2+.
+        var breaks: [Int] = []
     }
 
     /// Spelled-letter runs. Spaced/hyphenated: 2+ single letters, interior
@@ -162,6 +170,8 @@ nonisolated enum RedictationLearner {
             guard !t.hasDigit, t.isLetter || t.isCaps else { i += 1; continue }
             var j = i
             var members = [i]
+            var commaAt: [Int] = []      // member index where a comma came before it
+            var tailChunk = false        // ended on a vowelless chunk ("p yp")
             while j + 1 < toks.count {
                 let sep = gap(toks, j + 1, in: text).trimmingCharacters(in: .whitespaces)
                 guard sep.isEmpty || sep == "-" || sep == "," else { break }
@@ -171,6 +181,7 @@ nonisolated enum RedictationLearner {
                 // trailing caps word ("S H R E Y A, CEO of …").
                 if sep == "," && !(n.isLetter && toks[j].isLetter) { break }
                 if n.isLetter || n.isCaps {
+                    if sep == "," { commaAt.append(members.count) }
                     members.append(j + 1); j += 1; continue
                 }
                 // A short chunk ("Nak") only between letters, never across a comma.
@@ -181,6 +192,16 @@ nonisolated enum RedictationLearner {
                         members.append(j + 1); j += 1; continue
                     }
                 }
+                // A vowelless chunk closing the letters ("pipe, p yp, not
+                // pipe" — Parakeet, 2026-10-12): no English word, so the
+                // tail of the spelling, when punctuation or the end follows.
+                if sep != ",", toks[j].isLetter, n.text.count <= 3,
+                   n.text.allSatisfy({ $0.isLetter && !"aeiouAEIOU".contains($0) }) {
+                    let after = j + 2 < toks.count ? gap(toks, j + 2, in: text) : text[toks[j + 1].range.upperBound...]
+                    if after.isEmpty || after.contains(where: { ",.;:!?".contains($0) }) {
+                        members.append(j + 1); j += 1; tailChunk = true
+                    }
+                }
                 break
             }
             let singles = members.filter { toks[$0].isLetter }.count
@@ -188,8 +209,18 @@ nonisolated enum RedictationLearner {
             let after = text[toks[members.last!].range.upperBound...]
             let truncated = after.hasPrefix("-")
             if !truncated, letters.count >= minLetters {
-                if singles >= 2 {
-                    out.append(Run(first: members.first!, last: members.last!, letters: letters, merged: false))
+                if singles >= 2 || (singles >= 1 && tailChunk) {
+                    // Word breaks at commas, only if every piece is a word.
+                    var offsets: [Int] = [], count = 0
+                    for (k, m) in members.enumerated() {
+                        if commaAt.contains(k) { offsets.append(count) }
+                        count += toks[m].text.count
+                    }
+                    let edges = [0] + offsets + [letters.count]
+                    let pieces = zip(edges, edges.dropFirst()).map { $1 - $0 }
+                    var run = Run(first: members.first!, last: members.last!, letters: letters, merged: false)
+                    if !offsets.isEmpty, pieces.allSatisfy({ $0 >= 2 }) { run.breaks = offsets }
+                    out.append(run)
                 } else if members.count == 1, toks[i].isCaps {
                     out.append(Run(first: i, last: i, letters: letters, merged: true))
                 }
@@ -282,8 +313,12 @@ nonisolated enum RedictationLearner {
             let w = toks[end - 1]
             let sentenceStart = end - 1 == 0
                 || gap(toks, end - 1, in: text).contains(where: { ".!?".contains($0) })
+            // Not a word that is itself an aside ("Drew Meira, Dhruv, M E H
+            // R A": Parakeet wrote the spelled DHRUV as "Dhruv") — pairing
+            // it with the next letters taught Dhruv → Mehra (2026-10-12).
+            let aside = gap(toks, end - 1, in: text).contains(",")
             if run.letters.count >= 4, !w.hasDigit, w.text.first!.isUppercase, !sentenceStart,
-               w.text.count >= 3, !w.isCaps {
+               w.text.count >= 3, !w.isCaps, !aside {
                 spanLo = end - 1; adjacentFallback = true
             }
         }
@@ -306,7 +341,7 @@ nonisolated enum RedictationLearner {
 
         let spanRange = toks[lo].range.lowerBound..<toks[spanHi - 1].range.upperBound
         let span = String(text[spanRange])
-        let corrected = spelledForm(letters: run.letters, heard: span)
+        let corrected = spelledForm(letters: run.letters, heard: span, breaks: run.breaks)
 
         // Delete from the end of the word before the cue/run through the run,
         // plus the comma closing a ", L E T T E R S," aside.
@@ -333,7 +368,11 @@ nonisolated enum RedictationLearner {
     /// letters don't cover (or also end with) is kept as written; otherwise
     /// the letters are the whole word ("in akshi" → "Inakshi",
     /// "super base" → "Supabase").
-    static func spelledForm(letters: String, heard: String) -> String {
+    /// `breaks` (comma-separated spelling, "D-H-R-U-V, M-E-H-R-A") splits
+    /// the letters into words: "Dhruv Mehra". A trailing silent E Parakeet
+    /// dropped from the letters ("pipe" + "P Y P" → "Pype", not "Pyp") is
+    /// restored when the heard word differs from letters+e by one vowel.
+    static func spelledForm(letters: String, heard: String, breaks: [Int] = []) -> String {
         let words = heard.split(separator: " ").map(String.init)
         let acronym: (String) -> Bool = { w in w.count >= 2 && w.allSatisfy { $0.isLetter && $0.isUppercase } }
         if words.count > 1, acronym(words.last!) {
@@ -352,6 +391,16 @@ nonisolated enum RedictationLearner {
                !letters.hasSuffix(lettersOnly(words.last!)) {
                 return ([capitalized(letters)] + [words.last!]).joined(separator: " ")
             }
+        }
+        if !breaks.isEmpty, breaks.allSatisfy({ $0 > 0 && $0 < letters.count }) {
+            let edges = [0] + breaks + [letters.count]
+            let chars = Array(letters)
+            return zip(edges, edges.dropFirst()).map { capitalized(String(chars[$0..<$1])) }.joined(separator: " ")
+        }
+        let h = lettersOnly(heard)
+        if words.count == 1, h.hasSuffix("e"), !letters.hasSuffix("e"), h.count == letters.count + 1,
+           SoundCode.editDistance(letters + "e", h) <= 1 {
+            return capitalized(letters + "e")
         }
         return capitalized(letters)
     }
@@ -380,7 +429,7 @@ nonisolated enum RedictationLearner {
         if run.merged && !others.contains(where: { ["spelled", "spelt", "spelling"].contains(toks[$0].lower) }) { return nil }
         guard let hit = bestWindow(in: previous, matching: { spellingDistance(letters: run.letters, span: $0, loose: false) })
         else { return nil }
-        let corrected = spelledForm(letters: run.letters, heard: hit.span)
+        let corrected = spelledForm(letters: run.letters, heard: hit.span, breaks: run.breaks)
         guard CandidateFinder.normalize(hit.span) != CandidateFinder.normalize(corrected) else { return nil }
         return LearnedPair(heard: hit.span, corrected: corrected, kind: .spelled, strength: 0.9,
                            sentence: CandidateFinder.sentence(containing: hit.range, in: previous))

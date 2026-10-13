@@ -395,6 +395,28 @@ func timelines() -> [Timeline] {
     tl("52 typo fix recieve->receive (not a name)") {
         $0.dictate("Did you", at: 0).type(" recieve it", at: 2).fix("recieve", "receive", at: 6, real: false)
     }
+    // The founder's names (2026-10-12): Pype, Dhruv, Mehra.
+    tl("53 pipe->Pype") { $0.dictate("I work at pipe and we are hiring.", at: 0).fix("pipe", "Pype", at: 5) }
+    tl("54 two names in one edit") {
+        $0.dictate("this is druv mera from the sales team", at: 0).fix("druv mera", "Dhruv Mehra", at: 6)
+    }
+    tl("55 Mehta->Mehra (short codes differ)") {
+        $0.dictate("My surname is Mehta, not Sharma.", at: 0).fix("Mehta", "Mehra", at: 5)
+    }
+    tl("56 Mehta->Mehra at sentence start") { $0.dictate("Mehta is my surname.", at: 0).fix("Mehta", "Mehra", at: 5) }
+    tl("57 possessive druv's->Dhruv's") {
+        $0.dictate("Please forward it to druv's inbox today.", at: 0).fix("druv's", "Dhruv's", at: 5)
+    }
+    tl("58 Meyra->Mehra") { $0.dictate("Mr Meyra will join the call.", at: 0).fix("Meyra", "Mehra", at: 4) }
+    tl("59 pipe->pipes (not a name)") {
+        $0.dictate("the water pipe burst last night", at: 0).fix("pipe", "pipes", at: 4, real: false)
+    }
+    tl("60 Mark->Mike (different person)") {
+        $0.dictate("I met Mark yesterday.", at: 0).fix("Mark", "Mike", at: 4, real: false)
+    }
+    tl("61 Drew->Drawn (grammar)") {
+        $0.dictate("Drew a diagram of the flow.", at: 0).fix("Drew", "Drawn", at: 4, real: false)
+    }
     return all
 }
 
@@ -402,7 +424,12 @@ func timelines() -> [Timeline] {
 
 struct Score { var captured = 0, missed = 0, spurious = 0, reads = 0 }
 
-func score(_ tl: Timeline, _ emitted: [Emitted], keyless: Bool, keyed: Bool) -> (Score, [String]) {
+/// The app's gate since 2026-10-12: RuleLearning with the system dictionary.
+let ordinaryWords = RuleLearning.loadOrdinaryWords()
+enum Gate { case oracle, oldLocal, ruleKeyless, ruleKeyedDirect }
+
+func score(_ tl: Timeline, _ emitted: [Emitted], keyless: Bool, keyed: Bool, gate: Gate? = nil) -> (Score, [String]) {
+    let gate = gate ?? (keyed ? .oracle : .oldLocal)
     var s = Score()
     var notes: [String] = []
     // Unique real pairs: the same pair twice is one lesson.
@@ -412,11 +439,21 @@ func score(_ tl: Timeline, _ emitted: [Emitted], keyless: Bool, keyed: Bool) -> 
     for e in emitted {
         let k = e.heard.lowercased() + "→" + e.corrected
         let pass: Bool
-        if keyed {
+        let c = EditDiff.Correction(heard: e.heard, corrected: e.corrected)
+        switch gate {
+        case .oracle:
             pass = real[k] != nil            // decision model as an ideal oracle
             if real[k] == nil { s.spurious += 1; notes.append("diff-spurious \(k)") }
-        } else {
-            pass = CorrectionWatchPolicy.passesLocalGate(EditDiff.Correction(heard: e.heard, corrected: e.corrected), fixed: e.fixed)
+        case .oldLocal:
+            pass = CorrectionWatchPolicy.passesLocalGate(c, fixed: e.fixed)
+            if pass && real[k] == nil { s.spurious += 1; notes.append("SPURIOUS card \(k)") }
+        case .ruleKeyless, .ruleKeyedDirect:
+            // ruleKeyedDirect: cards made WITHOUT asking the model (the
+            // rest go to it); spurious = wrong cards the model never saw.
+            let p = RuleLearning.propose(c, fixed: e.fixed, source: .keyboard, existing: [],
+                                         hasKey: gate == .ruleKeyedDirect,
+                                         isOrdinaryWord: { ordinaryWords.contains($0) })
+            pass = p.gate == .learnDirect
             if pass && real[k] == nil { s.spurious += 1; notes.append("SPURIOUS card \(k)") }
         }
         if pass && real[k] != nil { got.insert(k) }
@@ -484,6 +521,7 @@ if let i = CommandLine.arguments.firstIndex(of: "-trace"), i + 1 < CommandLine.a
     _ = run(tl, &w)
     exit(0)
 }
+let gateFor: [String: Gate] = ["new  keyless poll+AX dict": .ruleKeyless, "new  key    poll+AX direct": .ruleKeyedDirect]
 let modes: [(String, Bool, () -> any Watcher)] = [
     ("old  key    ", false, { OldWatcher(keyless: false) }),
     ("new  key    poll", false, { NewWatcher(ax: false) }),
@@ -494,6 +532,8 @@ let modes: [(String, Bool, () -> any Watcher)] = [
     ("new  key poll+AX max3", false, {
         var c = CorrectionWatchPolicy.Config(); c.maxWatched = 3
         return NewWatcher(ax: true, policy: CorrectionWatchPolicy(config: c)) }),
+    ("new  keyless poll+AX dict", true, { NewWatcher(ax: true) }),
+    ("new  key    poll+AX direct", false, { NewWatcher(ax: true) }),
 ]
 let verbose = CommandLine.arguments.contains("-v")
 var totals: [String: Score] = [:]
@@ -506,7 +546,7 @@ for (label, keyless, make) in modes {
         if var o = w as? OldWatcher { emitted = run(tl, &o); w = o }
         else if var n = w as? NewWatcher { emitted = run(tl, &n); w = n }
         else { fatalError() }
-        var (s, notes) = score(tl, emitted, keyless: keyless, keyed: !keyless)
+        var (s, notes) = score(tl, emitted, keyless: keyless, keyed: !keyless, gate: gateFor[label])
         s.reads = w.reads
         t.captured += s.captured; t.missed += s.missed; t.spurious += s.spurious; t.reads += s.reads
         perTimeline[tl.name, default: [:]][label] = s.captured
@@ -516,14 +556,15 @@ for (label, keyless, make) in modes {
 }
 let realTotal = tls.reduce(0) { acc, tl in acc + Set(tl.fixes.filter(\.real).map { $0.heard.lowercased() + "→" + $0.corrected }).count }
 print("\n\(tls.count) timelines, \(realTotal) real name fixes, \(tls.flatMap(\.fixes).filter { !$0.real }.count) non-name edits")
-print("mode                    captured  missed  spurious  AX-reads(field reads, ×2 AX calls)")
+print("mode                        captured  missed  spurious  AX-reads(field reads, ×2 AX calls)")
 for (label, _, _) in modes {
     let t = totals[label]!
-    print(label.padding(toLength: 24, withPad: " ", startingAt: 0)
+    print(label.padding(toLength: 28, withPad: " ", startingAt: 0)
           + String(format: "%8d  %6d  %8d  %8d", t.captured, t.missed, t.spurious, t.reads))
 }
 print("(key modes: spurious = diff-level triggers sent to the decision model, which is scored as an ideal oracle;")
-print(" keyless modes: spurious = wrong Learned cards after the local gate)")
+print(" keyless modes: spurious = wrong Learned cards after the local gate;")
+print(" dict = RuleLearning keyless gate (app since 2026-10-12); key direct = cards made with a key WITHOUT asking the model)")
 
 // Gates.
 let oldK = totals["old  key    "]!, newK = totals["new  key    poll"]!, newKL = totals["new  keyless poll"]!
@@ -536,5 +577,9 @@ check(newAXKL.spurious == 0, "keyless poll+AX: zero wrong cards")
 check(newKL.spurious <= 1, "keyless poll-only: at most the known send-and-retype card")
 check(newKL.captured > 0, "keyless captures something")
 check(newK.spurious <= oldK.spurious + 2, "new: diff-level spurious not materially above old")
+let dictKL = totals["new  keyless poll+AX dict"]!, directK = totals["new  key    poll+AX direct"]!
+check(dictKL.spurious == 0, "keyless dict gate: zero wrong cards")
+check(dictKL.captured >= newAXKL.captured, "keyless dict gate captures at least the old gate")
+check(directK.spurious == 0, "keyed direct (no model): zero wrong cards")
 print(failures == 0 ? "\nWATCH-EVAL PASS" : "\nWATCH-EVAL FAIL (\(failures))")
 exit(failures == 0 ? 0 : 1)

@@ -11,7 +11,9 @@
 //    (RedictationLearner) — spelled-out letters, follow-up corrections,
 //    re-dictation — from the last few transcripts, kept in memory only.
 //  - cards: Keep/Undo (Learned; ignored = Keep), Yes/No (Did you mean;
-//    ignored = snoozed). Keep/Yes write a SpellingRule line to memory.md.
+//    ignored = snoozed). Keep/Yes write SpellingRule line(s) to memory.md.
+//    WHICH rules a correction teaches and whether it needs the decision
+//    model is RuleLearning (pure, shared with the offline evals).
 //  Spec: docs/superpowers/specs/2026-10-07-self-learning-vocabulary-design.md
 //
 
@@ -56,6 +58,29 @@ final class VocabularyLearning {
     }
     private var suggestionContext: [String: SuggestionContext] = [:]  // pairKey
     static let inPlaceFixWindow: TimeInterval = 20
+
+    /// Learned card pairKey → every rule its Keep writes (the card's own
+    /// pair plus per-word rules: "druv mera" → "Dhruv Mehra" also teaches
+    /// Dhruv ← druv and Mehra ← mera).
+    private var cardRules: [String: [SpellingRule]] = [:]
+    /// Learned cards not yet resolved survive a quit (they used to be lost
+    /// when the hourly limit or a recording held them back). Same data
+    /// memory.md gets on Keep; never logged.
+    static let pendingCardsKey = "vocabPendingLearnedCards"
+    private var restoredPending = false
+    private var cardRetry: DispatchWorkItem?
+
+    /// Lowercase system dictionary (/usr/share/dict/words) for the gate:
+    /// "is the corrected word an ordinary word?". Loaded once, off main.
+    nonisolated private static let ordinaryWordsLock = NSLock()
+    nonisolated(unsafe) private static var ordinaryWordsStore: Set<String>?
+    nonisolated static func ordinaryWords() -> Set<String> {
+        ordinaryWordsLock.lock(); defer { ordinaryWordsLock.unlock() }
+        if let w = ordinaryWordsStore { return w }
+        let w = RuleLearning.loadOrdinaryWords()
+        ordinaryWordsStore = w
+        return w
+    }
 
     var isEnabled: Bool {
         UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? true
@@ -183,6 +208,8 @@ final class VocabularyLearning {
 
     func didInsert(_ text: String, pid: pid_t) {
         guard isEnabled else { print("🧠 Learn: vocabulary learning is off — not watching"); return }
+        restorePendingCards()
+        DispatchQueue.global(qos: .utility).async { _ = Self.ordinaryWords() }
         if !pendingSuggestions.isEmpty, let field = AXText.focusedElement(pid: pid) {
             for card in pendingSuggestions {
                 suggestionContext[VocabularyCacheData.pairKey(heard: card.heard, term: card.term)] =
@@ -216,61 +243,88 @@ final class VocabularyLearning {
         guard !pairs.isEmpty else { return }
         print("🧠 Learn: \(pairs.count) spelled pair(s) from transcripts")
         for p in pairs {
-            considerPair(heard: p.heard, corrected: p.corrected, sentence: p.sentence, groundTruth: true, localGate: { true })
+            consider(EditDiff.Correction(heard: p.heard, corrected: p.corrected), sentence: p.sentence,
+                     fixed: p.sentence, source: .spelled)
         }
     }
 
     private func considerEdit(_ c: EditDiff.Correction, sentence: String, fixed: String) {
         guard isEnabled else { return }
-        considerPair(heard: c.heard, corrected: c.corrected, sentence: sentence, groundTruth: false,
-                     localGate: { CorrectionWatchPolicy.passesLocalGate(c, fixed: fixed) })
+        consider(c, sentence: sentence, fixed: fixed, source: .keyboard)
     }
 
-    /// groundTruth (the user spelled it out) → Keep/Undo card directly.
-    /// Otherwise the decision model must agree it's a spelling fix first;
-    /// with no key, `localGate` (unmistakable name fix) decides instead.
-    /// Either way nothing is learned until the card resolves.
-    private func considerPair(heard: String, corrected: String, sentence: String, groundTruth: Bool,
-                              localGate: () -> Bool) {
-        guard !VocabularyCache.shared.data.isBlocked(heard: heard, term: corrected, now: Date()) else {
-            print("🧠 Learn: pair was rejected/snoozed before — no card"); return
+    /// RuleLearning decides the rules and the gate; this only does I/O.
+    /// Nothing is learned until the Keep/Undo card resolves.
+    private func consider(_ c: EditDiff.Correction, sentence: String, fixed: String, source: RuleLearning.Source) {
+        let client = source == .keyboard ? client() : nil
+        let existing = SpellingRule.rules(from: MemoryStore.shared.memories)
+        // The first call loads the system dictionary (~60-300ms): off main.
+        DispatchQueue.global(qos: .userInitiated).async {
+            let words = Self.ordinaryWords()
+            let p = RuleLearning.propose(c, fixed: fixed, source: source, existing: existing,
+                                         hasKey: client != nil, isOrdinaryWord: { words.contains($0) })
+            DispatchQueue.main.async { self.act(on: p, source: source, sentence: sentence, client: client) }
         }
-        let known = SpellingRule.rules(from: MemoryStore.shared.memories).contains {
-            CandidateFinder.normalize($0.heardAs) == CandidateFinder.normalize(heard) && $0.term == corrected
-        }
-        guard !known else { print("🧠 Learn: already a confirmed rule — no card"); return }
-        if groundTruth {
-            queue.enqueue(VocabularyCard(kind: .learned, heard: heard, term: corrected))
-            showNextCard()
+    }
+
+    private func act(on p: RuleLearning.Proposal, source: RuleLearning.Source, sentence: String, client: DecisionClient?) {
+        print("🧠 Learn: \(source == .spelled ? "spelled" : "edit") → \(p.gate.rawValue) (\(p.reason)), \(p.rules.count) rule(s)")
+        switch p.gate {
+        case .reject:
             return
-        }
-        guard let client = client() else {
-            // No decision model: only an unmistakable name fix (sounds
-            // alike + capitalised + not a common word) becomes a card.
-            guard localGate() else { print("🧠 Learn: no key — local gate said not a name fix"); return }
-            print("🧠 Learn: no key — local gate passed")
-            queue.enqueue(VocabularyCard(kind: .learned, heard: heard, term: corrected))
-            showNextCard()
-            return
-        }
-        Task {
-            let q = DecisionQuestion.spellingFix(id: "q0", sentence: sentence, heard: heard, corrected: corrected)
-            let a = await client.ask(state: q.state, questions: [q], deadline: Self.backgroundDeadline)
-            guard let p = a?["q0"] else { print("🧠 Learn: decision engine gave no answer (timeout/error)"); return }
-            print("🧠 Learn: spelling-fix confidence \(String(format: "%.2f", p)) (needs ≥ \(VocabularyResolver.suggestThreshold))")
-            guard p >= VocabularyResolver.suggestThreshold else { return }
-            await MainActor.run {
-                self.queue.enqueue(VocabularyCard(kind: .learned, heard: heard, term: corrected))
-                self.showNextCard()
+        case .learnDirect:
+            enqueueLearned(p)
+        case .askDecisionModel:
+            guard let client else { return }
+            Task {
+                let q = DecisionQuestion.spellingFix(id: "q0", sentence: sentence,
+                                                     heard: p.card.heardAs, corrected: p.card.term)
+                let a = await client.ask(state: q.state, questions: [q], deadline: Self.backgroundDeadline)
+                let ans = a?["q0"]
+                let ok = RuleLearning.learns(p, decision: ans, threshold: VocabularyResolver.suggestThreshold)
+                if let ans {
+                    print("🧠 Learn: spelling-fix confidence \(String(format: "%.2f", ans)) (needs ≥ \(VocabularyResolver.suggestThreshold))")
+                } else {
+                    print("🧠 Learn: decision engine gave no answer — keyless gate \(ok ? "passed" : "failed")")
+                }
+                guard ok else { return }
+                await MainActor.run { self.enqueueLearned(p) }
             }
         }
+    }
+
+    /// One Learned card per correction; its Keep writes every rule.
+    private func enqueueLearned(_ p: RuleLearning.Proposal) {
+        let now = Date()
+        let card = VocabularyCard(kind: .learned, heard: p.card.heardAs, term: p.card.term)
+        guard !VocabularyCache.shared.data.isBlocked(heard: card.heard, term: card.term, now: now) else {
+            print("🧠 Learn: pair was rejected/snoozed before — no card"); return
+        }
+        // A per-word rule the user already turned down stays out.
+        let rules = p.rules.filter { !VocabularyCache.shared.data.isBlocked(heard: $0.heardAs, term: $0.term, now: now) }
+        guard !rules.isEmpty else { print("🧠 Learn: every rule was rejected before — no card"); return }
+        cardRules[VocabularyCacheData.pairKey(heard: card.heard, term: card.term)] = rules
+        queue.enqueue(card)
+        savePendingCards()
+        showNextCard()
     }
 
     // MARK: - Cards
 
     private func showNextCard() {
-        guard let card = queue.next(now: Date(), isRecording: TranscriptionCoordinator.shared.isRecording) else {
-            if !queue.pending.isEmpty { print("🧠 Cards: \(queue.pending.count) waiting (one showing, recording, or hourly limit)") }
+        cardRetry?.cancel(); cardRetry = nil
+        let now = Date()
+        let recording = TranscriptionCoordinator.shared.isRecording
+        guard let card = queue.next(now: now, isRecording: recording) else {
+            guard !queue.pending.isEmpty, queue.showing == nil else { return }
+            // Held back by a recording or the hourly limit: try again then,
+            // instead of waiting for the next dictation to come along.
+            let oldest = queue.shownAt.filter { now.timeIntervalSince($0) < 3600 }.min()
+            let delay = recording ? 3 : max(1, (oldest?.addingTimeInterval(3600).timeIntervalSince(now) ?? 1) + 1)
+            print("🧠 Cards: \(queue.pending.count) waiting (\(recording ? "recording" : "hourly limit")) — retry in \(Int(delay))s")
+            let work = DispatchWorkItem { [weak self] in self?.showNextCard() }
+            cardRetry = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
             return
         }
         print("🧠 Cards: showing \(card.kind == .learned ? "Learned" : "Did you mean") card")
@@ -283,11 +337,18 @@ final class VocabularyLearning {
         queue.dismissed()
         let rule = SpellingRule(term: card.term, heardAs: card.heard)
         let key = VocabularyCacheData.pairKey(heard: card.heard, term: card.term)
-        defer { suggestionContext[key] = nil }
+        let rules = card.kind == .learned ? (cardRules[key] ?? [rule]) : [rule]
+        defer {
+            suggestionContext[key] = nil
+            if card.kind == .learned { cardRules[key] = nil; savePendingCards() }
+        }
         switch (card.kind, choice) {
         case (.learned, .primary), (.learned, .ignored):
-            MemoryStore.shared.addMemory(rule.memoryLine)
-        case (.learned, .secondary), (.didYouMean, .secondary):
+            for r in rules { MemoryStore.shared.addMemory(r.memoryLine) }
+            print("🧠 Cards: kept — \(rules.count) rule(s) written")
+        case (.learned, .secondary):
+            VocabularyCache.shared.update { c in for r in rules { c.reject(heard: r.heardAs, term: r.term) } }
+        case (.didYouMean, .secondary):
             VocabularyCache.shared.update { $0.reject(heard: card.heard, term: card.term) }
         case (.didYouMean, .primary):
             MemoryStore.shared.addMemory(rule.memoryLine)
@@ -303,5 +364,36 @@ final class VocabularyLearning {
             VocabularyCache.shared.update { $0.snooze(heard: card.heard, term: card.term, now: Date()) }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.showNextCard() }
+    }
+
+    // MARK: - Pending Learned cards (survive quit)
+
+    private func savePendingCards() {
+        var list: [[String]] = []
+        for card in ([queue.showing].compactMap { $0 } + queue.pending) where card.kind == .learned {
+            let key = VocabularyCacheData.pairKey(heard: card.heard, term: card.term)
+            let rules = cardRules[key] ?? [SpellingRule(term: card.term, heardAs: card.heard)]
+            list.append([card.heard, card.term] + rules.flatMap { [$0.heardAs, $0.term] })
+        }
+        UserDefaults.standard.set(list, forKey: Self.pendingCardsKey)
+    }
+
+    private func restorePendingCards() {
+        guard !restoredPending else { return }
+        restoredPending = true
+        guard let list = UserDefaults.standard.array(forKey: Self.pendingCardsKey) as? [[String]], !list.isEmpty else { return }
+        let existing = SpellingRule.rules(from: MemoryStore.shared.memories)
+        var restored = 0
+        for e in list where e.count >= 4 && e.count % 2 == 0 {
+            let card = VocabularyCard(kind: .learned, heard: e[0], term: e[1])
+            let rules = stride(from: 2, to: e.count, by: 2).map { SpellingRule(term: e[$0 + 1], heardAs: e[$0]) }
+                .filter { !RuleLearning.isKnown(heard: $0.heardAs, term: $0.term, in: existing) }
+            guard !rules.isEmpty else { continue }
+            cardRules[VocabularyCacheData.pairKey(heard: card.heard, term: card.term)] = rules
+            queue.enqueue(card)
+            restored += 1
+        }
+        print("🧠 Cards: restored \(restored) unresolved Learned card(s) from last run")
+        savePendingCards()
     }
 }
