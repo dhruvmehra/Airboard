@@ -1,0 +1,72 @@
+# role|id|flags|prev|text
+# {Name} marks a name slot (expected term = the braces' content minus a
+# trailing 's). flags: acc = founder acceptance sentence. prev = id of the
+# dictation this one follows (spelled follow-ups).
+learn_keyboard|lk_pype|||I work at {Pype} now.
+learn_keyboard|lk_dhruv|||My name is {Dhruv}.
+learn_keyboard|lk_mehra|||My surname is {Mehra}.
+learn_keyboard|lk_full|||This is {Dhruv} {Mehra} from {Pype}.
+learn_keyboard|lk_poss|||{Dhruv's} laptop is here.
+learn_spelled|ls_pype|||The company is {Pype}, P Y P E.
+learn_spelled|ls_dhruv|||My name is {Dhruv}, D H R U V.
+learn_spelled|ls_mehra|||{Mehra}, M E H R A.
+learn_spelled|ls_mehra_f1|||My surname is {Mehra}.
+learn_spelled|ls_mehra_f2||ls_mehra_f1|That's spelled M E H R A.
+apply_pos|ap01|acc||I work at {Pype}.
+apply_pos|ap02|||{Pype} is hiring engineers this month.
+apply_pos|ap03|||Send the invoice to {Pype} by Friday.
+apply_pos|ap04|||{Pype's} new office is in Bangalore.
+apply_pos|ap05|||Have you tried {Pype} AI yet?
+apply_pos|ap06|||{Pype} AI ships voice agents.
+apply_pos|ap07|acc||This is {Dhruv} {Mehra}.
+apply_pos|ap08|||My name is {Dhruv} {Mehra}.
+apply_pos|ap09|||{Dhruv} {Mehra} founded {Pype}.
+apply_pos|ap10|||Email {Dhruv} about the launch.
+apply_pos|ap11|||Call {Dhruv} tomorrow morning.
+apply_pos|ap12|||{Dhruv} will review the pull request.
+apply_pos|ap13|||Thanks {Dhruv}, see you soon.
+apply_pos|ap14|||Is {Dhruv's} laptop charged?
+apply_pos|ap15|||Please ask {Mehra} to sign the contract.
+apply_pos|ap16|||Mister {Mehra} joined the call late.
+apply_pos|ap17|||The {Mehra} family is visiting.
+apply_pos|ap18|||Regards, {Dhruv} {Mehra}, {Pype}.
+apply_pos|ap19|||{Dhruv} works at {Pype}.
+apply_pos|ap20|||I spoke to {Dhruv} {Mehra} from {Pype} today.
+apply_pos|ap21|||Message {Dhruv} on Slack.
+apply_pos|ap22|||Book a meeting with {Dhruv} and the {Pype} team.
+apply_pos|ap23|||The {Pype} dashboard is down again.
+apply_pos|ap24|||Who is {Dhruv}?
+apply_pos|ap25|||We met {Dhruv} at the {Pype} booth.
+apply_pos|ap26|||Main {Dhruv} {Mehra} hoon.
+apply_pos|ap27|||Yeh {Dhruv} {Mehra} ka laptop hai.
+apply_pos|ap28|||{Dhruv}, mera phone kahan hai?
+apply_pos|ap29|||Tell {Pype} the water pipe burst.
+apply_pos|ap30|||Forward this to {Dhruv} at {Pype}.
+apply_pos|ap31|||Our CEO {Dhruv} {Mehra} says hello.
+apply_pos|ap32|||email {Dhruv}
+apply_pos|ap33|||{Dhruv} {Mehra}
+apply_pos|ap34|||Open {Pype}.
+apply_neg|an01|acc||The water pipe burst last night.
+apply_neg|an02|||Type the password again.
+apply_neg|an03|||Pipe the output to grep.
+apply_neg|an04|acc||Walk through the door.
+apply_neg|an05|||He drew a map of the city.
+apply_neg|an06|||I drove home after work.
+apply_neg|an07|||Ask Mister Mehta about the invoice.
+apply_neg|an08|acc||Mera naam Rahul hai.
+apply_neg|an09|||Yeh mera laptop hai.
+apply_neg|an10|||What type of file is this?
+apply_neg|an11|||The pipeline failed overnight.
+apply_neg|an12|||We drove through the tunnel.
+apply_neg|an13|||Drew is coming to the party.
+apply_neg|an14|||Please type your name here.
+apply_neg|an15|||He smoked a pipe on the porch.
+apply_neg|an16|||Go through the checklist first.
+apply_neg|an17|||The kitchen pipe is leaking.
+apply_neg|an18|||Mera ghar Delhi mein hai.
+apply_neg|an19|||Can you check the drive folder?
+apply_neg|an20|||Read through the document.
+apply_neg|an21|||This type of error is common.
+apply_neg|an22|||Mehta and Sons sent the bill.
+apply_neg|an23|||She drew the curtains.
+apply_neg|an24|||Mera dost aa raha hai.
