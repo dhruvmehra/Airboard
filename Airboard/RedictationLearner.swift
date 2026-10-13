@@ -27,8 +27,13 @@
 //  the letters ("pipe, p yp, not pipe"), a comma splits two spelled names
 //  ("D-H-R-U-V, M-E-H-R-A" → "Dhruv Mehra"), and spelled DHRUV can come
 //  back as the word "Dhruv," between commas — never a target itself.
+//  Third probe (2026-10-13): the target need not sound like the letters
+//  ("My son name is Mana." → "That's spelled M-E-H-R-A."): with no
+//  sound-alike span, the ONE name in the sentence(s) before the letters
+//  is the target (nameTarget) — none or two = nothing learned.
 //
-//  Pure, Foundation-only: compiles standalone for the offline eval.
+//  Pure, Foundation-only (+ SoundCode, CandidateFinder, VocabularyResolver's
+//  word list): compiles standalone for the offline eval.
 //
 
 import Foundation
@@ -292,7 +297,7 @@ nonisolated enum RedictationLearner {
         if gapBefore.contains("!") || gapBefore.contains("?") { return nil }
 
         // Adjacent windows: 1…3 words ending right before the cue/run.
-        var best: (lo: Int, d: Int)?
+        var best: (lo: Int, hi: Int, d: Int)?
         let end = cueStart   // exclusive
         for w in 1...maxWords where end - w >= 0 {
             let lo = end - w
@@ -300,12 +305,21 @@ nonisolated enum RedictationLearner {
             if w > 1, (lo + 1..<end).contains(where: { gap(toks, $0, in: text).contains(where: { ",.!?;:".contains($0) }) }) { break }
             let span = String(text[toks[lo].range.lowerBound..<toks[end - 1].range.upperBound])
             if toks[lo..<end].contains(where: { $0.hasDigit }) { continue }
-            if let d = spellingDistance(letters: run.letters, span: span, loose: punct || hasCue),
-               best == nil || d < best!.d {
-                best = (lo, d)
+            guard let d = spellingDistance(letters: run.letters, span: span, loose: punct || hasCue) else { continue }
+            var hit = (lo: lo, hi: end, d: d)
+            // A trailing word the letters don't spell ("Mehra today, that's
+            // spelled M-E-H-R-A", "Mare tomorrow. That's spelled …" — real
+            // Parakeet 2026-10-13): the words before it are the target, the
+            // trailing word stays. Not an acronym ("bright AI" + B R I T E).
+            if w > 1, !toks[end - 1].isCaps {
+                let head = String(text[toks[lo].range.lowerBound..<toks[end - 2].range.upperBound])
+                if let dh = spellingDistance(letters: run.letters, span: head, loose: punct || hasCue), dh < d {
+                    hit = (lo, end - 1, dh)
+                }
             }
+            if best == nil || hit.d < best!.d { best = hit }
         }
-        var spanLo = best?.lo, spanHi = end
+        var spanLo = best?.lo, spanHi = best?.hi ?? end
         var adjacentFallback = false
         if spanLo == nil, !run.merged, punct || hasCue {
             // "Tell Chavon, S-I-O-B-H-A-N" — clearly spelled letters right
@@ -337,6 +351,13 @@ nonisolated enum RedictationLearner {
             }
             if let far { spanLo = far.lo; spanHi = far.hi }
         }
+        var nameFallback = false
+        if spanLo == nil, hasCue, !run.merged || run.letters.count >= 4,
+           let i = nameTarget(toks, before: end, in: text, letters: run.letters, sentences: 2) {
+            // "My son name is Mana. That's spelled M-E-H-R-A": the one name
+            // in this or the previous sentence.
+            spanLo = i; spanHi = i + 1; nameFallback = true
+        }
         guard let lo = spanLo else { return nil }
 
         let spanRange = toks[lo].range.lowerBound..<toks[spanHi - 1].range.upperBound
@@ -359,9 +380,50 @@ nonisolated enum RedictationLearner {
         if !sameSplit {
             let sentence = CandidateFinder.sentence(containing: spanRange, in: text)
             pair = LearnedPair(heard: span, corrected: corrected, kind: .spelled,
-                               strength: adjacentFallback ? directCardStrength : 0.95, sentence: sentence)
+                               strength: adjacentFallback || nameFallback ? directCardStrength : 0.95,
+                               sentence: sentence)
         }
         return InlineHit(spanRange: spanRange, replacement: replacement, deleteRange: deleteRange, pair: pair)
+    }
+
+    /// Spelled letters with no sound-alike span: the token they name — the
+    /// ONE capitalised word in the last `sentences` sentences before `end`
+    /// that is a name: no dictionary word (nor Hinglish), or a word whose
+    /// SoundCode is one edit from the letters' ("Mana" MN for M-E-H-R-A,
+    /// MR). Not a sentence-start dictionary word (its capital proves
+    /// nothing), not a word between commas (an aside: "Drew Meira, Dhruv,
+    /// M E H R A" — Parakeet's own spelled DHRUV), not a day/month/"I".
+    /// nil when none or more than one qualify.
+    static func nameTarget(_ toks: [Token], before end: Int, in text: String, letters: String,
+                           sentences: Int) -> Int? {
+        guard end > 0, letters.count >= 4 else { return nil }
+        var lo = end, breaks = 0
+        while lo > 0 {
+            if gap(toks, lo, in: text).contains(where: { ".!?".contains($0) }) && lo < end {
+                breaks += 1
+                if breaks >= sentences { break }
+            }
+            lo -= 1
+        }
+        let lc = SoundCode.code(letters)
+        var hits: [Int] = []
+        for i in lo..<end {
+            let t = toks[i]
+            guard !t.hasDigit, t.text.count >= 3, t.text.allSatisfy({ $0.isLetter }), isNameWord(t),
+                  lettersOnly(t.text) != letters else { continue }
+            let before = gap(toks, i, in: text), after = gap(toks, i + 1, in: text)
+            if before.contains(","), after.contains(",") { continue }
+            let sentenceStart = i == 0 || before.contains(where: { ".!?".contains($0) })
+            let l = t.lower
+            let dictionary = VocabularyResolver.WordList.isOrdinaryWord(l) || VocabularyResolver.isHindiWord(l)
+            let tc = SoundCode.code(t.text)
+            let soundNear = tc.count >= 2 && lc.count >= 2 && tc.first == lc.first
+                && SoundCode.editDistance(tc, lc) <= 1
+            if dictionary && (sentenceStart || !soundNear) { continue }
+            if !dictionary && sentenceStart && !soundNear && VocabularyResolver.WordList.isKnownName(l) { continue }
+            hits.append(i)
+        }
+        return hits.count == 1 ? hits[0] : nil
     }
 
     /// "brite" for heard "bright AI" → "Brite AI": a trailing acronym the
@@ -427,8 +489,16 @@ nonisolated enum RedictationLearner {
         else { return nil }
         // A lone caps word ("USA.") is an acronym, not a spelling — unless cued.
         if run.merged && !others.contains(where: { ["spelled", "spelt", "spelling"].contains(toks[$0].lower) }) { return nil }
-        guard let hit = bestWindow(in: previous, matching: { spellingDistance(letters: run.letters, span: $0, loose: false) })
-        else { return nil }
+        var target = bestWindow(in: previous, matching: { spellingDistance(letters: run.letters, span: $0, loose: false) })
+        if target == nil {
+            // Nothing sounds like the letters ("My son name is Mana." then
+            // "That's spelled M-E-H-R-A."): the one name in the last sentence.
+            let pt = tokens(previous)
+            if let i = nameTarget(pt, before: pt.count, in: previous, letters: run.letters, sentences: 1) {
+                target = (pt[i].text, pt[i].range, Int.max)
+            }
+        }
+        guard let hit = target else { return nil }
         let corrected = spelledForm(letters: run.letters, heard: hit.span, breaks: run.breaks)
         guard CandidateFinder.normalize(hit.span) != CandidateFinder.normalize(corrected) else { return nil }
         return LearnedPair(heard: hit.span, corrected: corrected, kind: .spelled, strength: 0.9,

@@ -5,6 +5,7 @@
 //  Format:
 //    "Brite AI" is the correct spelling — often heard as "bright AI".
 //  Every other memory line is NOT a rule and stays LLM-only.
+//  Term and heard differ — possibly only in case ("Pype" ← "pype").
 //  Foundation-only: compiles standalone for scratch tests.
 //
 
@@ -33,7 +34,11 @@ nonisolated struct SpellingRule: Equatable, Hashable {
               let h = Range(m.range(at: 2), in: normalized) else { return nil }
         let term = normalized[t].trimmingCharacters(in: .whitespaces)
         let heard = normalized[h].trimmingCharacters(in: .whitespaces)
-        guard !term.isEmpty, !heard.isEmpty, term.lowercased() != heard.lowercased() else { return nil }
+        // A case-only rule ("Pype" ← "pype": the user re-cased a name) is a
+        // rule too; only an identical pair teaches nothing. (Before
+        // 2026-10-12 case-only lines were dropped here — none were ever
+        // written, so older memory.md files read back exactly as before.)
+        guard !term.isEmpty, !heard.isEmpty, term != heard else { return nil }
         return SpellingRule(term: term, heardAs: heard)
     }
 

@@ -1,0 +1,8 @@
+[
+  {"cat": "learn-unlike", "before": "I work at Python.", "inserted": "I work at Python.", "after": "I work at Pype now.", "expected": [{"heard": "Python", "corrected": "Pype"}]},
+  {"cat": "learn-unlike", "before": "This is Dhruv Mehra from Fight.", "inserted": "This is Dhruv Mehra from Fight.", "after": "This is Dhruv Mehra from Pype.", "expected": [{"heard": "Fight", "corrected": "Pype"}]},
+  {"cat": "learn-unlike", "before": "This is Druv from Fight.", "inserted": "This is Druv from Fight.", "after": "This is Dhruv from Pype.", "expected": [{"heard": "Druv", "corrected": "Dhruv"}, {"heard": "Fight", "corrected": "Pype"}]},
+  {"cat": "learn-unlike", "before": "I work at type.", "inserted": "I work at type.", "after": "I work at Pype.", "expected": [{"heard": "type", "corrected": "Pype"}]},
+  {"cat": "learn-recase", "before": "I work at pype now.", "inserted": "I work at pype now.", "after": "I work at Pype now.", "expected": [{"heard": "pype", "corrected": "Pype"}]},
+  {"cat": "learn-recase", "before": "Ask dhruv to call.", "inserted": "Ask dhruv to call.", "after": "Ask Dhruv to call.", "expected": [{"heard": "dhruv", "corrected": "Dhruv"}]}
+]

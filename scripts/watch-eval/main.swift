@@ -417,6 +417,37 @@ func timelines() -> [Timeline] {
     tl("61 Drew->Drawn (grammar)") {
         $0.dictate("Drew a diagram of the flow.", at: 0).fix("Drew", "Drawn", at: 4, real: false)
     }
+    // 2026-10-12 new-name path: a word fixed into a name that sounds unlike
+    // it (real Parakeet: Aman "I work at Python.", "…from Fight."), a
+    // re-cased name, and the content edits that must stay out.
+    tl("62 Python->Pype (unlike, new name)") {
+        $0.dictate("I work at Python and we are hiring.", at: 0).fix("Python", "Pype", at: 5)
+    }
+    tl("63 Fight->Pype at the end") {
+        $0.dictate("This is Dhruv Mehra from Fight.", at: 0).fix("Fight", "Pype", at: 6)
+    }
+    tl("64 Python->Pype, slow fixer pauses at Pyp") {
+        $0.dictate("I work at Python and we are hiring.", at: 0).fix("Python", "Pype", at: 5, pauseAfter: 3, pause: 2.5)
+    }
+    tl("65 two fixes, one unlike: Druv + Fight") {
+        $0.dictate("This is Druv from Fight.", at: 0).fix("Druv", "Dhruv", at: 4).fix("Fight", "Pype", at: 8)
+    }
+    tl("66 pype->Pype (re-cased name)") {
+        $0.dictate("I work at pype and we are hiring.", at: 0).fix("pype", "Pype", at: 5)
+    }
+    tl("67 Priya->Zoya (different person)") {
+        $0.dictate("Ask Priya to call me.", at: 0).fix("Priya", "Zoya", at: 4, real: false)
+    }
+    tl("68 him->Priya (content)") {
+        $0.dictate("I will call him later.", at: 0).fix("him", "Priya", at: 4, real: false)
+    }
+    tl("69 Mira->Meri (Hinglish grammar)") {
+        $0.dictate("Mira gaadi kahan hai", at: 0).fix("Mira", "Meri", at: 4, real: false)
+    }
+    tl("70 Monday->Pype inside a rewrite") {
+        $0.dictate("See you Monday at the office.", at: 0).fix("Monday", "Pype", at: 4, real: false)
+          .fix("office", "warehouse", at: 8, real: false)
+    }
     return all
 }
 
@@ -442,7 +473,14 @@ func score(_ tl: Timeline, _ emitted: [Emitted], keyless: Bool, keyed: Bool, gat
         let c = EditDiff.Correction(heard: e.heard, corrected: e.corrected)
         switch gate {
         case .oracle:
-            pass = real[k] != nil            // decision model as an ideal oracle
+            // What reaches the decision model (an ideal oracle) or a card:
+            // pairs RuleLearning rejects outright never leave the Mac
+            // (since 2026-10-12 — EditDiff's newNames path reports unlike
+            // swaps such as "Priya" → "Zoya" only for RuleLearning to judge).
+            let p = RuleLearning.propose(c, fixed: e.fixed, source: .keyboard, existing: [], hasKey: true,
+                                         isOrdinaryWord: { ordinaryWords.contains($0) })
+            if p.gate == .reject { continue }
+            pass = real[k] != nil
             if real[k] == nil { s.spurious += 1; notes.append("diff-spurious \(k)") }
         case .oldLocal:
             pass = CorrectionWatchPolicy.passesLocalGate(c, fixed: e.fixed)
@@ -537,9 +575,11 @@ let modes: [(String, Bool, () -> any Watcher)] = [
 ]
 let verbose = CommandLine.arguments.contains("-v")
 var totals: [String: Score] = [:]
+var legacyTotals: [String: Score] = [:]
 var perTimeline: [String: [String: Int]] = [:]
 for (label, keyless, make) in modes {
     var t = Score()
+    var legacy = Score()   // timelines 01–61 only (see the gate checks)
     for tl in tls {
         var w = make()
         let emitted: [Emitted]
@@ -549,10 +589,14 @@ for (label, keyless, make) in modes {
         var (s, notes) = score(tl, emitted, keyless: keyless, keyed: !keyless, gate: gateFor[label])
         s.reads = w.reads
         t.captured += s.captured; t.missed += s.missed; t.spurious += s.spurious; t.reads += s.reads
+        if let n = Int(tl.name.prefix(2)), n <= 61 {
+            legacy.captured += s.captured; legacy.missed += s.missed; legacy.spurious += s.spurious
+        }
         perTimeline[tl.name, default: [:]][label] = s.captured
         if verbose && !notes.isEmpty { print("  [\(label)] \(tl.name): \(notes.joined(separator: ", "))") }
     }
     totals[label] = t
+    legacyTotals[label] = legacy
 }
 let realTotal = tls.reduce(0) { acc, tl in acc + Set(tl.fixes.filter(\.real).map { $0.heard.lowercased() + "→" + $0.corrected }).count }
 print("\n\(tls.count) timelines, \(realTotal) real name fixes, \(tls.flatMap(\.fixes).filter { !$0.real }.count) non-name edits")
@@ -573,8 +617,12 @@ check(newK.captured > oldK.captured, "new (key) captures more than old")
 check(newAXK.captured >= newK.captured - 1, "poll+AX not worse than poll")
 // Shipped mode is poll+AX; poll-only (apps that post no AX changes) can't
 // see a chat field emptied-and-retyped between two polls (timeline 16).
-check(newAXKL.spurious == 0, "keyless poll+AX: zero wrong cards")
-check(newKL.spurious <= 1, "keyless poll-only: at most the known send-and-retype card")
+// The plain sound-only gate (no dictionary) has not shipped since
+// 2026-10-12; it is held to its old bar on its old timelines (01–61). It
+// passes "Mira" → "Meri" (69, Hinglish) — the shipped dict gate does not.
+let legAXKL = legacyTotals["new  keyless poll+AX"]!, legKL = legacyTotals["new  keyless poll"]!
+check(legAXKL.spurious == 0, "keyless poll+AX (sound-only gate, timelines 01-61): zero wrong cards")
+check(legKL.spurious <= 1, "keyless poll-only (sound-only gate, 01-61): at most the known send-and-retype card")
 check(newKL.captured > 0, "keyless captures something")
 check(newK.spurious <= oldK.spurious + 2, "new: diff-level spurious not materially above old")
 let dictKL = totals["new  keyless poll+AX dict"]!, directK = totals["new  key    poll+AX direct"]!

@@ -29,14 +29,24 @@ nonisolated enum EditDiff {
     static let maxAlignCells = 250_000
 
     /// First fix only — kept for callers that learn one lesson at a time.
-    static func correction(before: String, after: String, inserted: String) -> Correction? {
-        corrections(before: before, after: after, inserted: inserted).first
+    static func correction(before: String, after: String, inserted: String,
+                           newNames: Bool = false) -> Correction? {
+        corrections(before: before, after: after, inserted: inserted, newNames: newNames).first
     }
 
     /// - before: the field's full text right after our insertion
     /// - after:  the field's full text now
     /// - inserted: the text we inserted (must appear in `before`)
-    static func corrections(before: String, after: String, inserted: String) -> [Correction] {
+    /// - newNames: also report the two shapes only RuleLearning (which has
+    ///   the dictionary) can judge — the correction watcher sets it:
+    ///   * one word swapped for a capitalised word that does NOT sound like
+    ///     it ("Python" → "Pype", "Fight" → "Pype"), when it is the ONLY
+    ///     unexplained change in our text (every other changed stretch is a
+    ///     sound-alike fix; nothing else added or removed inside it);
+    ///   * one word re-cased into a name ("pype" → "Pype").
+    ///   RuleLearning.newNameGate decides whether either teaches a name.
+    static func corrections(before: String, after: String, inserted: String,
+                            newNames: Bool = false) -> [Correction] {
         guard before != after, !inserted.isEmpty,
               let ins = before.range(of: inserted, options: .backwards) else { return [] }
         let b = tokens(before), a = tokens(after)
@@ -47,17 +57,37 @@ nonisolated enum EditDiff {
 
         var found: [Correction] = []
         var fixedTokens = 0
-        for hunk in hunks where !hunk.b.isEmpty && !hunk.a.isEmpty {
+        var unexplained = 0                       // changed stretches inside our text with no fix
+        var swaps: [(Correction, Int)] = []       // unlike-sounding name swaps (newNames)
+        for hunk in hunks {
             // Words only added or only removed are content edits; a change
             // reaching outside our insertion is the user's own text.
+            if hunk.b.isEmpty || hunk.a.isEmpty {
+                // Added between two of our words, or one of ours removed.
+                let inside = hunk.b.isEmpty ? (hunk.b.lowerBound > insLo && hunk.b.lowerBound <= insHi)
+                    : (hunk.b.lowerBound >= insLo && hunk.b.upperBound - 1 <= insHi)
+                if inside { unexplained += 1 }
+                continue
+            }
             guard hunk.b.lowerBound >= insLo, hunk.b.upperBound - 1 <= insHi else { continue }
             for part in splitAtClauses(hunk, b, a) {
-                if let c = bestFix(part, b, a, atStart: part.b.lowerBound == insLo, atEnd: part.b.upperBound - 1 == insHi),
-                   !found.contains(c) {
-                    found.append(c)
-                    fixedTokens += part.b.count
+                let atStart = part.b.lowerBound == insLo, atEnd = part.b.upperBound - 1 == insHi
+                if let c = bestFix(part, b, a, atStart: atStart, atEnd: atEnd) {
+                    if !found.contains(c) { found.append(c); fixedTokens += part.b.count }
+                } else if newNames, let c = nameSwap(part, b, a, atEnd: atEnd) {
+                    swaps.append((c, part.b.count))
+                    unexplained += 1
+                } else {
+                    unexplained += 1
                 }
             }
+        }
+        // The lone unlike swap counts only when it is the one change the
+        // other fixes don't explain ("I work at Python." → "I work at Pype
+        // now."), never inside a rewrite ("Let us meet on Monday." → "Can we
+        // meet on Tuesday instead?").
+        if swaps.count == 1, unexplained == 1, let (c, n) = swaps.first, !found.contains(c) {
+            found.append(c); fixedTokens += n
         }
         guard !found.isEmpty, found.count <= maxCorrections else { return [] }
         // Most of the words the user didn't fix must still be there. A
@@ -222,6 +252,39 @@ nonisolated enum EditDiff {
 
     private static func hasAlnum(_ s: String) -> Bool { s.contains { $0.isLetter || $0.isNumber } }
 
+    /// `newNames` only: one of our words replaced by ONE capitalised word
+    /// the sound test rejected ("Python" → "Pype"), or the same word
+    /// re-cased into a name ("pype" → "Pype"). At the end of our text the
+    /// user may type on ("Python." → "Pype now."): the first new word is
+    /// the fix. Letters only on both sides (no URL, e-mail, number);
+    /// whether it is a NAME is RuleLearning's call (it has the dictionary).
+    private static func nameSwap(_ h: Hunk, _ b: [Token], _ a: [Token], atEnd: Bool) -> Correction? {
+        guard h.b.count == 1, h.a.count == 1 || (atEnd && h.a.count <= 2) else { return nil }
+        let heard = b[h.b.lowerBound].key, corrected = a[h.a.lowerBound].key
+        // Typed on: only a short trailing word ("now", "too"), never a new sentence.
+        if h.a.count == 2 {
+            let tail = a[h.a.lowerBound + 1].key.lowercased()
+            guard !a[h.a.lowerBound].endsClause, tail.count <= 4, tail.allSatisfy({ $0.isLetter }),
+                  commonWords.contains(tail) else { return nil }
+        }
+        func word(_ s: String) -> Bool { s.count >= 2 && s.allSatisfy { $0.isLetter || $0 == "'" || $0 == "’" } }
+        guard word(heard), word(corrected), corrected.count >= 3,
+              let f = corrected.first, f.isUppercase,
+              !commonWords.contains(corrected.lowercased()),
+              !isSuffixOnly(heard, corrected),
+              // Half-way through retyping ours ("bright" → "Bri"): not a lesson.
+              corrected.count >= heard.count || !heard.lowercased().hasPrefix(corrected.lowercased()) else { return nil }
+        return Correction(heard: heard, corrected: corrected)
+    }
+
+    /// "pipe" → "pipes", "Priya" → "Priya's": same word, new ending.
+    private static func isSuffixOnly(_ x: String, _ y: String) -> Bool {
+        let hl = x.lowercased().replacingOccurrences(of: "’", with: "'")
+        let cl = y.lowercased().replacingOccurrences(of: "’", with: "'")
+        let (short, long) = hl.count < cl.count ? (hl, cl) : (cl, hl)
+        return long.hasPrefix(short) && ["s", "es", "'s", "'"].contains(String(long.dropFirst(short.count)))
+    }
+
     private static func phrase(_ toks: ArraySlice<Token>) -> String {
         stripEdges(Substring(toks.map(\.raw).joined(separator: " ")))
     }
@@ -246,7 +309,24 @@ nonisolated enum EditDiff {
         "now", "well", "good", "great", "lose", "loose", "affect", "effect", "accept", "except",
         "weather", "whether", "know", "new", "knew", "right", "write", "see", "sea", "one", "won",
         "hear", "buy", "bye", "week", "weak", "lead", "led", "past", "passed",
+        // Hinglish function words (dictated by Indian users): "Mera" →
+        // "Meri" is grammar (mera/meri = my), never a name.
+        "mera", "meri", "mere", "tera", "teri", "tere", "hai", "hain", "kya", "nahi", "nahin", "aur",
+        "ka", "ki", "ke", "ko", "se", "ne", "mein", "bhi", "toh", "yeh", "woh",
     ]
+
+    /// The strict (sound-alike) test alone, for a pair already cut out:
+    /// what `corrections` reports without `newNames`.
+    static func isSoundFix(_ c: Correction) -> Bool {
+        isSpellingFix(heard: c.heard, corrected: c.corrected,
+                      heardWords: c.heard.split(separator: " ").count,
+                      correctedWords: c.corrected.split(separator: " ").count)
+    }
+
+    /// In the everyday-word list above (lowercase, ’ → ').
+    static func isCommonWord(_ w: String) -> Bool {
+        commonWords.contains(w.lowercased().replacingOccurrences(of: "’", with: "'"))
+    }
 
     private static func isSpellingFix(heard: String, corrected: String, heardWords: Int, correctedWords: Int) -> Bool {
         guard !heard.isEmpty, !corrected.isEmpty,

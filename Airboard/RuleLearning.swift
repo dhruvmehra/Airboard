@@ -43,11 +43,28 @@
 //    "Drew" → "Dhruv" once Dhruv is). Everything else → askDecisionModel;
 //    it learns at ≥ VocabularyResolver.suggestThreshold, and on NO answer
 //    (timeout/error) falls back to the keyless gate (`fallbackLearn`).
-//  - Never: a fix whose rules are all already confirmed (reason "known").
-//  Sound-unlike fixes of everyday words ("through" → "Dhruv") never get
-//  here — EditDiff rejects them as rewrites. That is deliberate: a rule
-//  "Dhruv" ← "through" would be a candidate in every "through the door",
-//  and nothing local can tell the two apart.
+//  - keyboard, key or not — "new-name" (2026-10-13): ONE word replaced by
+//    a capitalised name in no dictionary (not a word, not a dictionary
+//    proper noun, not Hinglish) that does NOT sound like it: "Python" →
+//    "Pype (now)", "Fight" → "Pype". EditDiff(newNames) reports it only
+//    when it is the one unexplained change in our text. Refused: a heard
+//    word that is itself a capitalised non-dictionary name (a rename:
+//    "Priya" → "Zoya"; "Mehta" → "Mehra" goes through the near-spelling
+//    gate), a pronoun or everyday function word ("him", "through"),
+//    anything not letters (URL, e-mail, number). The rule is
+//    term ← heard; heard sounds unlike the term, so the apply side uses it
+//    only with the decision model — what it teaches offline is the TERM.
+//  - keyboard re-case ("pype" → "Pype", "recase"): learned when the word is
+//    a confirmed term or a new name (as above); "the" → "The", "pipe" →
+//    "Pipe" never. Writes the case-only rule Pype ← pype.
+//  - Never: Hinglish words ("Mira" → "Meri", "hindi-word"); a dictionary
+//    word whose only capital is the sentence start ("Drove" → "Drive",
+//    keyless "sentence-start"); an unlike swap that is not a new name
+//    ("unlike" — never sent to the decision model); a fix whose rules are
+//    all already confirmed ("known").
+//  "through" → "Dhruv" stays unlearned: a rule "Dhruv" ← "through" would be
+//  a candidate in every "through the door", and nothing local can tell the
+//  two apart.
 //
 //  Rules (rules(for:)): possessives stripped ("druv's" → "Dhruv's" teaches
 //  Dhruv ← druv; ’ too), a multi-word fix whose words line up one-to-one
@@ -57,8 +74,8 @@
 //  rules already confirmed (same heard, same term ignoring case) dropped.
 //
 //  Pure, Foundation-only (+ SoundCode, EditDiff, SpellingRule,
-//  CandidateFinder.normalize, CorrectionWatchPolicy.commonWords). Never
-//  prints user text.
+//  CandidateFinder.normalize, CorrectionWatchPolicy.commonWords,
+//  VocabularyResolver.WordList/isHindiWord). Never prints user text.
 //
 
 import Foundation
@@ -85,15 +102,27 @@ nonisolated enum RuleLearning {
     static func propose(_ c: EditDiff.Correction, fixed: String, source: Source,
                         existing: [SpellingRule], hasKey: Bool,
                         isOrdinaryWord: (String) -> Bool) -> Proposal {
+        let c = trimTypedOn(c)
         let k = core(c)
         let card = SpellingRule(term: k.corrected, heardAs: k.heard)
         let new = rules(for: c, existing: existing, isOrdinaryWord: isOrdinaryWord)
         func make(_ g: Gate, _ why: String, fallback: Bool = false) -> Proposal {
             Proposal(card: card, rules: new, gate: g, reason: why, fallbackLearn: fallback)
         }
+        guard k.heard != k.corrected else { return make(.reject, "no-change") }
+        // Only re-cased ("pype" → "Pype"): a name the user owns, or a word
+        // no dictionary knows — never a sentence start ("the" → "The").
+        if k.heard.lowercased() == k.corrected.lowercased() {
+            guard !new.isEmpty else { return make(.reject, "known") }
+            let confirmed = existing.contains { $0.term == k.corrected }
+            return confirmed || isNewName(k.corrected, isOrdinaryWord: isOrdinaryWord)
+                ? make(.learnDirect, "recase") : make(.reject, "case-only")
+        }
         guard !new.isEmpty else { return make(.reject, "known") }
-        guard k.heard.lowercased() != k.corrected.lowercased() else { return make(.reject, "no-change") }
         guard !isSuffixChange(k.heard, k.corrected) else { return make(.reject, "suffix") }
+        // Hinglish words are not names, whatever their capital: "Mira" →
+        // "Meri" at a sentence start is mera → meri (my), grammar.
+        guard !changedWordsAreHindi(k) else { return make(.reject, "hindi-word") }
         if source == .spelled { return make(.learnDirect, "spelled") }
 
         if isConfirmedVariant(heard: k.heard, corrected: k.corrected, rules: existing) {
@@ -103,8 +132,24 @@ nonisolated enum RuleLearning {
            parts.allSatisfy({ isConfirmedVariant(heard: $0.heard, corrected: $0.corrected, rules: existing) }) {
             return make(.learnDirect, "confirmed-variant")
         }
-        let gate = keylessGate(k, fixed: fixed, isOrdinaryWord: isOrdinaryWord)
+        // A dictionary word whose only capital is the sentence start ("Drove
+        // to the office." → "Drive to …"): the capital proves nothing.
+        let startOnly = isSentenceStartWord(k, fixed: fixed, isOrdinaryWord: isOrdinaryWord)
+        let gate = !startOnly && keylessGate(k, fixed: fixed, isOrdinaryWord: isOrdinaryWord)
         let ext = !gate && isNameExtension(k, isOrdinaryWord: isOrdinaryWord)
+        // A word replaced by a name no dictionary knows, sound unlike
+        // ("Python" → "Pype"): the user typed it on purpose. Learned with or
+        // without a key — what it teaches is the TERM (later "pipe", "Pipe's"
+        // match it by sound); its heardAs stays exact-only and, sounding
+        // unlike its term, decision-model-only on the apply side.
+        if !gate && !ext && isNewNameSwap(k, isOrdinaryWord: isOrdinaryWord) {
+            return make(.learnDirect, "new-name")
+        }
+        // Reported only by EditDiff's newNames path (no sound-alike) and not
+        // a new name: a content edit ("Priya" → "Zoya", "him" → "Priya") —
+        // never worth a decision-model call.
+        if !EditDiff.isSoundFix(c) { return make(.reject, "unlike") }
+        if startOnly && !hasKey { return make(.reject, "sentence-start") }
         if hasKey {
             if gate && changedWordsAreNovel(k, isOrdinaryWord: isOrdinaryWord) {
                 return make(.learnDirect, "name-fix")
@@ -113,6 +158,81 @@ nonisolated enum RuleLearning {
         }
         if gate { return make(.learnDirect, "keyless-gate") }
         return ext ? make(.learnDirect, "name-extension") : make(.reject, "keyless-gate")
+    }
+
+    // MARK: - New names (unlike-sounding or re-cased)
+
+    /// A name the user introduces: one word, letters only, 3+ letters,
+    /// capitalised, and in no dictionary — not as a word ("Pipe", "Mark"),
+    /// not as a proper noun ("Tuesday", "Mira"), not Hinglish ("Meri").
+    static func isNewName(_ w: String, isOrdinaryWord: (String) -> Bool) -> Bool {
+        guard w.count >= 3, w.allSatisfy({ $0.isLetter }), let f = w.first, f.isUppercase,
+              w.contains(where: { $0.isLowercase }) else { return false }
+        return !isOrdinary(w, isOrdinaryWord) && !VocabularyResolver.WordList.isKnownName(w)
+            && !VocabularyResolver.isHindiWord(w)
+    }
+
+    /// Words that a misheard name never comes out as: replacing one is
+    /// a content edit ("call him" → "call Priya").
+    static let pronouns: Set<String> = [
+        "i", "me", "you", "he", "him", "she", "her", "it", "we", "us", "they", "them", "this", "that",
+        "someone", "somebody", "everyone", "everybody", "anyone", "anybody", "nobody", "my", "your",
+        "his", "its", "our", "their", "here", "there",
+    ]
+
+    /// The gate for a sound-UNLIKE fix (key or not): one word → a new name
+    /// (isNewName). Refused: a heard word that is itself a capitalised
+    /// non-dictionary name — a rename ("Mehta" → "Mehra" learns only through
+    /// the near-spelling gate; "Monday" → "Tuesday", "Priya" → "Zoya" not at
+    /// all); a pronoun ("him" → "Priya") or everyday function word
+    /// ("through"); anything but letters (URL, e-mail, number). EditDiff
+    /// (newNames) has already checked it was the only unexplained change in
+    /// our text — not a rewrite.
+    static func isNewNameSwap(_ c: EditDiff.Correction, isOrdinaryWord: (String) -> Bool) -> Bool {
+        let h = c.heard, w = c.corrected
+        guard !h.contains(" "), !w.contains(" "), h.count >= 2, h.allSatisfy({ $0.isLetter }),
+              isNewName(w, isOrdinaryWord: isOrdinaryWord),
+              !pronouns.contains(h.lowercased()),
+              // An everyday function word ("walk through the door" → "walk
+              // Dhruv the door") is a content edit as often as a mishearing,
+              // and a rule heard as "through" would be a candidate in every
+              // "through the door". Not learned (as before 2026-10-12).
+              !CorrectionWatchPolicy.commonWords.contains(h.lowercased()),
+              !EditDiff.isCommonWord(h) else { return false }
+        if let f = h.first, f.isUppercase,
+           !isOrdinary(h, isOrdinaryWord) || VocabularyResolver.WordList.isKnownName(h) { return false }
+        return true
+    }
+
+    /// One dictionary word fixed into another dictionary word whose capital
+    /// comes only from standing first in a sentence of `fixed`.
+    static func isSentenceStartWord(_ c: EditDiff.Correction, fixed: String,
+                                    isOrdinaryWord: (String) -> Bool) -> Bool {
+        let w = c.corrected
+        guard !w.contains(" "), !w.dropFirst().contains(where: { $0.isUppercase || $0.isNumber }),
+              isOrdinary(w, isOrdinaryWord) else { return false }
+        let f = fixed.trimmingCharacters(in: .whitespaces)
+        if f.hasPrefix(w) { return true }
+        return [". ", "! ", "? ", "\n"].contains { f.contains($0 + w) }
+    }
+
+    /// "Python" → "Pype now": the user typed on after fixing our last word.
+    /// One heard word, the fix plus one short common word → just the fix.
+    static func trimTypedOn(_ c: EditDiff.Correction) -> EditDiff.Correction {
+        let cw = c.corrected.split(separator: " ").map(String.init)
+        guard !c.heard.contains(" "), cw.count == 2,
+              CorrectionWatchPolicy.commonWords.contains(trimEdges(cw[1]).lowercased()),
+              !CorrectionWatchPolicy.commonWords.contains(trimEdges(cw[0]).lowercased()) else { return c }
+        return EditDiff.Correction(heard: c.heard, corrected: trimEdges(cw[0]))
+    }
+
+    /// Every word the user changed is a Hinglish word ("Meri", "Mera").
+    static func changedWordsAreHindi(_ c: EditDiff.Correction) -> Bool {
+        let edge = CharacterSet(charactersIn: ".,!?;:\"“”‘()[]{}…")
+        let heard = Set(c.heard.lowercased().split(separator: " ").map { $0.trimmingCharacters(in: edge) })
+        let changed = c.corrected.split(separator: " ").map { $0.trimmingCharacters(in: edge) }
+            .filter { !$0.isEmpty && !heard.contains($0.lowercased()) }
+        return !changed.isEmpty && changed.allSatisfy { VocabularyResolver.isHindiWord($0) }
     }
 
     /// After asking the decision model (askDecisionModel only). nil = no answer.
@@ -132,9 +252,8 @@ nonisolated enum RuleLearning {
     /// own pair, then per-word pairs. Already-confirmed ones dropped.
     static func rules(for c: EditDiff.Correction, existing: [SpellingRule],
                       isOrdinaryWord: (String) -> Bool) -> [SpellingRule] {
-        let k = core(c)
-        guard !k.heard.isEmpty, !k.corrected.isEmpty,
-              k.heard.lowercased() != k.corrected.lowercased() else { return [] }
+        let k = core(trimTypedOn(c))
+        guard !k.heard.isEmpty, !k.corrected.isEmpty, k.heard != k.corrected else { return [] }
         var out = [SpellingRule(term: k.corrected, heardAs: k.heard)]
         for p in split(k, isOrdinaryWord: isOrdinaryWord) ?? [] {
             out.append(SpellingRule(term: p.corrected, heardAs: p.heard))
@@ -165,7 +284,7 @@ nonisolated enum RuleLearning {
         if let s = strip(c.heard) { heard = s }
         // ASR wrote the possessive without the apostrophe: "druvs".
         else if h.lowercased().hasSuffix("s"), !h.lowercased().hasSuffix("ss"), h.count > 2 { heard = String(c.heard.dropLast()) }
-        guard let heard, heard.lowercased() != corr.lowercased() else { return c }
+        guard let heard, heard != corr else { return c }
         return EditDiff.Correction(heard: heard, corrected: corr)
     }
 

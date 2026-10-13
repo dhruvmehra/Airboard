@@ -91,5 +91,62 @@ func key(_ heard: String, _ corrected: String) -> String {
             let falseAlarms = negTraces.reduce(0) { $0 + $1.traces - $1.exact }
             print("\(name.padding(toLength: 9, withPad: " ", startingAt: 0)) precision \(pct(s.precision))%  recall \(pct(s.recall))%  F1 \(pct(s.f1))%  (tp \(s.tp), fp \(s.fp), fn \(s.fn)); exact traces \(s.exact)/\(s.traces); negatives with any output \(falseAlarms)")
         }
+
+        // ── Learned cards (what the user would actually see) ─────────────
+        // strict  = EditDiff as above → RuleLearning (no key, dictionary)
+        // watcher = EditDiff(newNames: true), as CorrectionWatchPolicy calls
+        //           it since 2026-10-12 → RuleLearning (no key, dictionary)
+        // A pair counts as carded when its proposal is learnDirect.
+        let learnPath = path.replacingOccurrences(of: "traces.json", with: "traces-learn.json")
+        let learnTraces = (try? JSONDecoder().decode([Trace].self, from: Data(contentsOf: URL(fileURLWithPath: learnPath)))) ?? []
+        let all = traces + learnTraces
+        let dict = RuleLearning.loadOrdinaryWords()
+        let ord: (String) -> Bool = { dict.contains($0) }
+        func cards(_ t: Trace, newNames: Bool) -> Set<String> {
+            Set(EditDiff.corrections(before: t.before, after: t.after, inserted: t.inserted, newNames: newNames)
+                .filter { RuleLearning.propose($0, fixed: t.after, source: .keyboard, existing: [], hasKey: false,
+                                               isOrdinaryWord: ord).gate == .learnDirect }
+                .map { key($0.heard, $0.corrected) })
+        }
+        print("\nLearned cards, no key (EditDiff → RuleLearning with the dictionary) — \(traces.count) traces + \(learnTraces.count) in traces-learn.json")
+        var carded: [String: [Int: Set<String>]] = [:]
+        for (mode, nn) in [("strict", false), ("watcher", true)] {
+            var sc = Score(), negWithCard = 0
+            var byCat: [String: Score] = [:]
+            for (i, t) in all.enumerated() {
+                let got = cards(t, newNames: nn)
+                carded[mode, default: [:]][i] = got
+                let want = Set(t.expected.map { key($0.heard, $0.corrected) })
+                var x = Score()
+                x.tp = got.intersection(want).count; x.fp = got.subtracting(want).count; x.fn = want.subtracting(got).count
+                x.traces = 1; x.exact = got == want ? 1 : 0
+                sc.add(x); byCat[t.cat, default: Score()].add(x)
+                if t.expected.isEmpty && !got.isEmpty { negWithCard += 1 }
+            }
+            print("  \(mode.padding(toLength: 8, withPad: " ", startingAt: 0)) card precision \(pct(sc.precision))%  card recall \(pct(sc.recall))%  (tp \(sc.tp), fp \(sc.fp), fn \(sc.fn)); negatives with a card \(negWithCard)")
+            if verbose {
+                for c in byCat.keys.sorted() {
+                    let x = byCat[c]!
+                    print("      \(c.padding(toLength: 16, withPad: " ", startingAt: 0)) tp\(x.tp) fp\(x.fp) fn\(x.fn)")
+                }
+            }
+        }
+        var newlyCarded: [String] = []
+        for (i, t) in all.enumerated() where t.expected.isEmpty {
+            let extra = carded["watcher"]![i]!.subtracting(carded["strict"]![i]!)
+            if !extra.isEmpty { newlyCarded.append("#\(i) \(t.cat): \(extra.sorted())") }
+        }
+        print("  negatives that NEWLY produce a card in watcher mode: \(newlyCarded.count)")
+        for n in newlyCarded { print("    \(n)") }
+        // Pairs the newNames path adds, on the learn traces (diff level).
+        var lp = Score()
+        for t in learnTraces {
+            let got = Set(EditDiff.corrections(before: t.before, after: t.after, inserted: t.inserted, newNames: true)
+                .map { key($0.heard, $0.corrected) })
+            let want = Set(t.expected.map { key($0.heard, $0.corrected) })
+            lp.tp += got.intersection(want).count; lp.fp += got.subtracting(want).count; lp.fn += want.subtracting(got).count
+            if verbose && got != want { print("    learn trace: want \(want.sorted()) got \(got.sorted())") }
+        }
+        print("  traces-learn.json (EditDiff newNames, diff level): precision \(pct(lp.precision))%  recall \(pct(lp.recall))%  (tp \(lp.tp), fp \(lp.fp), fn \(lp.fn))")
     }
 }

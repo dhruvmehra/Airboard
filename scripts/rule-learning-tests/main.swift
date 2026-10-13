@@ -22,7 +22,7 @@ func show(_ rs: [SpellingRule]) -> String { rs.map { "\($0.heardAs)→\($0.term)
         /// then RuleLearning — as CorrectionWatcher → considerEdit does.
         func keyboard(_ before: String, _ after: String, existing: [SpellingRule] = [],
                       hasKey: Bool) -> [RuleLearning.Proposal] {
-            EditDiff.corrections(before: before, after: after, inserted: before).map {
+            EditDiff.corrections(before: before, after: after, inserted: before, newNames: true).map {
                 RuleLearning.propose($0, fixed: after, source: .keyboard, existing: existing,
                                      hasKey: hasKey, isOrdinaryWord: ord)
             }
@@ -116,16 +116,89 @@ func show(_ rs: [SpellingRule]) -> String { rs.map { "\($0.heardAs)→\($0.term)
                     rules: [r("Dhruv", "Drum")], existing: dhruv)
         expectLearn("Drugs→Dhruv's, Dhruv confirmed", "Drugs laptop is here.", "Dhruv's laptop is here.",
                     rules: [r("Dhruv", "Drug")], existing: dhruv)
-        expectNothing("Drum's→Dhruv's, nothing confirmed", "Drum's laptop is here.", "Dhruv's laptop is here.")
+        // Nothing confirmed: still a word fixed INTO a new name (2026-10-12
+        // gate "new-name") — the term is learned; "Drum" sounds unlike
+        // Dhruv, so the apply side uses that heard form only with Jev.
+        expectLearn("Drum's→Dhruv's, nothing confirmed", "Drum's laptop is here.", "Dhruv's laptop is here.",
+                    rules: [r("Dhruv", "Drum")])
         expectNothing("Drew→Drawn (ordinary word)", "Drew a diagram of the flow.", "Drawn a diagram of the flow.")
         expectNothing("drugs→drums (ordinary words)", "The drugs were approved.", "The drums were approved.")
         expectLearn("druv mera→Dhruv Mehra, half known", "this is druv mera", "this is Dhruv Mehra",
                     rules: [r("Dhruv Mehra", "druv mera"), r("Mehra", "mera")], existing: dhruv)
-        // "type" → "Pype" (TP vs PP): keyless no; keyed asks; confirmed: learn.
+        // "type" → "Pype" (TP vs PP): a word fixed into a new name — learned
+        // (new-name), key or not; confirmed: learn.
         expectLearn("type→Pype, unknown", "I work at type.", "I work at Pype.",
-                    rules: [r("Pype", "type")], keyless: .reject, keyed: .askDecisionModel)
+                    rules: [r("Pype", "type")])
         expectLearn("type→Pype, Pype confirmed", "I work at type.", "I work at Pype.",
                     rules: [r("Pype", "type")], existing: pype)
+
+        // MARK: (a) A word fixed into a NEW name that sounds unlike it
+        // (real Parakeet, name-eval lk_pype-Aman / lk_full-Aman).
+        expectLearn("Python→Pype now (typed on)", "I work at Python.", "I work at Pype now.",
+                    rules: [r("Pype", "Python")])
+        expectLearn("Fight→Pype", "This is Dhruv Mehra from Fight.", "This is Dhruv Mehra from Pype.",
+                    rules: [r("Pype", "Fight")])
+        do {
+            let ps = keyboard("This is Druv from Fight.", "This is Dhruv from Pype.", hasKey: false)
+            check(ps.count == 2 && ps.allSatisfy { $0.gate == .learnDirect }, "Druv→Dhruv + Fight→Pype: both learned",
+                  ps.map { "\($0.gate.rawValue):\(show($0.rules))" }.joined(separator: "; "))
+        }
+        expectLearn("python's→Pype's", "Send python's deck.", "Send Pype's deck.", rules: [r("Pype", "python")])
+        // …but never a rewrite, a dictionary word, a rename, a pronoun, a URL/e-mail/number.
+        expectNothing("rewrite around a new name", "Let us meet on Monday.", "Can we meet at Pype instead?")
+        expectNothing("two words changed + a name", "The cafe is closed.", "The Pype office is closed.")
+        expectNothing("Monday→Tuesday", "Let us meet on Monday.", "Let us meet on Tuesday.")
+        expectNothing("Python→Google-like dictionary word", "I work at Python.", "I work at Apple.")
+        expectNothing("into a dictionary word", "I work at home.", "I work at Office.")
+        expectNothing("rename Priya→Zoya", "Ask Priya to call.", "Ask Zoya to call.")
+        expectNothing("rename Mehta→Pype", "Ask Mehta to call.", "Ask Pype to call.")
+        expectNothing("pronoun him→Priya", "I will call him later.", "I will call Priya later.")
+        expectNothing("pronoun you→Priya", "I will call you later.", "I will call Priya later.")
+        expectNothing("URL", "Visit our site today.", "Visit pype.ai today.")
+        expectNothing("e-mail", "Mail me today.", "Mail dhruv@pype.ai today.")
+        expectNothing("number", "I will be there at five.", "I will be there at 5.")
+        expectNothing("Hinglish meri at start", "Mira Ghari Kahan Hai", "Meri Ghari Kahan Hai")
+        expectNothing("Hinglish Mera→Meri", "Mera Gari Kahan Hip", "Meri Gari Kahan Hip")
+        expectNothing("half-typed new name", "I work at Python.", "I work at Py.")
+        expectNothing("new sentence typed after", "I work at Python.", "I work at Python. Pype is next.")
+
+        // MARK: (c) Ordinary edits never become rules
+        expectNothing("pipe→pipes", "The pipe bust again.", "The pipes bust again.")
+        expectNothing("burst→broke", "The pipe burst in the kitchen.", "The pipe broke in the kitchen.")
+        expectNothing("drove→drive", "I drove to the office.", "I drive to the office.")
+        expectNothing("Drove→Drive at start", "Drove to the office.", "Drive to the office.")
+        expectNothing("through→thorough", "We did a through review of the code.", "We did a thorough review of the code.")
+        expectNothing("mera→meri", "yeh mera gaadi hai", "yeh meri gaadi hai")
+        expectNothing("added comma", "Yes I can do that.", "Yes, I can do that.")
+        expectNothing("sentence start capitalised", "the pipe burst again.", "The pipe burst again.")
+        expectNothing("Mehta kept, bill→invoice", "Ask Mehta to send the bill.", "Ask Mehta to send the invoice.")
+        expectNothing("Meta kept, call→email", "Meta and sons will call you.", "Meta and sons will email you.")
+        expectNothing("word added", "Type the name again.", "Type the full name again.")
+
+        // MARK: (d) Case-only fixes of a name
+        expectLearn("pype→Pype (new name)", "I work at pype now.", "I work at Pype now.", rules: [r("Pype", "pype")])
+        expectLearn("dhruv→Dhruv (new name)", "Ask dhruv to call.", "Ask Dhruv to call.", rules: [r("Dhruv", "dhruv")])
+        expectLearn("pype→Pype, Pype confirmed", "I work at pype now.", "I work at Pype now.",
+                    rules: [r("Pype", "pype")], existing: pype)
+        expectNothing("pipe→Pipe (dictionary word)", "Use a pipe here.", "Use a Pipe here.")
+        expectNothing("mira→Mira (known name)", "Ask mira to call.", "Ask Mira to call.")
+        expectNothing("meri→Meri (Hinglish)", "yeh meri gaadi", "yeh Meri gaadi")
+        do {
+            let known = keyboard("I work at pype now.", "I work at Pype now.", existing: [r("Pype", "pype")], hasKey: false)
+            check(known.count == 1 && known[0].gate == .reject && known[0].reason == "known", "pype→Pype already a rule → no card")
+        }
+        // SpellingRule: a case-only line now round-trips; older lines unchanged.
+        let caseRule = r("Pype", "pype")
+        check(SpellingRule.parse(caseRule.memoryLine) == caseRule, "case-only rule round-trips through memory.md")
+        check(SpellingRule.parse(#""Pype" is the correct spelling — often heard as "Pype"."#) == nil, "identical pair is not a rule")
+        check(SpellingRule.parse(#""Brite AI" is the correct spelling — often heard as "bright AI"."#) == r("Brite AI", "bright AI"),
+              "old line still parses")
+        check(SpellingRule.parse("“Mehra” is the correct spelling - often heard as “Mera”") == r("Mehra", "Mera"),
+              "old curly/hyphen line still parses")
+        check(SpellingRule.rules(from: [caseRule.memoryLine, r("Pype", "pipe").memoryLine]).count == 2,
+              "case-only rule and sound rule coexist")
+        let caseFound = CandidateFinder.find(in: "I work at pype now.", rules: [caseRule], screenTerms: []).map(\.term)
+        check(caseFound == ["Pype"], "case-only rule reaches the apply side", "\(caseFound)")
 
         // MARK: Decision model outcomes
         let ask = RuleLearning.propose(.init(heard: "Drew", corrected: "Dhruv"), fixed: "My name is Dhruv.",
@@ -148,6 +221,9 @@ func show(_ rs: [SpellingRule]) -> String { rs.map { "\($0.heardAs)→\($0.term)
         expectNothing("rewrite", "send me the file tomorrow", "share the deck with Ashish today")
         expectNothing("pipe→pipes", "the water pipe burst", "the water pipes burst")
         expectNothing("pipe→Pipe at sentence start", "pipe the output into grep", "Pipe the output into grep")
+        // "through" → "Dhruv": an everyday word replaced — not learned,
+        // even though Parakeet sometimes writes Dhruv as "through" (a rule
+        // heard as "through" would hit every "through the door").
         expectNothing("through→Dhruv", "walk through the door", "walk Dhruv the door")
         expectNothing("through→Dhruv, Dhruv confirmed", "walk through the door", "walk Dhruv the door", existing: dhruv)
         expectNothing("Mark→Mike real-word swap", "I met Mark yesterday.", "I met Mike yesterday.")
@@ -211,6 +287,41 @@ func show(_ rs: [SpellingRule]) -> String { rs.map { "\($0.heardAs)→\($0.term)
                                                 source: .spelled, existing: [], hasKey: false, isOrdinaryWord: ord)
                 check(prop.gate == .learnDirect, "spelled pair learns directly: \(text)")
             }
+        }
+        // (b) Letters with no sound-alike target: the one name in the
+        // sentence(s) before them (real Parakeet, Aman: "My son name is Mana."
+        // then "That's spelled M-E-H-R-A.").
+        func follow(_ cur: String, _ prev: String) -> [String] {
+            let now = Date()
+            return RedictationLearner.detect(current: TranscriptTurn(text: cur, at: now, pid: 1),
+                                             previous: [TranscriptTurn(text: prev, at: now.addingTimeInterval(-5), pid: 1)])
+                .filter { $0.kind == .spelled && $0.strength >= RedictationLearner.directCardStrength }
+                .map { "\($0.heard)→\($0.corrected)" }
+        }
+        check(follow("That's spelled M-E-H-R-A.", "My son name is Mana.") == ["Mana→Mehra"],
+              "Mana + spelled M-E-H-R-A (next dictation) → Mehra", "\(follow("That's spelled M-E-H-R-A.", "My son name is Mana."))")
+        check(follow("That's spelled M-E-H-R-A.", "My surname is Mana.") == ["Mana→Mehra"], "surname is Mana → Mehra")
+        check(follow("That's spelled M-E-H-R-A.", "I met Priyar and Mana today.").isEmpty, "two candidate names → nothing")
+        check(follow("That's spelled M-E-H-R-A.", "The weather is nice today.").isEmpty, "no name → nothing")
+        check(follow("That's spelled M-E-H-R-A.", "Mana is a word.").isEmpty, "sentence-start dictionary word → nothing")
+        check(follow("That's spelled M-E-H-R-A.", "I met Mana, Dhruv, and Ashish.").isEmpty, "aside between commas is not used")
+        check(follow("That's spelled P Y P E.", "I work at Fight.").isEmpty, "dictionary word, sound unlike → nothing")
+        for (text, want, wantText) in [
+            ("My son name is Mana. That's spelled M-E-H-R-A.", ["Mana": "Mehra"], "My son name is Mehra."),
+            ("I work at Zentrix. It is spelled P-Y-P-E.", ["Zentrix": "Pype"], "I work at Pype."),
+            // The word right before the cue is the existing adjacent target.
+            ("I met Priyar and Mana. That's spelled M-E-H-R-A.", ["Mana": "Mehra"], nil),
+            ("My son name is Mana today. That's spelled M-E-H-R-A.", ["Mana": "Mehra"], "My son name is Mehra today."),
+            ("I met Priyar and Mana today. That's spelled M-E-H-R-A.", [:], nil),
+            // A trailing word the letters don't spell stays (real Parakeet).
+            ("I met Priyar and Mehra today, that's spelled M-E-H-R-A.", [:], "I met Priyar and Mehra today."),
+            ("Call Meta and Mare tomorrow. That's spelled M-E-H-R-A.", ["Mare": "Mehra"], "Call Meta and Mehra tomorrow."),
+        ] as [(String, [String: String], String?)] {
+            let rw = RedictationLearner.spelledRewrite(text)
+            var got: [String: String] = [:]
+            for p in rw.pairs where p.strength >= RedictationLearner.directCardStrength { got[p.heard] = p.corrected }
+            check(got == want, "spelled (name target): \(text)", "got \(got) want \(want)")
+            if let wantText { check(rw.text == wantText, "spelled text (name target): \(text)", "got \"\(rw.text)\"") }
         }
         // Spelled pair with two words splits per word too.
         let two = RuleLearning.propose(.init(heard: "Druv Mera", corrected: "Dhruv Mehra"), fixed: "",

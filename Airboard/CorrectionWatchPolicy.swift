@@ -19,6 +19,9 @@
 //    lesson — and only if the field was focused at some reading since the
 //    last settled one (a field changing while the user is elsewhere —
 //    another channel's draft swapped in — isn't them).
+//  - A fix only the new-name path reports (sound unlike: "Python" →
+//    "Pype") or a re-cased name ("pype" → "Pype") must stay settled
+//    `settleNewName` (3s): a half-typed "Pyp" is no lesson.
 //  - Several lessons per insertion; never the same pair twice; never a
 //    "heard" word the user already changed by hand.
 //  - A watch ends when the window ends, our text is gone from the field
@@ -38,6 +41,10 @@ nonisolated struct CorrectionWatchPolicy {
         /// the same field cost no AX calls — only a string search.
         var maxWatched = 5
         var settle: TimeInterval = 1.0        // AX: quiet this long = settled
+        /// A fix only the new-name path reports (sound UNLIKE what we typed:
+        /// "Python" → "Pype") must stay put this long — "Pyp" half-typed
+        /// after a pause is otherwise a word no dictionary knows.
+        var settleNewName: TimeInterval = 3.0
         var confirmDelay: TimeInterval = 1.5  // changed but unsettled → read again
         var confirmGrace: TimeInterval = 4    // a confirm read may land after the window
         var maxUnreadable = 3
@@ -71,6 +78,8 @@ nonisolated struct CorrectionWatchPolicy {
         let fixes: [EditDiff.Correction]
         let fixed: String                  // our text with the fixes applied
         let piece: Range<String.Index>     // where our (fixed) text sits in the field
+        /// Some fix is new-name only (no sound-alike): needs `settleNewName`.
+        var newNameOnly = false
     }
 
     let config: Config
@@ -230,6 +239,16 @@ nonisolated struct CorrectionWatchPolicy {
             guard settled else {
                 confirmDue[fieldID] = now.addingTimeInterval(config.confirmDelay); continue
             }
+            if found.newNameOnly {
+                let long = config.settleNewName - 0.05
+                let steadyLong = now.timeIntervalSince(seenSince[fieldID] ?? now) >= long
+                let quietLong = axLive.contains(fieldID)
+                    && (lastChange[fieldID].map { now.timeIntervalSince($0) >= long } ?? true)
+                guard steadyLong || quietLong else {
+                    let wait = config.settleNewName - now.timeIntervalSince(seenSince[fieldID] ?? now)
+                    confirmDue[fieldID] = now.addingTimeInterval(max(config.confirmDelay, wait)); continue
+                }
+            }
             let before = entries[i].text
             entries[i].text = found.fixed
             Self.anchor(&entries[i], at: found.piece, in: text, length: n)
@@ -314,8 +333,17 @@ nonisolated struct CorrectionWatchPolicy {
     /// EditDiff judges each alone; words only ADDED are the user's own
     /// text, never a fix.
     static func corrections(_ ours: String, _ region: Substring) -> Found? {
-        if let c = EditDiff.correction(before: ours, after: String(region), inserted: ours) {
-            return Found(fixes: [c], fixed: String(region), piece: region.startIndex..<region.endIndex)
+        // Every fix in the region, not just the first ("Drove Mera from
+        // Pipe" → "Dhruv Mehra from Pype" is two lessons). newNames: a lone
+        // unlike-sounding swap into a capitalised word ("Python" → "Pype")
+        // or a re-cased name ("pype" → "Pype") is reported too —
+        // RuleLearning's dictionary gate judges it.
+        let all = EditDiff.corrections(before: ours, after: String(region), inserted: ours, newNames: true)
+        if !all.isEmpty {
+            let strict = EditDiff.corrections(before: ours, after: String(region), inserted: ours)
+            var f = Found(fixes: all, fixed: String(region), piece: region.startIndex..<region.endIndex)
+            f.newNameOnly = all.contains { !strict.contains($0) }
+            return f
         }
         let a = words(ours[...]), b = words(region)
         let n = a.count, m = b.count

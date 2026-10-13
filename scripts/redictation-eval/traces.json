@@ -33,7 +33,6 @@
     {"id": "spx-10", "kind": "spelled", "turns": [{"text": "Send the deck to zen tricks by Friday."}, {"text": "Sorry, that's Z E N T R I X."}], "expect": [["zen tricks", "Zentrix"]]},
     {"id": "spx-11", "kind": "spelled", "turns": [{"text": "Ask kate to review the pull request."}, {"text": "That's C-A-I-T."}], "expect": [["kate", "Cait"]]},
     {"id": "spx-12", "kind": "spelled", "turns": [{"text": "Loop in Ashij on the build."}, {"text": "It's spelled ASHISH."}], "expect": [["Ashij", "Ashish"]]},
-
     {"id": "fu-01", "kind": "followUp", "turns": [{"text": "We deploy everything on for sell."}, {"text": "Sorry, Vercel, not for sell."}], "expect": [["for sell", "Vercel"]]},
     {"id": "fu-02", "kind": "followUp", "source": "parakeet-probe", "turns": [{"text": "We deploy everything on for sell."}, {"text": "Sorry, versile, not for sell."}], "expect": [["for sell", "Vercel"]]},
     {"id": "fu-03", "kind": "followUp", "source": "parakeet-probe", "turns": [{"text": "Ask bright eye to send the invoice."}, {"text": "I meant bright AI."}], "expect": [["bright eye", "Brite AI"]]},
@@ -48,7 +47,6 @@
     {"id": "fu-12", "kind": "followUp", "turns": [{"text": "Email Kaviar about the offsite."}, {"text": "I meant Kavya, not Kaviar."}], "expect": [["Kaviar", "Kavya"]]},
     {"id": "fu-13", "kind": "followUp", "turns": [{"text": "Push the branch to get hub."}, {"text": "Sorry, GitHub."}], "expect": [["get hub", "GitHub"]]},
     {"id": "fu-14", "kind": "followUp", "turns": [{"text": "Ask bright eye to send the invoice."}, {"text": "I meant bright eye."}], "expect": [["bright eye", "Brite AI"]]},
-
     {"id": "rd-01", "kind": "redictation", "turns": [{"text": "talk to in akshi tomorrow", "scratched": true}, {"text": "talk to Inakshi tomorrow"}], "expect": [["in akshi", "Inakshi"]]},
     {"id": "rd-02", "kind": "redictation", "source": "parakeet-probe", "turns": [{"text": "Talk to Anakshi tomorrow.", "scratched": true}, {"text": "Talk to Inakshi tomorrow."}], "expect": [["Anakshi", "Inakshi"]]},
     {"id": "rd-03", "kind": "redictation", "turns": [{"text": "Send the deck to zen tricks by Friday.", "scratched": true}, {"text": "Send the deck to Zentrix by Friday."}], "expect": [["zen tricks", "Zentrix"]]},
@@ -63,7 +61,6 @@
     {"id": "rd-12", "kind": "redictation", "turns": [{"text": "Can you ask Kaviar to join the call?", "scratched": true}, {"text": "Can you ask Kavya to join the call?"}], "expect": [["Kaviar", "Kavya"]]},
     {"id": "rd-13", "kind": "redictation", "turns": [{"text": "Push the fix to get hub tonight.", "scratched": true}, {"text": "Push the fix to GitHub tonight."}], "expect": [["get hub", "GitHub"]]},
     {"id": "rd-14", "kind": "redictation", "turns": [{"text": "Ask Ashij to check the build."}, {"text": "Ask Ashish to check the build."}], "expect": [["Ashij", "Ashish"]]},
-
     {"id": "neg-01", "kind": "negative", "source": "parakeet-probe", "turns": [{"text": "The API is down again."}], "expect": [], "expectText": "The API is down again."},
     {"id": "neg-02", "kind": "negative", "source": "parakeet-probe", "turns": [{"text": "We shipped it to the USA last week."}], "expect": [], "expectText": "We shipped it to the USA last week."},
     {"id": "neg-03", "kind": "negative", "source": "parakeet-probe", "turns": [{"text": "Send it to the SDK team."}], "expect": [], "expectText": "Send it to the SDK team."},
@@ -135,6 +132,20 @@
     {"id": "sp-40", "kind": "spelled", "source": "parakeet-probe", "turns": [{"text": "I'm Drovmara, Dhruv, M-E-H-R-A."}], "expect": [["Drovmara", "Dhruv Mehra"]]},
     {"id": "neg-49", "kind": "negative", "turns": [{"text": "My surname is Mehra, M-E-H-R-A."}], "expect": [], "expectText": "My surname is Mehra.", "source": "parakeet-probe"},
     {"id": "neg-50", "kind": "negative", "turns": [{"text": "My name is Dhruv, D H R U V."}], "expect": [], "expectText": "My name is Dhruv.", "source": "parakeet-probe"},
-    {"id": "neg-51", "kind": "negative", "turns": [{"text": "The water pipe burst, call a plumber."}], "expect": [], "expectText": "The water pipe burst, call a plumber."}
+    {"id": "neg-51", "kind": "negative", "turns": [{"text": "The water pipe burst, call a plumber."}], "expect": [], "expectText": "The water pipe burst, call a plumber."},
+    {"id": "spn-01", "kind": "spelled", "source": "parakeet-probe", "turns": [{"text": "My son name is Mana."}, {"text": "That's spelled M-E-H-R-A."}], "expect": [["Mana", "Mehra"]]},
+    {"id": "spn-02", "kind": "spelled", "source": "parakeet-probe", "turns": [{"text": "My soname is Mara."}, {"text": "That's spelled M-E-H-R-A."}], "expect": [["Mara", "Mehra"]]},
+    {"id": "spn-03", "kind": "spelled", "source": "parakeet-probe", "turns": [{"text": "My son name is MER. That's spelled M-E-H-R-A."}], "expect": [["MER", "Mehra"]], "expectText": "My son name is Mehra."},
+    {"id": "spn-04", "kind": "spelled", "source": "parakeet-probe", "turns": [{"text": "My soname is Mer, that's spelled M-E-H-R-A."}], "expect": [["Mer", "Mehra"]], "expectText": "My soname is Mehra."},
+    {"id": "spn-05", "kind": "spelled", "source": "parakeet-probe", "turns": [{"text": "My surname is Mera, that's spelled M-E-H-R-A."}], "expect": [["Mera", "Mehra"]], "expectText": "My surname is Mehra."},
+    {"id": "spn-06", "kind": "spelled", "source": "parakeet-probe", "turns": [{"text": "My surname is Mira, that's spelled M-E-H-R-A."}], "expect": [["Mira", "Mehra"]], "expectText": "My surname is Mehra."},
+    {"id": "spn-07", "kind": "spelled", "source": "parakeet-probe", "turns": [{"text": "Call Meta and Mare tomorrow. That's spelled M-E-H-R-A."}], "expect": [["Mare", "Mehra"]]},
+    {"id": "spn-08", "kind": "spelled", "source": "parakeet-probe", "turns": [{"text": "I work at five, that's spelled PYP."}], "expect": [["five", "Pype"]]},
+    {"id": "neg-52", "kind": "negative", "source": "parakeet-probe", "turns": [{"text": "My surname is Mehra, that's spelled M-E-H-R-A."}], "expect": [], "expectText": "My surname is Mehra."},
+    {"id": "neg-53", "kind": "negative", "source": "parakeet-probe", "turns": [{"text": "My name is Dhruv, that's spelled D H R U V."}], "expect": [], "expectText": "My name is Dhruv."},
+    {"id": "neg-54", "kind": "negative", "source": "parakeet-probe", "turns": [{"text": "I met Priyar and Mehra today, that's spelled M-E-H-R-A."}], "expect": [], "expectText": "I met Priyar and Mehra today."},
+    {"id": "neg-55", "kind": "negative", "turns": [{"text": "I met Priyar and Mana today."}, {"text": "That's spelled M-E-H-R-A."}], "expect": []},
+    {"id": "neg-56", "kind": "negative", "turns": [{"text": "The weather is nice today."}, {"text": "That's spelled M-E-H-R-A."}], "expect": []},
+    {"id": "neg-57", "kind": "negative", "turns": [{"text": "I met Mana, Dhruv, and Ashish."}, {"text": "That's spelled M-E-H-R-A."}], "expect": []}
   ]
 }
