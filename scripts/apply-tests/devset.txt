@@ -1,0 +1,66 @@
+# R2 adversarial dev set: id|truth. dn* = must stay unchanged apart from names already in the truth
+# (no Pype/Dhruv/Mehra may be inserted beyond the truth); dp* = positives (problem 2 recall).
+# dn52 and dn55 were rendered with "Mera" (same sound) and are scored with "Mehra" (the learned spelling).
+# Rendered by render.sh (say -o, never played) → Parakeet → appended to parakeet.tsv.
+dn01|I drove Mehra to the airport.
+dn02|He drove Mehra's car.
+dn03|Look at pipe now.
+dn04|Stop at pipe and fittings.
+dn05|He drove the car.
+dn06|She drove Mehra home after dinner.
+dn07|They drove Mehra back to the office.
+dn08|My brother drove Mehra to school.
+dn09|Mary drove Mehra home.
+dn10|Who drove Mehra's car yesterday?
+dn11|You drove Mehra crazy last week.
+dn12|He drove the truck over the bridge.
+dn13|Look at the pipe now.
+dn14|We sell copper pipe and fittings.
+dn15|Buy pipe and tape at the store.
+dn16|Check the pipe at the joint now.
+dn17|I'm good at pipe and drum music.
+dn18|Stare at pipe now and then.
+dn19|The plumber cut pipe and wire.
+dn20|Order pipe today.
+dn21|We need more pipe and more wire.
+dn22|Drive to the pipe yard.
+dn23|I drove to the pipe factory.
+dn24|He drove more than me.
+dn25|She drove Mira to the mall.
+dn26|We drove Meera to the hospital.
+dn27|They drove Mara home.
+dn28|Pipe down, everyone.
+dn29|Please pipe down.
+dn30|The organ pipe sounded loud.
+dn31|Dad drove Mehra home.
+dn32|Then he drove Mehra and me to the beach.
+dn33|Who drove?
+dn34|Meet me at pipe nine.
+dn35|It was at pipe level.
+dn36|We arrived at pipe junction three.
+dn37|Dhruv bhai kahan ho?
+dn38|Dhruv mera dost hai.
+dn39|Dhruv aur mera bhai aa rahe hain.
+dn40|Dhruv ji, namaste.
+dn41|Dhruv sir will join us.
+dn42|The mayor drove Mehra home.
+dn43|Somebody drove Mehra's scooter into a wall.
+dn44|He drove Mehra and Rahul to work.
+dn45|Look at pipe one, then pipe two.
+dn46|Glance at pipe and valve prices.
+dn47|We stopped at pipe and steel suppliers.
+dn48|He lives at pipe street now.
+dn49|Aim at pipe height.
+dn50|Mera naam Dhruv hai.
+dn51|Main Dhruv bol raha hoon.
+dn52|I drove Mehra home.
+dn53|Uncle drove Mehra to the doctor.
+dn54|Rahul drove Mehra to the party.
+dn55|He drove Mehra's sister home.
+dn56|Dhruv laptop le aao.
+dn57|Dhruvji aap kahan ho?
+dn58|Dhruv sunao kya haal hai.
+dn59|Dhruv yaar chalo.
+dn60|Dhruv bhaiya ko bolo.
+dn61|Dhruv emailed the deck.
+dn62|Thanks Dhruv, okay bye.

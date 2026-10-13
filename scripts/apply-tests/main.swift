@@ -123,7 +123,7 @@ for rs in [("A", rulesA), ("A+PypeAI", rulesAPlus)] {
 pos("synthetic/A+PypeAI", "Have you tried pipe AI yet?", "Have you tried Pype AI yet?", rules: rulesAPlus)
 pos("synthetic/A+PypeAI", "I work at pipe now.", "I work at Pype now.", rules: rulesAPlus)
 pos("synthetic/A+PypeAI", "Have you tried PiPai yet?", "Have you tried Pype AI yet?", rules: rulesAPlus)
-pos("synthetic/A", "Have you tried pipe AI yet?", "Have you tried pipe AI yet?", rules: rulesA)  // never "Pype" eating "AI"
+pos("synthetic/A", "Have you tried pipe AI yet?", "Have you tried Pype AI yet?", rules: rulesA)  // never "Pype" eating "AI"; "AI" after it is a company suffix (R2)
 
 // MARK: - Real Parakeet output (say -o → Parakeet), answers = nil, rules A
 // Hand-labelled: what the founder wants from THIS transcript.
@@ -234,6 +234,87 @@ for rs in [("A", rulesA), ("A+PypeAI", rulesAPlus), ("B", rulesB)] {
     for n in realNeg { neg("parakeet/" + rs.0, n, rules: rs.1) }
 }
 
+// MARK: - R2 precision: no-key false replacements (dictionary words moving
+// on adjacency / slot signals the syntax contradicts). Rules as the
+// founder's corrections teach them, both spellings.
+let rulesB2 = [rule("Pype", "Pipe"), rule("Dhruv", "Druv"), rule("Mehra", "Mayra")]
+let rulesDroveOnly = [rule("Dhruv", "Drove")]
+let fpLiterals = ["I drove Mehra to the airport.", "He drove Mehra's car.", "Look at pipe now.",
+                  "Stop at pipe and fittings.", "He Drove the car.",
+                  // synthetic variants of the same shapes
+                  "We drove Mira to the mall.", "Mary drove Mehra home.", "He Drove Mehra's car.",
+                  "I Drove the truck.", "Look at Pipe now.", "Stop at pipe and valves now.",
+                  "We sell pipe and fittings.", "He drove Mehra and me home.", "He came and drove Mehra home.",
+                  "I just drove Mehra home.", "Pipe it to grep.", "Please Pipe the logs.", "He lives at Pipe Street."]
+for rs in [("A", rulesA), ("B", rulesB), ("B2", rulesB2), ("drove-only", rulesDroveOnly)] {
+    for t in fpLiterals { neg("r2-fp/" + rs.0, t, rules: rs.1) }
+}
+// "drove" stays a verb; the learned surname heard right after it may still move.
+for (i, e) in [("She drove Mera home.", "She drove Mehra home."), ("My brother drove Mera to school.", "My brother drove Mehra to school.")] {
+    pos("r2-fp/B", i, e, rules: rulesB)
+}
+pos("r2-fp/B2", "They drove Mayra back.", "They drove Mehra back.", rules: rulesB2)
+// The same span in a name position still moves.
+for (i, e) in [("This is Drove Mera.", "This is Dhruv Mehra."), ("Drove Mera founded pipe.", "Dhruv Mehra founded Pype."),
+               ("I spoke to Drove Mera from Pipe today.", "I spoke to Dhruv Mehra from Pype today."),
+               ("I work at pipe now.", "I work at Pype now."), ("I work at pipe and I love it.", "I work at Pype and I love it."),
+               ("We met at pipe.", "We met at Pype."), ("Drove Mera's laptop is here.", "Dhruv Mehra's laptop is here.")] {
+    pos("r2-pos/B", i, e, rules: rulesB)
+}
+
+// R2 recall: a full name Parakeet only half knows. Rishi's corrections
+// teach only Dhruv (Dhruv←Dhruve, Dhruv←Drew); Daniel's teach Dhruv←Drove, Mehra←Mera.
+let rulesRishi = [rule("Pype", "pipe"), rule("Dhruv", "Dhruve"), rule("Dhruv", "Drew")]
+for (i, e) in [("This is Dhruvmehra.", "This is Dhruv Mehra."), ("This is Dhruv mehra.", "This is Dhruv Mehra."),
+               ("this is druv mehra", "this is Dhruv Mehra"), ("Dhruvmehra's laptop is here.", "Dhruv Mehra's laptop is here."),
+               ("I spoke to Dhruv mehra from Pype today.", "I spoke to Dhruv Mehra from Pype today."),
+               // A Hindi sentence: an unknown word may be Hindi — left to the engine.
+               ("Dhruv mehra ka laptop hai.", "Dhruv mehra ka laptop hai.")] {
+    pos("r2-tail/Rishi", i, e, rules: rulesRishi)
+}
+pos("r2-tail/B", "My name is Drovera.", "My name is Dhruv Mehra.", rules: rulesB)
+for t in ["Dhruv bhai kahan ho?", "Dhruv mera dost hai.", "Dhruv laptop.", "Dhruvji namaste.", "Dhruv emailed.",
+          "Dhruv bolraha hai.", "Dhruv bhaiya ko bolo.", "Dhruv okay.", "Dhruv mehra dost hai.", "Dhruv sunao kya haal hai.",
+          "Ask Dhruv tomorrow.", "Dhruv Mehra is here.", "Dhruv kumarji hai."] {
+    neg("r2-tail/Rishi", t, rules: rulesRishi)
+}
+for t in ["Main Dhruv Marahune.", "Dhruvka laptop hai.", "Yeh mera laptop hai.", "Mareabhai Arahe Hang."] { neg("r2-tail/B", t, rules: rulesB) }
+
+// R2 adversarial dev set (devset.txt, real Parakeet rows dn* in parakeet.tsv):
+// no Pype/Dhruv/Mehra inserted beyond the truth, and no other word changed.
+func names(_ s: String) -> [String: Int] {
+    var m: [String: Int] = [:]
+    for t in ["Pype", "Dhruv", "Mehra"] { m[t] = occurrences(t, s) }
+    return m
+}
+func devNegOK(raw: String, truth: String, out: String) -> Bool {
+    let r = names(raw), t = names(truth), o = names(out)
+    for k in o.keys where o[k]! > max(r[k]!, t[k]!) { return false }
+    let rw = raw.split(separator: " "), ow = out.split(separator: " ")
+    guard rw.count == ow.count else { return true }  // a fused name split: the count bound decides
+    for (a, b) in zip(rw, ow) where a != b {
+        guard let k = ["Pype", "Dhruv", "Mehra"].first(where: { b.hasPrefix($0) }), t[k]! > 0 else { return false }
+    }
+    return true
+}
+var devRows: [(id: String, truth: String, raw: String)] = []
+if let p = parakeetPath, let s = try? String(contentsOfFile: p, encoding: .utf8) {
+    for line in s.split(separator: "\n") where line.hasPrefix("dn") {
+        let f = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+        if f.count == 4 { devRows.append((f[0] + "-" + f[1], f[2], f[3])) }
+    }
+}
+for rs in [("A", rulesA), ("A+PypeAI", rulesAPlus), ("B", rulesB), ("B2", rulesB2), ("drove-only", rulesDroveOnly)] {
+    var c = (pass: 0, total: 0)
+    for d in devRows {
+        let out = run(d.raw, rs.1)
+        c.total += 1
+        if devNegOK(raw: d.raw, truth: d.truth, out: out) { c.pass += 1 }
+        else { failures.append("[dev-neg/\(rs.0)] \(d.id) \(d.raw)  →  \(out)   (truth: \(d.truth))") }
+    }
+    counts["neg dev/" + rs.0] = c
+}
+
 // MARK: - With a key: ambiguous spans obey the engine, unmistakable ones don't wait
 
 #if NEW
@@ -278,7 +359,7 @@ func loadItems() -> [Item] {
     if let p = parakeetPath, let s = try? String(contentsOfFile: p, encoding: .utf8) {
         for line in s.split(separator: "\n") where !line.hasPrefix("#") {
             let f = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
-            guard f.count == 4 else { continue }
+            guard f.count == 4, !f[0].hasPrefix("d") else { continue }
             items.append(Item(truth: f[2], raw: f[3], positive: f[0].hasPrefix("p")))
         }
     }

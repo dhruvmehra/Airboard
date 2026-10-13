@@ -22,6 +22,10 @@ nonisolated struct Candidate: Equatable {
                           // term ("Dhruvan"/"Drovat" for Dhruv: ASR glued
                           // the next word on)
         case correct      // (composite part only) already the term: "Dhruv" in "Dhruv mera"
+        case tail         // (composite part only) an unknown word glued to or right after a
+                          // learned name, as heard: "Dhruvmehra" / "Dhruv mehra" with only
+                          // Dhruv learned ("Mehra", capitalised), or the swallowed tail of
+                          // another learned name ("Drovera" → Dhruv Mehra)
     }
     let range: Range<String.Index>  // span in the transcript (a possessive's stem only)
     let span: String                // the text as heard, e.g. "bright AI"
@@ -70,7 +74,8 @@ nonisolated enum CandidateFinder {
     /// a fused "Brightai" is fine); a span the text already spells
     /// correctly.
     static func find(in text: String, rules: [SpellingRule], screenTerms: [String],
-                     isOrdinaryWord: (String) -> Bool = VocabularyResolver.WordList.isOrdinaryWord) -> [Candidate] {
+                     isOrdinaryWord: (String) -> Bool = VocabularyResolver.WordList.isOrdinaryWord,
+                     isKnownName: (String) -> Bool = VocabularyResolver.WordList.isKnownName) -> [Candidate] {
         let words = wordRanges(in: text)
         guard !words.isEmpty else { return [] }
         // A word may join a window only if it has a Latin sound code and
@@ -236,8 +241,10 @@ nonisolated enum CandidateFinder {
                                width, 3, width == wordCount(r.term)))
                     }
                     if learned, width <= 2,
-                       let (term, parts) = learnedNames(window: i, width: width) {
-                        if normalize(term) != key && !alreadyCorrect(term)
+                       let (term, parts) = learnedNames(window: i, width: width) ?? nameTail(window: i, width: width) {
+                        // (A tail capitalises: "Dhruv mehra" is not yet "Dhruv Mehra".)
+                        let correct = parts.last == .tail ? span == term : normalize(term) == key || alreadyCorrect(term)
+                        if !correct
                             && !duplicatesTail(term: term, spanWords: width, after: range.upperBound, in: text) {
                             let m: Candidate.Match = parts.contains(.exactUnlike) ? .exactUnlike : .sameSound
                             offer((Candidate(range: range, span: span, term: term, source: source, exact: false,
@@ -324,6 +331,76 @@ nonisolated enum CandidateFinder {
             return nil
         }
 
+        /// A learned person name with an unknown word glued on or right
+        /// after it, as Parakeet writes a full name it only half knows:
+        /// "Dhruvmehra" / "Dhruv mehra" (only Dhruv learned) → "Dhruv
+        /// Mehra"; or a fused name whose second half lost its start
+        /// ("Drovera" → "Dhruv Mehra", Mehra learned). The unknown word must
+        /// be lowercase, 4+ letters, not a dictionary word (or an inflection
+        /// of one), a first name, a Hindi word ("Dhruv bhai", "Dhruvji",
+        /// "Dhruv mera" stay) or a word newer than the dictionary ("Dhruv
+        /// laptop"). Two words: only at the end of the clause or before a
+        /// word that follows a name ("Dhruv mehra from Pype", "druv mehra's
+        /// team"). VocabularyResolver still vetoes it in a Hindi sentence.
+        func nameTail(window i: Int, width: Int) -> (String, [Candidate.Match])? {
+            guard !singleByTerm.isEmpty else { return nil }
+            func unknownWord(_ w: String) -> Bool {
+                let l = w.lowercased()
+                guard l.count >= 4, l.allSatisfy({ $0.isLetter && $0.isASCII }), !isOrdinaryWord(l), !isKnownName(l),
+                      !VocabularyResolver.isHindiWord(l), !modernWords.contains(l),
+                      !englishSuffixes.contains(where: { l.hasSuffix($0) && l.count > $0.count + 2 }) else { return false }
+                for (suffix, repl) in [("s", ""), ("es", ""), ("ed", ""), ("ed", "e"), ("ing", ""), ("ing", "e"), ("ies", "y")]
+                    where l.hasSuffix(suffix) && isOrdinaryWord(String(l.dropLast(suffix.count)) + repl) { return false }
+                return true
+            }
+            /// A learned one-word person name this word IS: as written, or
+            /// as heard / with its sound (not an ordinary, Hindi or first
+            /// name word: "mera laptop" is not a name).
+            func name(_ w: String) -> (term: String, match: Candidate.Match)? {
+                let k = normalize(w)
+                if let t = singleByTerm[k] { return isNameWord(t, isOrdinaryWord) ? (t, .correct) : nil }
+                guard !isOrdinaryWord(k), !isKnownName(k), !VocabularyResolver.isHindiWord(k) else { return nil }
+                if let h = singleByHeard[k], h.match == .exact, isNameWord(h.term, isOrdinaryWord) { return h }
+                if k.count >= 4, let t = singleByCode[SoundCode.code(k)], isNameWord(t, isOrdinaryWord) {
+                    return (t, .sameSound)
+                }
+                return nil
+            }
+            func capitalised(_ w: String) -> String { w.prefix(1).uppercased() + w.dropFirst() }
+            if width == 2 {
+                let second = String(text[stems[i + 1]])
+                guard second.first?.isLowercase == true, part(at: i + 1, stem: true) == nil, unknownWord(second),
+                      let a = name(String(text[words[i]])) else { return nil }
+                // End of the clause, a possessive, or a word that follows a name.
+                let j = i + 2
+                let endsHere = stems[i + 1] != words[i + 1] || j >= words.count || !spaced(words[i + 1], words[j])
+                guard endsHere || afterName.contains(normWords[j]) else { return nil }
+                return (a.term + " " + capitalised(second), [a.match, .tail])
+            }
+            let w = String(text[stems[i]])
+            let lw = w.lowercased()
+            guard lw.count >= 6, w.allSatisfy({ $0.isLetter }), !isOrdinaryWord(lw) else { return nil }
+            for n in stride(from: lw.count - 2, through: 3, by: -1) {
+                let head = String(lw.prefix(n)), rest = String(lw.dropFirst(n))
+                // "Dhruvmehra": the learned name exactly as spelled, then an unknown word.
+                if let t = singleByTerm[head], isNameWord(t, isOrdinaryWord), unknownWord(rest) {
+                    return (t + " " + capitalised(rest), [.correct, .tail])
+                }
+                // "Drovera": a learned name (as spelled, heard, or by its
+                // sound), then the tail of another learned name.
+                let a: String? = singleByTerm[head] ?? singleByHeard[head].map(\.term)
+                    ?? (head.count >= 4 ? singleByCode[SoundCode.code(head)] : nil)
+                guard let a, isNameWord(a, isOrdinaryWord) else { continue }
+                if rest.count >= 2, let b = singleByTerm.values.sorted().first(where: {
+                    $0 != a && isNameWord($0, isOrdinaryWord) && $0.count > rest.count + 1
+                        && $0.lowercased().hasSuffix(rest)
+                }) {
+                    return (a + " " + b, [.sameSound, .tail])
+                }
+            }
+            return nil
+        }
+
         /// A span wider than its term must not swallow a word that adds no
         /// sound ("pipe AI" is PP like "Pype" — replacing it deletes "AI");
         /// a narrower one must not duplicate the term's tail.
@@ -370,6 +447,28 @@ nonisolated enum CandidateFinder {
               w.dropFirst().contains(where: { $0.isLowercase }) else { return false }
         return !isOrdinaryWord(w.lowercased())
     }
+
+    /// Words that follow a full name: "Dhruv mehra from Pype", "… says hello".
+    static let afterName: Set<String> = ["from", "of", "at", "and", "here", "says", "said", "is", "was", "will",
+                                         "has", "had", "who", "joined", "founded", "wrote", "sent", "ka", "ki",
+                                         "ke", "ko", "se", "ne", "ji", "speaking", "calling", "this", "please"]
+    /// Common words newer than the system word list (1934 Webster) — never
+    /// taken for an unknown surname ("Dhruv laptop").
+    static let modernWords: Set<String> = ["okay", "laptop", "laptops", "email", "emails", "emailed", "emailing",
+                                           "online", "offline", "app", "apps", "startup", "startups", "website",
+                                           "websites", "internet", "smartphone", "iphone", "ipad", "android",
+                                           "google", "googled", "whatsapp", "slack", "zoom", "linkedin", "github",
+                                           "wifi", "bluetooth", "blog", "blogs", "podcast", "selfie", "inbox",
+                                           "login", "logout", "signup", "username", "download", "downloads",
+                                           "upload", "uploads", "chatgpt", "youtube", "instagram", "twitter",
+                                           "facebook", "uber", "ola", "zomato", "swiggy", "paytm", "gmail",
+                                           "dashboard", "backend", "frontend", "devops", "fintech", "saas",
+                                           "webinar", "standup", "onboarding", "screenshot", "hackathon",
+                                           "repo", "repos", "codebase", "workflow", "workflows", "ok", "yeah"]
+    /// English endings: an unknown word with one is a word, not a surname.
+    static let englishSuffixes: [String] = ["ed", "ing", "ly", "ers", "est", "tion", "sion", "ment", "ness",
+                                            "able", "ible", "ful", "less", "ize", "ise", "ized", "ised", "izes",
+                                            "ous", "ive", "ity", "ship", "ism", "ist", "ists", "ware"]
 
     /// Titles are never a name themselves ("Mr" sounds like "Mehra", MR).
     static let titles: Set<String> = ["mr", "mrs", "ms", "mister", "miss", "dr", "doctor", "shri", "sri", "smt"]
