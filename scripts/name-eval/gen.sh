@@ -4,14 +4,20 @@
 #      (say -o … — never played aloud) in a scratch dir (not committed);
 #   2. transcribes them with the probe (scripts/name-eval/probe: FluidAudio
 #      0.15.5, Parakeet TDT v3, the app's config);
-#   3. build_corpus.py aligns each transcript to its truth and writes corpus.json.
+#   3. build_corpus.py aligns each transcript to its truth and writes corpus.json
+#      (every row carries "source": "parakeet").
 # Usage: scripts/name-eval/gen.sh [audio-dir]
+#   SENTENCES=heldout.txt OUT=heldout.json   build the held-out set instead
+#   ONLY=learn_keyboard_neg   render only rows of this role and MERGE them into OUT
+#                             (other roles' rows, and their raw text, are kept as is)
 #   PROBE=/path/to/probe  use a prebuilt probe binary (default: swift build the package)
 #   VOICES="Rishi Aman"   override the voice list
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 AUDIO="${1:-${TMPDIR:-/tmp}/name-eval-audio}"
 VOICES="${VOICES:-Rishi Aman Tara Samantha Daniel}"
+SENTENCES="$HERE/${SENTENCES:-sentences.txt}"
+OUT="$HERE/${OUT:-corpus.json}"
 mkdir -p "$AUDIO"
 
 if [ -z "${PROBE:-}" ]; then
@@ -35,7 +41,9 @@ echo "voices: ${USED[*]}" >&2
 : > "$AUDIO/manifest.tsv"
 while IFS='|' read -r role id flags prev text; do
   [[ -z "$role" || "$role" == \#* ]] && continue
-  spoken=$(sed -E 's/[{}]//g' <<<"$text")
+  [[ -n "${ONLY:-}" && "$role" != "$ONLY" ]] && continue
+  # "text ==> edit" (learn_keyboard_neg): only the text is spoken.
+  spoken=$(sed -E 's/ ==> .*$//; s/[{}]//g' <<<"$text")
   for v in "${USED[@]}"; do
     f="$id-$v.wav"
     # say occasionally renders a truncated file (~0.2s); retry those.
@@ -45,7 +53,7 @@ while IFS='|' read -r role id flags prev text; do
     done
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$f" "$role" "$id" "$v" "$flags" "$prev" "$text" >> "$AUDIO/manifest.tsv"
   done
-done < "$HERE/sentences.txt"
+done < "$SENTENCES"
 
 cut -f1 "$AUDIO/manifest.tsv" | sed "s|^|$AUDIO/|" | xargs "$PROBE" > "$AUDIO/transcripts.tsv"
-python3 -I "$HERE/build_corpus.py" "$AUDIO/manifest.tsv" "$AUDIO/transcripts.tsv" "$HERE/corpus.json"
+python3 -I "$HERE/build_corpus.py" "$AUDIO/manifest.tsv" "$AUDIO/transcripts.tsv" "$OUT" ${ONLY:+--merge}

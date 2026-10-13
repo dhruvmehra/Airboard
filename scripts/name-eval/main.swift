@@ -14,7 +14,18 @@
 //             isolates the APPLY stage from the LEARN stage
 // then every apply_pos / apply_neg utterance goes through the dictation path.
 //
+// Extra sections (they never change the numbers above):
+//   learn negatives  learn_keyboard_neg rows: an ORDINARY keyboard edit
+//                    (pipe→pipes, drove→drive, a rewrite…) replayed on a
+//                    fresh memory per voice; every rule produced is a bug.
+//   reachable        apply recall raw and over the slots NOT listed in
+//                    unreachable.json (frozen; rules in its header).
+//   held-out         heldout.json (new sentences, not tuned to the code),
+//                    scored with each scenario's learned rules; lists every
+//                    held-out negative the pipeline changed.
+//
 // Usage: name-eval corpus.json [-v] [--label NAME] [--summary FILE]
+//                  [--heldout heldout.json] [--unreachable unreachable.json]
 import Foundation
 
 struct Corpus: Decodable {
@@ -22,14 +33,24 @@ struct Corpus: Decodable {
         let i: Int; let word: String; let term: String
         let heard: String?; let `class`: String; let merged: Bool?
     }
+    /// learn_keyboard_neg: the ordinary edit (build_corpus.py resolve_edit).
+    struct Edit: Decodable { let from: String?; let to: String?; let at: String?; let rewrite: String? }
     struct Item: Decodable {
         let id: String; let sentence: String; let voice: String; let role: String; let label: String
         let truth: String; let raw: String; let slots: [Slot]
         let after: String?; let prev: String?; let acceptance: Bool?
         let spelling_heard: Bool?
+        let source: String?; let edit: Edit?; let excluded_reason: String?
     }
     let items: [Item]
 }
+
+struct Unreachable: Decodable {
+    struct Slot: Decodable { let id: String; let slot: Int; let rule: String; let reason: String }
+    let slots: [Slot]
+}
+/// "itemID#slotIndex" of every slot no learned rule can reach (unreachable.json).
+var unreachable = Set<String>()
 
 // MARK: - Tokens (same as build_corpus.py)
 
@@ -95,6 +116,19 @@ func place(slots: [Corpus.Slot], truth: [Tok], text: [Tok]) -> [SlotPlace] {
     }
 }
 
+/// An ordinary keyboard edit (learn_keyboard_neg) applied to what was
+/// inserted — same rule as build_corpus.py apply_edit.
+func applyEdit(_ text: String, _ e: Corpus.Edit) -> String {
+    if let r = e.rewrite { return r }
+    guard let at = e.at, let to = e.to,
+          let t = tokens(text).first(where: { $0.key == at.lowercased() }) else { return text }
+    var rep = to
+    if t.word.first?.isUppercase == true, let f = rep.first { rep = f.uppercased() + rep.dropFirst() }
+    var out = text
+    out.replaceSubrange(t.range, with: rep)
+    return out
+}
+
 /// The user's keyboard fix: misheard name tokens replaced by the truth.
 func userFix(_ text: String, item: Corpus.Item) -> String {
     let tt = tokens(item.truth), ot = tokens(text)
@@ -133,6 +167,12 @@ struct Counts {
 struct LearnCounts {
     var tp = 0, fp = 0, fn = 0, expected = 0, produced = 0, waitedOnCap = 0
     var auto = 0   // covered because an earlier rule already applied (in tp)
+    var excluded = 0, excludedTP = 0   // expectations only from excluded_reason events
+    var covered: [Expected] = []
+    /// Recall with auto items left out of both sides (only what was LEARNED).
+    var recallNoAuto: Double? { expected - auto == 0 ? nil : Double(tp - auto) / Double(expected - auto) }
+    /// Recall over learnable expectations (excluded_reason events left out).
+    var recallLearnable: Double? { expected - excluded == 0 ? nil : Double(tp - excludedTP) / Double(expected - excluded) }
     var precision: Double? { produced == 0 ? nil : Double(produced - fp) / Double(produced) }
     var recall: Double? { expected == 0 ? nil : Double(tp) / Double(expected) }
 }
@@ -147,7 +187,11 @@ struct ApplyResult {
 }
 
 /// Scores one apply utterance. input = what the vocabulary step received.
-func score(item: Corpus.Item, input: String, output: String, result: inout ApplyResult, terms: Set<String>) {
+/// Slots are scored whenever the row has them (a held-out negative may hold
+/// a real surname slot); every change outside a slot is a false positive.
+/// Returns those unexplained changes.
+@discardableResult
+func score(item: Corpus.Item, input: String, output: String, result: inout ApplyResult, terms: Set<String>) -> [String] {
     let tt = tokens(item.truth), ot = tokens(output), it = tokens(input)
     // What the pipeline changed: input ↔ output, exact words.
     let io = lcs(it.map(\.word), ot.map(\.word))
@@ -156,7 +200,7 @@ func score(item: Corpus.Item, input: String, output: String, result: inout Apply
     var c = Counts()
     var perSlot: [(Corpus.Slot, String)] = []
     var okOut = Set<Int>()     // output tokens explained by a TP / WRONG slot
-    if item.label == "pos" {
+    if !item.slots.isEmpty {
         for (s, p) in zip(item.slots, place(slots: item.slots, truth: tt, text: ot)) {
             let poss = s.word.hasSuffix("'s")
             let exact = p.matched.map { ot[$0].word == s.word } ?? false
@@ -172,9 +216,8 @@ func score(item: Corpus.Item, input: String, output: String, result: inout Apply
             if s.class != "correct" { c.misheardSlots += 1; if outcome == "TP" { c.misheardTP += 1 } }
             perSlot.append((s, outcome))
         }
-    } else {
-        c.negSentences = 1
     }
+    if item.label == "neg" { c.negSentences = 1 }
     // Change hunks not explained by a slot: false positives.
     var extra: [String] = []
     var j = 0, i = 0
@@ -196,12 +239,16 @@ func score(item: Corpus.Item, input: String, output: String, result: inout Apply
     add("all", c)
     add("voice:\(item.voice)", c)
     add("label:\(item.label)", c)
-    for (s, o) in perSlot {
+    for (k, (s, o)) in perSlot.enumerated() {
         var x = Counts()
         switch o { case "TP": x.tp = 1; case "WRONG": x.wrong = 1; default: x.fn = 1 }
         if s.class != "correct" { x.misheardSlots = 1; x.misheardTP = o == "TP" ? 1 : 0 }
         add("name:\(s.term)", x)
         add("class:\(s.class)", x)
+        if !unreachable.contains("\(item.id)#\(k)") {
+            add("reach:all", x)
+            add("reach:class:\(s.class)", x)
+        }
     }
     // Extra FPs, by which learned term they introduced.
     for e in extra {
@@ -215,6 +262,7 @@ func score(item: Corpus.Item, input: String, output: String, result: inout Apply
         let fps = extra.isEmpty ? "" : " FP[\(extra.joined(separator: " | "))]"
         result.misses.append("\(item.id): \"\(output)\"  \(slots)\(fps)")
     }
+    return extra
 }
 
 // MARK: - Learn expectations
@@ -300,6 +348,7 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected], auto: Set<Expected>
     }
     lc.tp = covered.count
     lc.fn = expected.count - covered.count
+    lc.covered = covered.sorted().map { expected[$0] }
     for (k, e) in expected.enumerated() where !covered.contains(k) {
         notes.append("  learn FN: \(e.term) ← \"\(e.heard)\"")
     }
@@ -315,8 +364,17 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected], auto: Set<Expected>
         var label = "eval", summaryPath: String?
         if let i = args.firstIndex(of: "--label") { label = args[i + 1]; args.removeSubrange(i...(i + 1)) }
         if let i = args.firstIndex(of: "--summary") { summaryPath = args[i + 1]; args.removeSubrange(i...(i + 1)) }
+        var heldoutPath: String?, unreachablePath: String?
+        if let i = args.firstIndex(of: "--heldout") { heldoutPath = args[i + 1]; args.removeSubrange(i...(i + 1)) }
+        if let i = args.firstIndex(of: "--unreachable") { unreachablePath = args[i + 1]; args.removeSubrange(i...(i + 1)) }
         let path = args.first ?? "corpus.json"
         let corpus = try! JSONDecoder().decode(Corpus.self, from: Data(contentsOf: URL(fileURLWithPath: path))).items
+        let heldout = heldoutPath.map { try! JSONDecoder().decode(Corpus.self, from: Data(contentsOf: URL(fileURLWithPath: $0))).items } ?? []
+        if let p = unreachablePath {
+            let u = try! JSONDecoder().decode(Unreachable.self, from: Data(contentsOf: URL(fileURLWithPath: p)))
+            unreachable = Set(u.slots.map { "\($0.id)#\($0.slot)" })
+        }
+        let notParakeet = (corpus + heldout).filter { $0.source != "parakeet" }.count
         let voices = corpus.reduce(into: [String]()) { if !$0.contains($1.voice) { $0.append($1.voice) } }
         let terms: Set<String> = Set(corpus.flatMap { $0.slots.map(\.term) })
         var summary: [(String, String)] = []
@@ -333,6 +391,8 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected], auto: Set<Expected>
         let roleCount = Dictionary(grouping: corpus, by: \.role).mapValues(\.count)
         print("== name-eval [\(label)] — \(corpus.count) utterances (\(roleCount.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", "))), voices: \(voices.joined(separator: " "))")
         print("   modes: \(modes.map(\.name).joined(separator: ", "))\(key == nil ? "  (OPENROUTER_API_KEY not set — with-key modes skipped)" : "")")
+        print("   provenance: \(corpus.count + heldout.count - notParakeet)/\(corpus.count + heldout.count) rows source=parakeet; held-out \(heldout.count) rows; unreachable slots listed \(unreachable.count)")
+        summary.append(("rows not source=parakeet", "\(notParakeet)"))
 
         let scenarios = ["none", "keyboard", "spelled", "both", "oracle"]
         for mode in modes {
@@ -341,10 +401,15 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected], auto: Set<Expected>
                          "LEARN  exp prod  TP  FP  FN   prec  recall  (cap-wait)" as NSString,
                          "APPLY  slots TP  FN WRONG FPx   prec  recall misheard-recall  neg-clean" as NSString))
             var detail: [String: ApplyResult] = [:]
+            var heldDetail: [String: ApplyResult] = [:]
+            var heldChanged: [String: [String]] = [:]
+            var learnExtra: [String] = []
             var accLines: [String] = []
             for sc in scenarios {
                 var lcAll = LearnCounts()
                 var ar = ApplyResult()
+                var hr = ApplyResult()
+                var changed: [String] = []
                 var learnNotes: [String] = []
                 for v in voices {
                     let app = GlueApp(client: mode.client, applyDeadline: mode.apply, learnDeadline: mode.learn)
@@ -375,6 +440,12 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected], auto: Set<Expected>
                     if sc != "none" && sc != "oracle" {
                         var (lc, notes) = scoreLearn(rules: app.rules, expected: exp, auto: auto)
                         lc.waitedOnCap = app.rules.count - beforeDrain
+                        // Expectations that only excluded_reason events imply.
+                        let keyOf = { (e: Expected) in e.term + "|" + norm(e.heard) }
+                        let kept = Set(expectedRules(events.filter { $0.excluded_reason == nil }).map(keyOf))
+                        let excl = Set(expectedRules(events.filter { $0.excluded_reason != nil }).map(keyOf)).subtracting(kept)
+                        lcAll.excluded += exp.filter { excl.contains(keyOf($0)) }.count
+                        lcAll.excludedTP += lc.covered.filter { excl.contains(keyOf($0)) }.count
                         lcAll.auto += lc.auto
                         lcAll.tp += lc.tp; lcAll.fp += lc.fp; lcAll.fn += lc.fn
                         lcAll.expected += lc.expected; lcAll.produced += lc.produced; lcAll.waitedOnCap += lc.waitedOnCap
@@ -404,12 +475,28 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected], auto: Set<Expected>
                             accLines.append("  \(out == want ? "PASS" : "FAIL") [\(v)] literal \"\(input)\" → \"\(out)\" (want \"\(want)\")")
                         }
                     }
+                    // Held-out set, same learned rules (after everything above, so it changes nothing there).
+                    for it in heldout where it.voice == v {
+                        let input = FillerRules.clean(it.raw)
+                        let out = await app.dictate(it.raw)
+                        let extra = score(item: it, input: input, output: out.text, result: &hr, terms: terms)
+                        if it.label == "neg" && !extra.isEmpty {
+                            changed.append("\(it.id): \"\(input)\" → \"\(out.text)\"")
+                        }
+                    }
                 }
+                heldDetail[sc] = hr
+                heldChanged[sc] = changed
                 detail[sc] = ar
                 let a = ar.byKey["all"] ?? Counts()
                 let learnCol = (sc == "none" || sc == "oracle") ? String(repeating: " ", count: 53)
                     : String(format: "       %3d %4d %3d %3d %3d %@ %@  (%d) auto %d", lcAll.expected, lcAll.produced, lcAll.tp, lcAll.fp, lcAll.fn,
                              pct(lcAll.precision) as NSString, pct(lcAll.recall) as NSString, lcAll.waitedOnCap, lcAll.auto)
+                if sc != "none" && sc != "oracle" {
+                    learnExtra.append(String(format: "    %@ learn recall %@ | without auto items %@ (%d auto) | learnable %@ (%d excluded)",
+                                             pad(sc, 9) as NSString, pct(lcAll.recall) as NSString, pct(lcAll.recallNoAuto) as NSString, lcAll.auto,
+                                             pct(lcAll.recallLearnable) as NSString, lcAll.excluded))
+                }
                 let slots = a.tp + a.fn + a.wrong
                 print(pad(sc, 9) + String(format: " │ %@ │        %4d %3d %3d %4d %3d %@ %@ %@          %d/%d", learnCol as NSString,
                              slots, a.tp, a.fn, a.wrong, a.fpExtra, pct(a.precision) as NSString, pct(a.recall) as NSString,
@@ -422,6 +509,8 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected], auto: Set<Expected>
                     summary.append(("\(mode.name) \(sc) learn prec", pct(lcAll.precision)))
                     summary.append(("\(mode.name) \(sc) learn recall", pct(lcAll.recall)))
                     summary.append(("\(mode.name) \(sc) learn auto-applied", "\(lcAll.auto)"))
+                    summary.append(("\(mode.name) \(sc) learn recall w/o auto", pct(lcAll.recallNoAuto)))
+                    summary.append(("\(mode.name) \(sc) learn recall learnable", pct(lcAll.recallLearnable)))
                 }
                 if verbose && sc != "none" && sc != "oracle" {
                     print("    learn detail (\(sc)):"); learnNotes.forEach { print("    " + $0) }
@@ -430,6 +519,78 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected], auto: Set<Expected>
                     print("    apply misses (\(sc)):"); ar.misses.forEach { print("      " + $0) }
                 }
             }
+            // ---- Learn report extras: recall with/without auto; excluded events.
+            print("\n  learn recall [\(mode.name)] (auto = covered because an earlier rule already applied):")
+            learnExtra.forEach { print($0) }
+            let excludedRows = corpus.filter { $0.excluded_reason != nil }
+            print("    keyboard/spelled events deliberately excluded from 'learnable' (\(excludedRows.count)):")
+            for r in excludedRows { print("      \(r.id) \"\(r.raw)\" → \"\(r.after ?? "")\": \(r.excluded_reason!)") }
+
+            // ---- Learn negatives: ordinary keyboard edits must produce no rule.
+            let negEvents = corpus.filter { $0.role == "learn_keyboard_neg" }
+            if !negEvents.isEmpty {
+                var produced: [String] = []
+                var edited = 0
+                for v in voices {
+                    let app = GlueApp(client: mode.client, applyDeadline: mode.apply, learnDeadline: mode.learn)
+                    for ev in negEvents where ev.voice == v {
+                        await app.advance(to: app.now.addingTimeInterval(30))
+                        await app.recordingStarted()
+                        let out = await app.dictate(ev.raw)
+                        guard let fid = await app.didInsert(out.text, pid: 1), let e = ev.edit else { continue }
+                        let after = applyEdit(out.text, e)
+                        if after != out.text { edited += 1; app.userEdits(field: fid, to: after, at: app.now.addingTimeInterval(3)) }
+                    }
+                    await app.advance(to: app.now.addingTimeInterval(120))
+                    await app.drainCards()
+                    produced += app.rules.map { "      [\(v)] \($0.memoryLine)" }
+                    if verbose { app.trace.forEach { print("      [\(v)]    · " + $0) } }
+                }
+                print("\n  learn negatives [\(mode.name)]: \(produced.count) rules produced (must be 0) — \(negEvents.count) ordinary edits, \(edited) applied in the field")
+                produced.forEach { print($0) }
+                summary.append(("\(mode.name) learn negatives: rules produced", "\(produced.count)"))
+            }
+
+            // ---- Reachable-slot recall (unreachable.json removed from the denominator).
+            print("\n  reachable slots [\(mode.name)] (\(unreachable.count) slots listed in unreachable.json; corpus apply rows):")
+            print("    scenario   apply recall raw  reachable │ nondict raw  reachable")
+            for sc in scenarios {
+                guard let ar = detail[sc] else { continue }
+                let all = ar.byKey["all"] ?? Counts(), ra = ar.byKey["reach:all"] ?? Counts()
+                let nd = ar.byKey["class:nondict"] ?? Counts(), rnd = ar.byKey["reach:class:nondict"] ?? Counts()
+                print("    " + pad(sc, 9) + String(format: "  %@ (%d)  %@ (%d) │ %@ (%d)  %@ (%d)",
+                      pct(all.recall) as NSString, all.tp + all.fn + all.wrong, pct(ra.recall) as NSString, ra.tp + ra.fn + ra.wrong,
+                      pct(nd.recall) as NSString, nd.tp + nd.fn + nd.wrong, pct(rnd.recall) as NSString, rnd.tp + rnd.fn + rnd.wrong))
+                summary.append(("\(mode.name) \(sc) apply recall reachable", pct(ra.recall)))
+                summary.append(("\(mode.name) \(sc) nondict recall raw", pct(nd.recall)))
+                summary.append(("\(mode.name) \(sc) nondict recall reachable", pct(rnd.recall)))
+            }
+
+            // ---- Held-out set (heldout.json), scored with each scenario's learned rules.
+            if !heldout.isEmpty {
+                let hc = Dictionary(grouping: heldout, by: \.role).mapValues(\.count)
+                print("\n  HELD-OUT [\(mode.name)] — \(heldout.count) rows (\(hc.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")))")
+                print("    scenario   slots  TP  FN WRONG FPx   prec  recall reach-recall neg-clean")
+                for sc in scenarios {
+                    guard let hr = heldDetail[sc] else { continue }
+                    let a = hr.byKey["all"] ?? Counts(), r = hr.byKey["reach:all"] ?? Counts()
+                    print("    " + pad(sc, 9) + String(format: " %5d %3d %3d %4d %3d %@ %@ %@      %d/%d", a.tp + a.fn + a.wrong, a.tp, a.fn, a.wrong,
+                          a.fpExtra, pct(a.precision) as NSString, pct(a.recall) as NSString, pct(r.recall) as NSString, a.negClean, a.negSentences))
+                    summary.append(("\(mode.name) \(sc) heldout prec", pct(a.precision)))
+                    summary.append(("\(mode.name) \(sc) heldout recall", pct(a.recall)))
+                    summary.append(("\(mode.name) \(sc) heldout reach-recall", pct(r.recall)))
+                    summary.append(("\(mode.name) \(sc) heldout neg clean", "\(a.negClean)/\(a.negSentences)"))
+                }
+                for sc in scenarios {
+                    let ch = heldChanged[sc] ?? []
+                    print("    held-out negatives changed [\(sc)]: \(ch.count)")
+                    ch.forEach { print("      " + $0) }
+                    if verbose, let hr = heldDetail[sc] {
+                        print("    held-out misses [\(sc)]:"); hr.misses.forEach { print("      " + $0) }
+                    }
+                }
+            }
+
             // Breakdowns for the scenarios that matter.
             for sc in ["both", "oracle"] {
                 guard let ar = detail[sc] else { continue }

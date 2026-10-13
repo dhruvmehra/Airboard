@@ -1,0 +1,525 @@
+{
+ "about": "Apply slots no learned rule can reasonably reach. Frozen list (generated once by classify_unreachable.py, rules in its header); fixers must not edit it. main.swift reports apply recall raw and over the remaining (reachable) slots.",
+ "rules": {
+  "R1": "dropped: Parakeet wrote nothing for the name",
+  "R2": "numeral: the heard form contains a digit",
+  "R3": "untaught: the voice never corrected that term in any learn event, so no rule for it exists",
+  "R4": "swallowed: the heard token is also the best alignment match of an adjacent non-name truth word",
+  "R5": "far-sound: SoundCode(heard minus 's) > 1 edit from SoundCode(term) and from every form that voice corrected for it (SoundCode @5c07f49)"
+ },
+ "counts": {
+  "R1": 2,
+  "R2": 2,
+  "R3": 19,
+  "R4": 25,
+  "R5": 15,
+  "unreachable": 63,
+  "slots_total": 360
+ },
+ "slots": [
+  {
+   "id": "ap02-Tara",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "Fight",
+   "rule": "R5",
+   "reason": "\"Fight\" FT is 2 code edits from Pype PP and from every form Tara corrected (Pipe PP, pipe PP)"
+  },
+  {
+   "id": "ap04-Tara",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "Fipes",
+   "rule": "R5",
+   "reason": "\"Fipes\" FPS is 2 code edits from Pype PP and from every form Tara corrected (Pipe PP, pipe PP)"
+  },
+  {
+   "id": "ap05-Tara",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "Pipia",
+   "rule": "R4",
+   "reason": "\"Pipia\" swallows the neighbouring word \"AI\""
+  },
+  {
+   "id": "ap05-Samantha",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "pipei",
+   "rule": "R4",
+   "reason": "\"pipei\" swallows the neighbouring word \"AI\""
+  },
+  {
+   "id": "ap06-Aman",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "The",
+   "rule": "R5",
+   "reason": "\"The\" 0 is 2 code edits from Pype PP and from every form Aman corrected (Fight FT, Python P0N)"
+  },
+  {
+   "id": "ap06-Tara",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "PiPR",
+   "rule": "R4",
+   "reason": "\"PiPR\" swallows the neighbouring word \"AI\""
+  },
+  {
+   "id": "ap07-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Dhruvmehra",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap07-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Dhruvmehra",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap08-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Dhruvmehra",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap08-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Dhruvmehra",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap09-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "me",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap12-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "The",
+   "rule": "R5",
+   "reason": "\"The\" 0 is 2 code edits from Dhruv TRF and from every form Rishi corrected (Dhruve TRF, Drew TR)"
+  },
+  {
+   "id": "ap16-Rishi",
+   "slot": 0,
+   "term": "Mehra",
+   "heard": "Mahra",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap18-Aman",
+   "slot": 2,
+   "term": "Pype",
+   "heard": "5",
+   "rule": "R2",
+   "reason": "heard as the numeral \"5\""
+  },
+  {
+   "id": "ap20-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Dhruvmehra",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap20-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Dhruvmehra",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap22-Aman",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Dhruvan",
+   "rule": "R4",
+   "reason": "\"Dhruvan\" swallows the neighbouring word \"and\""
+  },
+  {
+   "id": "ap22-Tara",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Droven",
+   "rule": "R4",
+   "reason": "\"Droven\" swallows the neighbouring word \"and\""
+  },
+  {
+   "id": "ap24-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Ghov",
+   "rule": "R5",
+   "reason": "\"Ghov\" KHF is 2 code edits from Dhruv TRF and from every form Rishi corrected (Dhruve TRF, Drew TR)"
+  },
+  {
+   "id": "ap25-Aman",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Drova",
+   "rule": "R4",
+   "reason": "\"Drova\" swallows the neighbouring word \"at\""
+  },
+  {
+   "id": "ap26-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "May",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap26-Tara",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Mendruvmehrahu",
+   "rule": "R4",
+   "reason": "\"Mendruvmehrahu\" swallows the neighbouring word \"Main\""
+  },
+  {
+   "id": "ap26-Tara",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Mendruvmehrahu",
+   "rule": "R4",
+   "reason": "\"Mendruvmehrahu\" swallows the neighbouring word \"Main\""
+  },
+  {
+   "id": "ap26-Daniel",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Marahune",
+   "rule": "R4",
+   "reason": "\"Marahune\" swallows the neighbouring word \"hoon\""
+  },
+  {
+   "id": "ap27-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "me",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap27-Tara",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "mehrak",
+   "rule": "R5",
+   "reason": "\"mehrak\" MRK is 3 code edits from Dhruv Mehra TRFMR and from every form Tara corrected (DrewMer TRMR, DrewMira TRMR, TruthMara TR0MR, TruveMer TRFMR, TruveMira TRFMR)"
+  },
+  {
+   "id": "ap27-Tara",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "mehrak",
+   "rule": "R5",
+   "reason": "\"mehrak\" MRK is 3 code edits from Dhruv Mehra TRFMR and from every form Tara corrected (DrewMer TRMR, DrewMira TRMR, TruthMara TR0MR, TruveMer TRFMR, TruveMira TRFMR)"
+  },
+  {
+   "id": "ap27-Samantha",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Miraca",
+   "rule": "R4",
+   "reason": "\"Miraca\" swallows the neighbouring word \"ka\""
+  },
+  {
+   "id": "ap27-Daniel",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Merikar",
+   "rule": "R4",
+   "reason": "\"Merikar\" swallows the neighbouring word \"ka\""
+  },
+  {
+   "id": "ap28-Tara",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "",
+   "rule": "R1",
+   "reason": "Parakeet dropped the name"
+  },
+  {
+   "id": "ap30-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "the",
+   "rule": "R5",
+   "reason": "\"the\" 0 is 2 code edits from Dhruv TRF and from every form Rishi corrected (Dhruve TRF, Drew TR)"
+  },
+  {
+   "id": "ap30-Aman",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Dhruvet",
+   "rule": "R4",
+   "reason": "\"Dhruvet\" swallows the neighbouring word \"at\""
+  },
+  {
+   "id": "ap30-Tara",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Drovat",
+   "rule": "R4",
+   "reason": "\"Drovat\" swallows the neighbouring word \"at\""
+  },
+  {
+   "id": "ap30-Samantha",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Drupid",
+   "rule": "R4",
+   "reason": "\"Drupid\" swallows the neighbouring word \"at\""
+  },
+  {
+   "id": "ap30-Daniel",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Drovad",
+   "rule": "R4",
+   "reason": "\"Drovad\" swallows the neighbouring word \"at\""
+  },
+  {
+   "id": "ap31-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Dhruvmehra",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap31-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Dhruvmehra",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "ap33-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "me",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "hp01-Aman",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "5",
+   "rule": "R2",
+   "reason": "heard as the numeral \"5\""
+  },
+  {
+   "id": "hp01-Tara",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "Fight",
+   "rule": "R5",
+   "reason": "\"Fight\" FT is 2 code edits from Pype PP and from every form Tara corrected (Pipe PP, pipe PP)"
+  },
+  {
+   "id": "hp02-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "",
+   "rule": "R1",
+   "reason": "Parakeet dropped the name"
+  },
+  {
+   "id": "hp03-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Dhruvmehar",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "hp03-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Dhruvmehar",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "hp03-Tara",
+   "slot": 2,
+   "term": "Pype",
+   "heard": "Vibe",
+   "rule": "R5",
+   "reason": "\"Vibe\" FB is 2 code edits from Pype PP and from every form Tara corrected (Pipe PP, pipe PP)"
+  },
+  {
+   "id": "hp09-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Dhruvmehar",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "hp09-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Dhruvmehar",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "hp10-Tara",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "Five",
+   "rule": "R5",
+   "reason": "\"Five\" FF is 2 code edits from Pype PP and from every form Tara corrected (Pipe PP, pipe PP)"
+  },
+  {
+   "id": "hp10-Daniel",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "I'd",
+   "rule": "R5",
+   "reason": "\"I'd\" AT is 2 code edits from Pype PP and from every form Daniel corrected (Pipe PP, pipe PP)"
+  },
+  {
+   "id": "hp11-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "through",
+   "rule": "R5",
+   "reason": "\"through\" 0RK is 2 code edits from Dhruv TRF and from every form Rishi corrected (Dhruve TRF, Drew TR)"
+  },
+  {
+   "id": "hp11-Aman",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "through",
+   "rule": "R5",
+   "reason": "\"through\" 0RK is 2 code edits from Dhruv TRF and from every form Aman corrected (Drew TR, Druf TRF)"
+  },
+  {
+   "id": "hp11-Tara",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "of",
+   "rule": "R5",
+   "reason": "\"of\" AF is 2 code edits from Dhruv TRF and from every form Tara corrected (Drew TR, Truve TRF)"
+  },
+  {
+   "id": "hp12-Rishi",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Kaldhruve",
+   "rule": "R4",
+   "reason": "\"Kaldhruve\" swallows the neighbouring word \"Kal\""
+  },
+  {
+   "id": "hp12-Rishi",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "May",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "hp12-Aman",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Kaldruvmehra",
+   "rule": "R4",
+   "reason": "\"Kaldruvmehra\" swallows the neighbouring word \"Kal\""
+  },
+  {
+   "id": "hp12-Aman",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Kaldruvmehra",
+   "rule": "R4",
+   "reason": "\"Kaldruvmehra\" swallows the neighbouring word \"Kal\""
+  },
+  {
+   "id": "hp12-Samantha",
+   "slot": 0,
+   "term": "Dhruv",
+   "heard": "Kaldruv",
+   "rule": "R4",
+   "reason": "\"Kaldruv\" swallows the neighbouring word \"Kal\""
+  },
+  {
+   "id": "hp12-Daniel",
+   "slot": 1,
+   "term": "Mehra",
+   "heard": "Marimba",
+   "rule": "R4",
+   "reason": "\"Marimba\" swallows the neighbouring word \"Mumbai\""
+  },
+  {
+   "id": "hp14-Rishi",
+   "slot": 0,
+   "term": "Mehra",
+   "heard": "Mehraji",
+   "rule": "R3",
+   "reason": "Rishi never corrected Mehra in any learn event"
+  },
+  {
+   "id": "hp14-Aman",
+   "slot": 0,
+   "term": "Mehra",
+   "heard": "Merji",
+   "rule": "R4",
+   "reason": "\"Merji\" swallows the neighbouring word \"ji\""
+  },
+  {
+   "id": "hp14-Tara",
+   "slot": 0,
+   "term": "Mehra",
+   "heard": "Merigi",
+   "rule": "R4",
+   "reason": "\"Merigi\" swallows the neighbouring word \"ji\""
+  },
+  {
+   "id": "hp14-Samantha",
+   "slot": 0,
+   "term": "Mehra",
+   "heard": "Mayraji",
+   "rule": "R4",
+   "reason": "\"Mayraji\" swallows the neighbouring word \"ji\""
+  },
+  {
+   "id": "hp14-Daniel",
+   "slot": 0,
+   "term": "Mehra",
+   "heard": "Merigi",
+   "rule": "R4",
+   "reason": "\"Merigi\" swallows the neighbouring word \"ji\""
+  },
+  {
+   "id": "hp15-Tara",
+   "slot": 0,
+   "term": "Pype",
+   "heard": "TMUTPipe",
+   "rule": "R4",
+   "reason": "\"TMUTPipe\" swallows the neighbouring word \"at\""
+  }
+ ]
+}

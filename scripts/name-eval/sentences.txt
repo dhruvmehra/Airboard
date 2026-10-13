@@ -70,3 +70,23 @@ apply_neg|an21|||This type of error is common.
 apply_neg|an22|||Mehta and Sons sent the bill.
 apply_neg|an23|||She drew the curtains.
 apply_neg|an24|||Mera dost aa raha hai.
+# learn_keyboard_neg: an ORDINARY keyboard edit after the dictation; must
+# produce NO rule. "text ==> from -> to" replaces the first word `from`
+# (case-insensitive) in what was inserted; "text ==> = new text" replaces
+# the whole field (a full rewrite).
+learn_keyboard_neg|kn01|||The pipe burst again. ==> pipe -> pipes
+learn_keyboard_neg|kn02|||The pipe burst in the kitchen. ==> burst -> broke
+learn_keyboard_neg|kn03|||I drove to the office. ==> drove -> drive
+learn_keyboard_neg|kn04|||I drove the kids to school. ==> drove -> drive
+learn_keyboard_neg|kn05|||We did a through review of the code. ==> through -> thorough
+learn_keyboard_neg|kn06|||Mera behen aa rahi hai. ==> mera -> meri
+learn_keyboard_neg|kn07|||Mera gaadi kahan hai? ==> mera -> meri
+learn_keyboard_neg|kn08|||Let us meet on Monday. ==> = Can we meet on Tuesday instead?
+learn_keyboard_neg|kn09|||Yes I can do that. ==> yes -> Yes,
+learn_keyboard_neg|kn10|||Ask Mehta to send the bill. ==> bill -> invoice
+learn_keyboard_neg|kn11|||Mehta and Sons will call you. ==> call -> email
+learn_keyboard_neg|kn12|||Type the name again. ==> name -> full name
+learn_keyboard_neg|kn13|||The water pipe is leaking. ==> leaking -> dripping
+learn_keyboard_neg|kn14|||He drew a picture. ==> drew -> draws
+learn_keyboard_neg|kn15|||Pipe the logs to a file. ==> logs -> output
+learn_keyboard_neg|kn16|||I will be there at five. ==> five -> 5

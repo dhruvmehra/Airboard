@@ -7,6 +7,9 @@
 #   scripts/name-eval/run.sh --rev WORKTREE  the working tree only (Glue.swift)
 #   -v                                       list every learn decision and every miss
 #   OPENROUTER_API_KEY=… adds the decision-model modes (never read from the Keychain).
+# Also scores: learn negatives (learn_keyboard_neg: ordinary edits → must
+# learn 0 rules), reachable-slot recall (unreachable.json, frozen) and the
+# held-out set heldout.json (new sentences; fixers must not tune to it).
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 W="$(cd "$HERE/../.." && pwd)"
@@ -59,7 +62,8 @@ run_one() {  # rev label
     echo "!! (expected while other agents are mid-edit; update Glue.swift if VocabularyLearning's glue changed)" >&2
     return 1
   fi
-  "$bin" "$HERE/corpus.json" $VERBOSE --label "$2" --summary "$TMP/$2.summary"
+  "$bin" "$HERE/corpus.json" $VERBOSE --label "$2" --summary "$TMP/$2.summary" \
+    --heldout "$HERE/heldout.json" --unreachable "$HERE/unreachable.json"
 }
 
 if [ -n "$REV" ]; then

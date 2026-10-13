@@ -10,6 +10,14 @@ by the true spelling (what the user's keyboard fix leaves in the field).
 Slot class: correct (Parakeet wrote the truth word exactly), case (right
 letters, wrong capitalisation), dict (every heard word, minus a possessive
 's, is in /usr/share/dict/words, case-insensitive), nondict, dropped.
+Every row carries "source": "parakeet" (raw is real Parakeet output, never
+hand-typed). learn_keyboard_neg rows carry `edit` ({"from","to"} or
+{"rewrite"}: the ORDINARY keyboard edit, applied by main.swift to what was
+inserted; `at` = the raw token it targets, see resolve_edit) and `after`
+(that edit applied to raw, for reading).
+Usage: build_corpus.py manifest transcripts out.json [--merge]
+  --merge: keep out.json's rows whose role is not in this manifest.
+
 Tokenisation (shared with main.swift): split on whitespace, strip leading/
 trailing non-alphanumerics, curly apostrophe -> straight.
 """
@@ -49,7 +57,53 @@ def klass(heard, word):
     ws = heard.split()
     return "dict" if all(strip_poss(w.lower()) in DICT for w in ws) else "nondict"
 
-def main(manifest, transcripts, out):
+NEG_ROLES = {"apply_neg", "learn_keyboard_neg", "heldout_neg"}
+
+def parse_edit(spec):
+    """"from -> to" or "= new text" (see sentences.txt)."""
+    spec = spec.strip()
+    if spec.startswith("="):
+        return {"rewrite": spec[1:].strip()}
+    a, b = spec.split(" -> ", 1)
+    return {"from": a.strip(), "to": b.strip()}
+
+def resolve_edit(edit, truth, raw):
+    """Pins the ordinary edit to what Parakeet actually wrote. `at` = the raw
+    token the user edits: `from` itself if Parakeet wrote it, else the raw
+    token aligned 1:1 with `from` in the truth ("bust" for "burst"). If the
+    truth word sits in a garbled stretch with no 1:1 token ("Mira
+    behanarahi" for "Mera behen aa rahi hai"), the user retypes the field:
+    the edit becomes a rewrite to the truth with the edit applied."""
+    if "rewrite" in edit:
+        return dict(edit)
+    rt = tokens(raw)
+    if any(c.lower() == edit["from"].lower() for c, _, _ in rt):
+        return {**edit, "at": next(c for c, _, _ in rt if c.lower() == edit["from"].lower())}
+    tt = tokens(truth)
+    k = next((i for i, t in enumerate(tt) if t[0].lower() == edit["from"].lower()), None)
+    if k is not None:
+        for op, a1, a2, b1, b2 in difflib.SequenceMatcher(
+                None, [t[0].lower() for t in tt], [t[0].lower() for t in rt], autojunk=False).get_opcodes():
+            if a1 <= k < a2 and op in ("equal", "replace") and a2 - a1 == b2 - b1:
+                return {**edit, "at": rt[b1 + k - a1][0]}
+    fixed, _ = apply_edit(truth, {**edit, "at": edit["from"]})
+    return {**edit, "rewrite": fixed, "garbled": True}
+
+def apply_edit(text, edit):
+    """Same rule as main.swift's applyEdit: a rewrite replaces the field;
+    else the first token whose core equals `at` (case-insensitive) gets its
+    core replaced by `to` (first letter upper-cased if the token's was)."""
+    if "rewrite" in edit:
+        return edit["rewrite"], True
+    for core, s, e in tokens(text):
+        if core.lower() == edit["at"].lower():
+            to = edit["to"]
+            if core[:1].isupper():
+                to = to[:1].upper() + to[1:]
+            return text[:s] + to + text[e:], True
+    return text, False
+
+def main(manifest, transcripts, out, merge=None):
     heard = {}
     for line in open(transcripts):
         if "\t" in line:
@@ -58,6 +112,10 @@ def main(manifest, transcripts, out):
     items = []
     for line in open(manifest):
         f, role, sid, voice, flags, prev, text = line.rstrip("\n").split("\t")
+        edit = None
+        if " ==> " in text:
+            text, spec = text.split(" ==> ", 1)
+            edit = parse_edit(spec)
         raw = heard.get(f, "<ERROR>")
         if raw == "<ERROR>":
             print(f"skip {f}: probe error", file=sys.stderr); continue
@@ -124,8 +182,15 @@ def main(manifest, transcripts, out):
         for s in slots:
             s["class"] = klass(s.get("heard"), s["word"])
         item = {"id": f"{sid}-{voice}", "sentence": sid, "voice": voice, "role": role,
-                "label": "neg" if role == "apply_neg" else "pos",
+                "label": "neg" if role in NEG_ROLES else "pos",
+                "source": "parakeet",
                 "truth": truth, "raw": raw, "slots": slots}
+        if edit is not None:
+            item["edit"] = resolve_edit(edit, truth, raw)
+            item["after"], _ = apply_edit(raw, item["edit"])
+            if item["after"] == raw:
+                item["edit_noop"] = True   # Parakeet already wrote the edited form
+                print(f"note {item['id']}: edit is a no-op on raw {raw!r}", file=sys.stderr)
         if "acc" in flags.split(","):
             item["acceptance"] = True
         if prev:
@@ -155,11 +220,30 @@ def main(manifest, transcripts, out):
         if target is not None:   # a follow-up spelling: the name sits in prev
             i["spelling_heard"] = ok
             target["spelling_heard"] = ok
+    # excluded_reason (a learn event deliberately left out of "learnable"
+    # recall, see main.swift) is a human judgement on ONE transcript: carry
+    # it over only while that row's raw text is unchanged.
+    try:
+        prior = {i["id"]: i for i in json.load(open(out))["items"]}
+    except (OSError, ValueError, KeyError):
+        prior = {}
+    for i in items:
+        p = prior.get(i["id"])
+        if p and p.get("excluded_reason") and p["raw"] == i["raw"]:
+            i["excluded_reason"] = p["excluded_reason"]
+    doc = {"generated_by": "scripts/name-eval/gen.sh (say -o + Parakeet TDT v3 via FluidAudio 0.15.5)"}
+    if merge:
+        old = json.load(open(out))
+        roles = {i["role"] for i in items}
+        keep = [i for i in old["items"] if i["role"] not in roles]
+        doc = {k: v for k, v in old.items() if k != "items"}
+        items = keep + items
+    doc["items"] = items
     with open(out, "w") as f:
-        json.dump({"generated_by": "scripts/name-eval/gen.sh (say -o + Parakeet TDT v3 via FluidAudio 0.15.5)",
-                   "items": items}, f, indent=1, ensure_ascii=False)
+        json.dump(doc, f, indent=1, ensure_ascii=False)
         f.write("\n")
     print(f"wrote {len(items)} items to {out}", file=sys.stderr)
 
 if __name__ == "__main__":
-    main(*sys.argv[1:4])
+    a = sys.argv[1:]
+    main(a[0], a[1], a[2], merge="--merge" in a[3:])
