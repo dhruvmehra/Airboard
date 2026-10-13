@@ -117,6 +117,7 @@ final class VocabularyLearning {
     /// on a strong signal).
     func process(_ raw: String, useEngine: Bool) async -> VocabOutcome {
         guard isEnabled else { return VocabOutcome(text: raw, ms: nil, outcome: "off") }
+        VocabStats.shared.record(.dictation)
         // "Tell Anakshi, I N A K S H I, that…" → "Tell Inakshi that…": the
         // user spelled it, so this dictation gets the spelling now (local,
         // ~0ms). Learning the rule still waits for the Keep/Undo card.
@@ -142,6 +143,7 @@ final class VocabularyLearning {
         let ms = a.askedEngine ? Int(Date().timeIntervalSince(start) * 1000) : nil
         let r = a.result
         pendingSuggestions = r.suggestions.map { VocabularyCard(kind: .didYouMean, heard: $0.span, term: $0.term) }
+        if r.applied > 0 { VocabStats.shared.record(.autoFixed(r.applied)) }
         print("🧠 Vocab: \(candidates.count) candidate(s), \(r.applied) applied, \(r.suggestions.count) suggested, \(a.outcome)\(ms.map { " in \($0)ms" } ?? "")")
         return VocabOutcome(text: r.text, ms: ms, outcome: a.outcome)
     }
@@ -205,6 +207,7 @@ final class VocabularyLearning {
             .suffix(Self.maxRecentTurns))
         guard !pairs.isEmpty else { return }
         print("🧠 Learn: \(pairs.count) spelled pair(s) from transcripts")
+        VocabStats.shared.record(.spelled(pairs.count))
         for p in pairs {
             consider(EditDiff.Correction(heard: p.heard, corrected: p.corrected), sentence: p.sentence,
                      fixed: p.sentence, source: .spelled)
@@ -213,6 +216,7 @@ final class VocabularyLearning {
 
     private func considerEdit(_ c: EditDiff.Correction, sentence: String, fixed: String) {
         guard isEnabled else { return }
+        VocabStats.shared.record(.handFixed)
         consider(c, sentence: sentence, fixed: fixed, source: .keyboard)
     }
 
@@ -307,8 +311,10 @@ final class VocabularyLearning {
         case (.learned, .primary), (.learned, .ignored):
             for r in rules { MemoryStore.shared.addMemory(r.memoryLine) }
             print("🧠 Cards: kept — \(rules.count) rule(s) written")
+            VocabStats.shared.record(.cardKept)
         case (.learned, .secondary):
             VocabularyCache.shared.update { c in for r in rules { c.reject(heard: r.heardAs, term: r.term) } }
+            VocabStats.shared.record(.cardUndone)
         case (.didYouMean, .secondary):
             VocabularyCache.shared.update { $0.reject(heard: card.heard, term: card.term) }
         case (.didYouMean, .primary):
