@@ -12,11 +12,16 @@ promotes that section to the released version automatically.
   (typed, or spelled out loud) also catches the name's other mishearings
   ("Druv", "Dhruva", "Dhruvmehra"), possessives ("Pipe's" → "Pype's"),
   and first and last name together ("druv mera" → "Dhruv Mehra").
-  Possessive fixes ("Drew's" → "Dhruv's") are learned too.
+  Possessive fixes ("Drew's" → "Dhruv's") are learned too, and so are
+  fixes where the mishearing sounds nothing like the name ("Python" →
+  "Pype"), just a capital letter ("pype" → "Pype"), or a spelling said
+  after an odd mishearing ("…Mana. That's spelled M-E-H-R-A"). Ordinary
+  edits (a typo, a plural, a reworded Hindi phrase) are not learned.
 - Unusual names now work without an OpenRouter key. A mishearing that is
   an ordinary word ("pipe", "through", "mera") is only changed where the
   sentence says a name belongs ("I work at ___", "Email ___ about…",
-  "Mr. ___"); "the water pipe burst" and "mera naam…" stay as they are.
+  "Mr. ___"); "the water pipe burst", "Look at pipe now", "I drove Mehra
+  to the airport" and "mera naam…" stay as they are.
 - Fixing a misheard name now teaches Airboard for a full minute after you
   dictate — even if you keep dictating, switch apps briefly, or fix two
   names. Works without an OpenRouter key too (then only clear name fixes,
