@@ -8,13 +8,15 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
-- Names you correct once are now used on every later dictation, with or
-  without an OpenRouter key: a fixed name also catches its other
-  mishearings ("Druv", "Dhruva", "Dhruvmehra", "Pipe's"), first and last
-  name together, and spots where a name clearly belongs ("Email ___ about…",
-  "I work at ___", "Mr. ___"). Ordinary words stay untouched ("the water
-  pipe burst", "Mera naam…"). Possessive fixes ("Drew's" → "Dhruv's") are
-  learned too.
+- Names you correct once are now used on every later dictation: one fix
+  (typed, or spelled out loud) also catches the name's other mishearings
+  ("Druv", "Dhruva", "Dhruvmehra"), possessives ("Pipe's" → "Pype's"),
+  and first and last name together ("druv mera" → "Dhruv Mehra").
+  Possessive fixes ("Drew's" → "Dhruv's") are learned too.
+- Unusual names now work without an OpenRouter key. A mishearing that is
+  an ordinary word ("pipe", "through", "mera") is only changed where the
+  sentence says a name belongs ("I work at ___", "Email ___ about…",
+  "Mr. ___"); "the water pipe burst" and "mera naam…" stay as they are.
 - Fixing a misheard name now teaches Airboard for a full minute after you
   dictate — even if you keep dictating, switch apps briefly, or fix two
   names. Works without an OpenRouter key too (then only clear name fixes,
