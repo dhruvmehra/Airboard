@@ -26,10 +26,21 @@
 //      · for the rule's exact heardAs only: capitalised mid-sentence
 //        ("send it to Pipe by Friday"), or a company slot — after
 //        at/join/called/named/founded, followed by the end of the clause or
-//        a small word ("I work at pipe now", but not "look at pipe sizes").
+//        a small word ("I work at pipe now", but not "look at pipe sizes");
+//      · a person slot — after email/message/call/tell/ask/thanks…, then the
+//        end of the clause or a small word ("Email drove about the launch"):
+//        the exact heardAs, or the same sound for a 3+ sound name;
+//      · a Hinglish exact heardAs capitalised mid-sentence in a sentence
+//        with no Hindi word ("Please ask Mera to sign"), never a dictionary
+//        first name ("Mira");
+//      · the user's own learned heard form that doesn't sound like its term,
+//        right before the other learned name ("Drew Mehra" → "Dhruv Mehra");
+//      · a non-dictionary learned name with one glued-on sound ("Dhruvan the
+//        team", Candidate.Match.extended).
 //  - A heardAs that doesn't sound like its term ("Mehta" → Mehra, "Drew" →
-//    Dhruv) or a one-sound-off match: decision engine only. Mehta is a real
-//    surname; local evidence can't tell them apart.
+//    Dhruv) or a one-sound-off match: decision engine only (except the
+//    name-anchor and glued-sound cases above). Mehta is a real surname;
+//    local evidence can't tell them apart.
 //  - A confirmed exact MULTI-word heardAs ("bright AI"): applied locally
 //    (unchanged from before).
 //  Screen terms are only ever suggestions, decision engine only.
@@ -114,10 +125,26 @@ nonisolated enum VocabularyResolver {
 
     private enum Kind { case name, word, soft }  // not a word / English word / Hinglish or first name
 
-    private struct Context {
+    private final class Context {
         let text: String
         let words: [Range<String.Index>]
         init(_ text: String) { self.text = text; words = CandidateFinder.wordRanges(in: text) }
+        /// Per word: its sentence number; per sentence: holds a Hindi word.
+        /// Built once, only when a Hinglish candidate needs it.
+        private lazy var sentences: (of: [Int], hindi: [[String]]) = {
+            var of: [Int] = [], hindi: [[String]] = [[]]
+            var prevEnd = text.startIndex
+            for w in words {
+                if text[prevEnd..<w.lowerBound].contains(where: { ".!?\n".contains($0) }) { hindi.append([]) }
+                let l = String(text[w]).lowercased()
+                if VocabularyResolver.hinglish.contains(l) || VocabularyResolver.hindiFollow.contains(l) {
+                    hindi[hindi.count - 1].append(l)
+                }
+                of.append(hindi.count - 1)
+                prevEnd = w.upperBound
+            }
+            return (of, hindi)
+        }()
 
         /// Index of the first word starting at or after `i`.
         func index(atOrAfter i: String.Index) -> Int {
@@ -143,6 +170,16 @@ nonisolated enum VocabularyResolver {
             guard let f = rest.first, f.isLetter || f.isNumber else { return nil }
             let k = index(atOrAfter: rest.startIndex)
             return k < words.count ? String(text[words[k]]).lowercased() : nil
+        }
+        /// Any Hindi/Hinglish word in the sentence around `r` (other than
+        /// the word itself).
+        func hindiInSentence(around r: Range<String.Index>) -> Bool {
+            let k = index(atOrAfter: r.lowerBound)
+            guard k < words.count else { return false }
+            let me = String(text[r]).lowercased()
+            var found = sentences.hindi[sentences.of[k]]
+            if let i = found.firstIndex(of: me) { found.remove(at: i) }
+            return !found.isEmpty
         }
         func possessive(after i: String.Index) -> Bool {
             text[i...].hasPrefix("'s") || text[i...].hasPrefix("\u{2019}s")
@@ -224,6 +261,32 @@ nonisolated enum VocabularyResolver {
                 if i == pieces.count - 1, ctx.possessive(after: c.range.upperBound),
                    !(before.map(determiners.contains) ?? false) { verdicts[i] = .signal; continue }
             }
+            // A person slot: "Email drove", "Call drove tomorrow", "Message
+            // drove on Slack" — an ordinary word right after a verb that
+            // takes a person, then the end of the clause or a small word.
+            // The rule's exact heardAs, or the same sound for a 3+ sound
+            // name (never a 2-sound one: "Call Mary" must not become Mehra).
+            if pieces.count == 1, kinds[i] == .word, let b = before, personBefore.contains(b),
+               after == nil || personAfter.contains(after!),
+               pieces[i].2 == .exact || SoundCode.code(pieces[i].1).count >= 3 {
+                verdicts[i] = .signal; continue
+            }
+            // A Hinglish word that is the rule's exact heardAs, capitalised
+            // mid-sentence in a sentence with no Hindi in it: "Please ask
+            // Mera to sign" (Parakeet capitalises Hinglish words too, so
+            // any Hindi word in the sentence vetoes). Never a dictionary
+            // first name ("Mira", "Mara"): those may be real people.
+            if pieces[i].2 == .exact, kinds[i] == .soft, !isKnownName(String(text[pieces[i].0])),
+               ctx.capitalisedMidSentence(pieces[i].0), !ctx.hindiInSentence(around: pieces[i].0) {
+                verdicts[i] = .signal; continue
+            }
+        }
+        // A non-dictionary word that is a learned name plus one glued-on
+        // sound ("Dhruvan the team", "to Drovat Pype"), same first letter:
+        // applied with no answer; the engine decides when it answers.
+        if pieces.count == 1, changed[0], kinds[0] == .name, pieces[0].2 == .extended,
+           let h = text[pieces[0].0].lowercased().first, h == pieces[0].1.lowercased().first {
+            verdicts[0] = .signal
         }
         // Pass 2: support from the other learned name in the span.
         if aligned {
@@ -233,7 +296,12 @@ nonisolated enum VocabularyResolver {
             func ambiguousOK(_ j: Int) -> Bool {   // a Hinglish/first-name word that may move
                 pieces.indices.contains(j) && changed[j] && usable[j] && kinds[j] == .soft && !hindiAround
             }
-            for i in pieces.indices where changed[i] && usable[i] && verdicts[i] == .ask {
+            for i in pieces.indices where changed[i] && verdicts[i] == .ask {
+                // The user's own learned heard form that doesn't sound like
+                // its term ("Drew" for Dhruv) moves only right before the
+                // other learned name: "Drew Mehra" → "Dhruv Mehra".
+                if pieces[i].2 == .exactUnlike, kinds[i] == .word, anchors(i + 1) { verdicts[i] = .signal; continue }
+                guard usable[i] else { continue }
                 switch kinds[i] {
                 case .word:  // English word: only before the name ("Drove Meira", not "druv more")
                     if anchors(i + 1) || ambiguousOK(i + 1) { verdicts[i] = .signal }
@@ -270,6 +338,13 @@ nonisolated enum VocabularyResolver {
     static let slotAfter: Set<String> = ["now", "today", "tomorrow", "yesterday", "since", "as", "and", "or", "but",
                                          "in", "on", "for", "too", "again", "so", "because", "where", "which",
                                          "who", "with", "this", "last", "next", "full", "anymore", "is", "was"]
+    /// "Email drove", "Call drove tomorrow": verbs that take a person…
+    static let personBefore: Set<String> = ["email", "emailed", "emailing", "message", "messaged", "call", "ping",
+                                            "pinged", "text", "texted", "tell", "told", "ask", "asked", "thank",
+                                            "thanks", "cc", "invite", "invited", "remind", "reminded", "dm"]
+    /// …followed by the end of the clause or one of these.
+    static let personAfter: Set<String> = slotAfter.union(["about", "on", "to", "tomorrow", "tonight", "later",
+                                                           "please", "back", "asap", "re"])
     /// Common Hindi/Hinglish words as Parakeet writes them — ordinary, so a
     /// learned "Mehra" ← "mera" never fires in "mera naam Rahul hai".
     /// Includes Parakeet's renderings of "mera" (meera, mira, mara).

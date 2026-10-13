@@ -169,5 +169,10 @@
   {"cat": "neg-names", "before": "walk through the door", "inserted": "walk through the door", "after": "walk Dhruv the door", "expected": []},
   {"cat": "neg-names", "before": "Their team is ready.", "inserted": "Their team is ready.", "after": "There team is ready.", "expected": []},
   {"cat": "neg-names", "before": "I met Mark yesterday.", "inserted": "I met Mark yesterday.", "after": "I met Mike yesterday.", "expected": []},
-  {"cat": "neg-names", "before": "Drew a diagram of the flow.", "inserted": "Drew a diagram of the flow.", "after": "Drawn a diagram of the flow.", "expected": []}
+  {"cat": "neg-names", "before": "Drew a diagram of the flow.", "inserted": "Drew a diagram of the flow.", "after": "Drawn a diagram of the flow.", "expected": []},
+  {"cat": "names", "before": "Drew's laptop is here.", "inserted": "Drew's laptop is here.", "after": "Dhruv's laptop is here.", "expected": [{"heard": "Drew's", "corrected": "Dhruv's"}], "source": "name-eval lk_poss (Parakeet)"},
+  {"cat": "names", "before": "Drum's laptop is here.", "inserted": "Drum's laptop is here.", "after": "Dhruv's laptop is here.", "expected": [{"heard": "Drum's", "corrected": "Dhruv's"}], "source": "name-eval lk_poss (Parakeet)"},
+  {"cat": "names", "before": "Drugs laptop is here.", "inserted": "Drugs laptop is here.", "after": "Dhruv's laptop is here.", "expected": [{"heard": "Drugs", "corrected": "Dhruv's"}], "source": "name-eval lk_poss (Parakeet)"},
+  {"cat": "neg-names", "before": "Mark's notes are attached.", "inserted": "Mark's notes are attached.", "after": "Mike's notes are attached.", "expected": []},
+  {"cat": "neg-names", "before": "The drugs were approved.", "inserted": "The drugs were approved.", "after": "The drums were approved.", "expected": []}
 ]

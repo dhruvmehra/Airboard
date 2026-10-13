@@ -301,12 +301,31 @@ nonisolated enum EditDiff {
         // still never match one sound off anywhere else. Whether it is
         // learned is RuleLearning's call (needs a confirmed term or the
         // decision model) — this only stops it being dropped as a rewrite.
-        if heardWords == 1, correctedWords == 1, corrected.count >= heard.count,
-           let h0 = heard.lowercased().first, h0 == corrected.lowercased().first {
-            let hc = SoundCode.code(heard), cc = SoundCode.code(corrected)
-            if hc.count >= 2, cc.count == hc.count + 1, cc.hasPrefix(hc) { return true }
+        // Same for a possessive both sides share ("Drew's" → "Dhruv's",
+        // "Drugs" → "Dhruv's"), and for the LAST sound swapped in a 3+
+        // sound name ("Drum's" TRM → "Dhruv's" TRF) — RuleLearning learns
+        // the latter only for a term the user already confirmed.
+        if heardWords == 1, correctedWords == 1 {
+            let (h, c) = possessiveStems(heard, corrected)
+            if c.count >= h.count, let h0 = h.lowercased().first, h0 == c.lowercased().first {
+                let hc = SoundCode.code(h), cc = SoundCode.code(c)
+                if hc.count >= 2, cc.count == hc.count + 1, cc.hasPrefix(hc) { return true }
+                if hc.count >= 3, cc.count == hc.count, hc.dropLast() == cc.dropLast() { return true }
+            }
         }
         return false
+    }
+
+    /// "Drew's"/"Drews"/"Drew’s" → "Dhruv's": both stems ("Drew", "Dhruv").
+    /// Unchanged when the corrected word is not a possessive.
+    static func possessiveStems(_ heard: String, _ corrected: String) -> (String, String) {
+        let c = corrected.replacingOccurrences(of: "\u{2019}", with: "'")
+        guard c.lowercased().hasSuffix("'s"), c.count > 3 else { return (heard, corrected) }
+        let h = heard.replacingOccurrences(of: "\u{2019}", with: "'")
+        let cs = String(c.dropLast(2))
+        if h.lowercased().hasSuffix("'s"), h.count > 3 { return (String(h.dropLast(2)), cs) }
+        if h.lowercased().hasSuffix("s"), h.count > 2 { return (String(h.dropLast()), cs) }
+        return (heard, corrected)
     }
 
     /// How a name is said: symbols dropped, or read out ("AT&T" -> "at and

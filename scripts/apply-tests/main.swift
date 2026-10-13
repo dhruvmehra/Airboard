@@ -168,9 +168,9 @@ let realA: [(String, String)] = [
 for (i, e) in realA { pos("parakeet/A", i, e) }
 // Same real outputs, rules as the founder's corpus fixes teach them.
 let realB: [(String, String)] = [
-    ("Email drove about the launch.", "Email drove about the launch."),  // lowercase verb-shaped: engine's call
+    ("Email drove about the launch.", "Email Dhruv about the launch."),  // person slot: "Email ___ about"
     ("Call Drove tomorrow morning.", "Call Dhruv tomorrow morning."),
-    ("Message Trove on Slack.", "Message Trove on Slack."),       // dictionary word, not the heardAs: engine's call
+    ("Message Trove on Slack.", "Message Dhruv on Slack."),       // person slot, same 3-sound code (TRF)
     ("Thanks Drove. See you soon.", "Thanks Dhruv. See you soon."),
     ("This is Drove Mera.", "This is Dhruv Mehra."),
     ("Rads, Drove Mehra, Pipe.", "Rads, Dhruv Mehra, Pype."),
@@ -178,6 +178,34 @@ let realB: [(String, String)] = [
     ("I work at pipe.", "I work at Pype."),
 ]
 for (i, e) in realB { pos("parakeet/B", i, e, rules: rulesB) }
+
+// Integration fixes (T4), real Parakeet shapes from scripts/name-eval/corpus.json.
+// Rules as Aman's corrections teach them: a fused full name, Drew → Dhruv.
+let rulesC = [rule("Dhruv Mehra", "Dhruvmara"), rule("Dhruv", "Drew"), rule("Mehra", "Mara")]
+for (i, e) in [
+    ("I spoke to Dhruvmara from Five today.", "I spoke to Dhruv Mehra from Five today."),  // "to Dhruvmara" no longer swallows it
+    ("Our CEO Dhruvmara says hello.", "Our CEO Dhruv Mehra says hello."),
+    ("This is Droomer.", "This is Dhruv Mehra."),                       // fused: Drew (TR) + Mara (MR)
+    ("Our CEO Drew Mehra says hello.", "Our CEO Dhruv Mehra says hello."), // learned heard form before the surname
+    ("Book a meeting with Dhruvan the Pipe team.", "Book a meeting with Dhruv the Pipe team."), // glued sound
+    ("Thanks Drov, see you soon.", "Thanks Dhruv, see you soon."),
+] { pos("t4/C", i, e, rules: rulesC) }
+// Only the full name was ever learned: its words still count as names.
+let rulesD = [rule("Dhruv Mehra", "Dhruvmara")]
+for (i, e) in [("Druv will review the pull request.", "Dhruv will review the pull request."),
+               ("My name is Druvmer.", "My name is Dhruv Mehra.")] { pos("t4/D", i, e, rules: rulesD) }
+for (i, e) in [("Please ask Mera to sign the contract.", "Please ask Mehra to sign the contract."),
+               ("The Mera family is visiting.", "The Mehra family is visiting.")] { pos("t4/B", i, e, rules: rulesB) }
+for t in ["Drew is coming to the party.", "He drew a map.", "Who is Drew?", "We met Drew at the booth.",
+          "I drove in yesterday.", "Call Mary tomorrow.", "Ask Mira about it.", "I drew more often.",
+          "The drew was over.", "Drew's laptop is here."] { neg("t4/C", t, rules: rulesC) }
+for t in ["Yeh Mera laptop hai.", "Mera naam Rahul hai.", "Dhruv, Mera phone kahan hai?", "Yeah, Mira Laptop High.",
+          "Call Mary tomorrow.", "Email more about the launch.", "Tell me more on Slack.", "Ask Mira to sign.",
+          "Message pipe fitters today.", "I drove in to work.", "Call drive-through later."] { neg("t4/B", t, rules: rulesB) }
+// Brand phrases teach no single-word names.
+for t in ["Write some code.", "Visual inspection.", "It is bright."] {
+    neg("t4/brand", t, rules: [rule("Claude Code", "cloud code"), rule("Visual Studio", "visual studio"), rule("Brite AI", "bright AI")])
+}
 
 // Real negatives (Parakeet output of ordinary speech): never changed.
 let realNeg = [

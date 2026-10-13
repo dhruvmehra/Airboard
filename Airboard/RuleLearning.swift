@@ -34,7 +34,8 @@
 //  - keyboard, NO key: learnDirect iff keylessGate passes (capitalised, not
 //    only common words, and sounds alike — or, when every changed word is
 //    not an ordinary dictionary word, a 1–2 letter fix with the same first
-//    letter: "Mehta" → "Mehra"); else reject.
+//    letter: "Mehta" → "Mehra") or it is a name extension ("Drew" → "Dhruv",
+//    isNameExtension); else reject.
 //  - keyboard, WITH key: learnDirect for an unmistakable name fix (keyless
 //    gate passes AND every changed corrected word is not an ordinary word:
 //    "pipe" → "Pype", "druv" → "Dhruv") or a new mishearing of a term the
@@ -102,14 +103,16 @@ nonisolated enum RuleLearning {
            parts.allSatisfy({ isConfirmedVariant(heard: $0.heard, corrected: $0.corrected, rules: existing) }) {
             return make(.learnDirect, "confirmed-variant")
         }
-        let local = keylessGate(k, fixed: fixed, isOrdinaryWord: isOrdinaryWord)
+        let gate = keylessGate(k, fixed: fixed, isOrdinaryWord: isOrdinaryWord)
+        let ext = !gate && isNameExtension(k, isOrdinaryWord: isOrdinaryWord)
         if hasKey {
-            if local && changedWordsAreNovel(k, isOrdinaryWord: isOrdinaryWord) {
+            if gate && changedWordsAreNovel(k, isOrdinaryWord: isOrdinaryWord) {
                 return make(.learnDirect, "name-fix")
             }
-            return make(.askDecisionModel, local ? "ordinary-word" : "ambiguous", fallback: local)
+            return make(.askDecisionModel, gate ? "ordinary-word" : "ambiguous", fallback: gate || ext)
         }
-        return local ? make(.learnDirect, "keyless-gate") : make(.reject, "keyless-gate")
+        if gate { return make(.learnDirect, "keyless-gate") }
+        return ext ? make(.learnDirect, "name-extension") : make(.reject, "keyless-gate")
     }
 
     /// After asking the decision model (askDecisionModel only). nil = no answer.
@@ -225,7 +228,27 @@ nonisolated enum RuleLearning {
         guard !hl.isEmpty, hl.first == cl.first else { return false }
         if closeSpelling(heard, corrected) { return true }
         let (s, l) = hc.count < cc.count ? (hc, cc) : (cc, hc)
-        return s.count >= 2 && l.count == s.count + 1 && l.hasPrefix(s)
+        if s.count >= 2 && l.count == s.count + 1 && l.hasPrefix(s) { return true }
+        // The last sound swapped in a 3+ sound name: "Drum" TRM → "Dhruv" TRF.
+        return hc.count >= 3 && hc.count == cc.count && hc.dropLast() == cc.dropLast()
+    }
+
+    /// "Drew" → "Dhruv" (TR → TRF): one word, same first letter, the fix
+    /// keeps every heard sound and adds one at the end, and the corrected
+    /// word is a capitalised name no dictionary knows. The user typed it, so
+    /// it is learned even with no key. Safe offline: VocabularyResolver
+    /// never applies a heardAs that doesn't sound like its term ("Drew is
+    /// coming" stays) without the decision model — what the rule adds
+    /// offline is the TERM, so "Druv", "Dhruva", "Drove Meira" are
+    /// recognised on later dictations.
+    static func isNameExtension(_ c: EditDiff.Correction, isOrdinaryWord: (String) -> Bool) -> Bool {
+        let h = c.heard, w = c.corrected
+        guard !h.contains(" "), !w.contains(" "), let f = w.first, f.isUppercase,
+              w.allSatisfy({ $0.isLetter }), h.allSatisfy({ $0.isLetter }),
+              h.lowercased().first == w.lowercased().first,
+              !isOrdinary(w, isOrdinaryWord) else { return false }
+        let hc = SoundCode.code(h), cc = SoundCode.code(w)
+        return hc.count >= 2 && cc.count == hc.count + 1 && cc.hasPrefix(hc)
     }
 
     static func changedWordsAreNovel(_ c: EditDiff.Correction, isOrdinaryWord: (String) -> Bool) -> Bool {

@@ -12,7 +12,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 W="$(cd "$HERE/../.." && pwd)"
 BASE=3504715
 PURE="SoundCode SpellingRule CandidateFinder VocabularyResolver EditDiff CorrectionWatchPolicy
-RedictationLearner DecisionTypes DecisionClient VocabularyCardQueue VocabularyCacheData FillerRules"
+RedictationLearner DecisionTypes DecisionClient VocabularyCardQueue VocabularyCacheData FillerRules
+RuleLearning VocabularyPipeline"
 # Pure files added later (e.g. glue moved out of VocabularyLearning) can be listed here:
 PURE="$PURE ${EXTRA_PURE:-}"
 

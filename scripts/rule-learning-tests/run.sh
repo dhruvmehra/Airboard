@@ -9,6 +9,6 @@ OUT=$(mktemp -d)
 swiftc -parse-as-library \
   Airboard/SoundCode.swift Airboard/SpellingRule.swift Airboard/CandidateFinder.swift \
   Airboard/EditDiff.swift Airboard/CorrectionWatchPolicy.swift Airboard/RedictationLearner.swift \
-  Airboard/RuleLearning.swift \
+  Airboard/RuleLearning.swift Airboard/VocabularyResolver.swift \
   scripts/rule-learning-tests/main.swift -o "$OUT/rule-learning-tests" 2>&1 | grep -v warning || true
 "$OUT/rule-learning-tests"

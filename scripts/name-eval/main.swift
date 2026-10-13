@@ -132,6 +132,7 @@ struct Counts {
 
 struct LearnCounts {
     var tp = 0, fp = 0, fn = 0, expected = 0, produced = 0, waitedOnCap = 0
+    var auto = 0   // covered because an earlier rule already applied (in tp)
     var precision: Double? { produced == 0 ? nil : Double(produced - fp) / Double(produced) }
     var recall: Double? { expected == 0 ? nil : Double(tp) / Double(expected) }
 }
@@ -246,16 +247,37 @@ func matches(_ r: SpellingRule, _ e: Expected) -> Bool {
     if r.term == e.term && norm(r.heardAs) == norm(e.heard) { return true }
     if e.possessive {
         let h = e.heard.replacingOccurrences(of: "\u{2019}", with: "'")
-        let base = h.hasSuffix("'s") ? String(h.dropLast(2)) : h
+        // ASR may drop the apostrophe ("Drugs" for "Dhruv's").
+        let base = h.hasSuffix("'s") ? String(h.dropLast(2)) : h.hasSuffix("s") ? String(h.dropLast()) : h
         if r.term == e.term && norm(r.heardAs) == norm(base) { return true }
         if r.term == e.term + "'s" && norm(r.heardAs) == norm(h) { return true }
     }
     return false
 }
 
+/// Expected rules of a learn event whose slots ALREADY came out right in
+/// that event's dictation (an earlier learned rule applied — "Meira" via
+/// the Mehra←Mayra rule), so there was nothing to correct: the loop
+/// handled that mishearing. Counted as covered ("auto"), reported apart.
+func autoCovered(item: Corpus.Item, output: String) -> Set<Expected> {
+    let tt = tokens(item.truth), ot = tokens(output)
+    let places = place(slots: item.slots, truth: tt, text: ot)
+    var out = Set<Expected>()
+    for e in expectedRules([item]) {
+        let slots = item.slots.indices.filter { item.slots[$0].heard == e.heard && e.term.split(separator: " ").contains(Substring(item.slots[$0].term)) }
+        guard !slots.isEmpty else { continue }
+        let ok = slots.allSatisfy { k in
+            guard let o = places[k].matched else { return false }
+            return ot[o].word == item.slots[k].word || stripPoss(ot[o].word) == item.slots[k].term
+        }
+        if ok { out.insert(e) }
+    }
+    return out
+}
+
 /// TP/FP/FN of produced rules vs expected (a "Dhruv Mehra"/"drove mera"
 /// rule covers both slots when its words split 1:1 onto expected pairs).
-func scoreLearn(rules: [SpellingRule], expected: [Expected]) -> (LearnCounts, [String]) {
+func scoreLearn(rules: [SpellingRule], expected: [Expected], auto: Set<Expected> = []) -> (LearnCounts, [String]) {
     var covered = Set<Int>()
     var lc = LearnCounts(); var notes: [String] = []
     lc.expected = expected.count; lc.produced = rules.count
@@ -271,6 +293,10 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected]) -> (LearnCounts, [S
             }
         }
         if !hit { lc.fp += 1; notes.append("  learn FP: \(r.memoryLine)") }
+    }
+    for (k, e) in expected.enumerated() where !covered.contains(k) && auto.contains(e) {
+        covered.insert(k); lc.auto += 1
+        notes.append("  learn auto: \(e.term) ← \"\(e.heard)\" (already applied by an earlier rule)")
     }
     lc.tp = covered.count
     lc.fn = expected.count - covered.count
@@ -331,10 +357,12 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected]) -> (LearnCounts, [S
                         for e in exp { app.addMemory(SpellingRule(term: e.term, heardAs: e.heard).memoryLine) }
                     }
                     // Learn: one dictation every 30s; the user fixes names ~3s after insertion.
+                    var auto = Set<Expected>()
                     for ev in events {
                         await app.advance(to: app.now.addingTimeInterval(30))
                         await app.recordingStarted()
                         let out = await app.dictate(ev.raw)
+                        auto.formUnion(autoCovered(item: ev, output: out.text))
                         guard let fid = await app.didInsert(out.text, pid: 1) else { continue }
                         if ev.role == "learn_keyboard" {
                             let after = (out.text == FillerRules.clean(ev.raw) ? ev.after : nil) ?? userFix(out.text, item: ev)
@@ -345,8 +373,9 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected]) -> (LearnCounts, [S
                     let beforeDrain = app.rules.count
                     await app.drainCards()
                     if sc != "none" && sc != "oracle" {
-                        var (lc, notes) = scoreLearn(rules: app.rules, expected: exp)
+                        var (lc, notes) = scoreLearn(rules: app.rules, expected: exp, auto: auto)
                         lc.waitedOnCap = app.rules.count - beforeDrain
+                        lcAll.auto += lc.auto
                         lcAll.tp += lc.tp; lcAll.fp += lc.fp; lcAll.fn += lc.fn
                         lcAll.expected += lc.expected; lcAll.produced += lc.produced; lcAll.waitedOnCap += lc.waitedOnCap
                         learnNotes.append("  [\(v)] rules: " + (app.rules.isEmpty ? "(none)" : app.rules.map { "\($0.term)←\"\($0.heardAs)\"" }.joined(separator: ", ")))
@@ -379,8 +408,8 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected]) -> (LearnCounts, [S
                 detail[sc] = ar
                 let a = ar.byKey["all"] ?? Counts()
                 let learnCol = (sc == "none" || sc == "oracle") ? String(repeating: " ", count: 53)
-                    : String(format: "       %3d %4d %3d %3d %3d %@ %@  (%d)", lcAll.expected, lcAll.produced, lcAll.tp, lcAll.fp, lcAll.fn,
-                             pct(lcAll.precision) as NSString, pct(lcAll.recall) as NSString, lcAll.waitedOnCap)
+                    : String(format: "       %3d %4d %3d %3d %3d %@ %@  (%d) auto %d", lcAll.expected, lcAll.produced, lcAll.tp, lcAll.fp, lcAll.fn,
+                             pct(lcAll.precision) as NSString, pct(lcAll.recall) as NSString, lcAll.waitedOnCap, lcAll.auto)
                 let slots = a.tp + a.fn + a.wrong
                 print(pad(sc, 9) + String(format: " │ %@ │        %4d %3d %3d %4d %3d %@ %@ %@          %d/%d", learnCol as NSString,
                              slots, a.tp, a.fn, a.wrong, a.fpExtra, pct(a.precision) as NSString, pct(a.recall) as NSString,
@@ -392,6 +421,7 @@ func scoreLearn(rules: [SpellingRule], expected: [Expected]) -> (LearnCounts, [S
                 if sc != "none" && sc != "oracle" {
                     summary.append(("\(mode.name) \(sc) learn prec", pct(lcAll.precision)))
                     summary.append(("\(mode.name) \(sc) learn recall", pct(lcAll.recall)))
+                    summary.append(("\(mode.name) \(sc) learn auto-applied", "\(lcAll.auto)"))
                 }
                 if verbose && sc != "none" && sc != "oracle" {
                     print("    learn detail (\(sc)):"); learnNotes.forEach { print("    " + $0) }

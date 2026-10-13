@@ -101,12 +101,24 @@ func show(_ rs: [SpellingRule]) -> String { rs.map { "\($0.heardAs)→\($0.term)
         expectLearn("confirmed Mehra, new heard Mehta", "Mr Mehta called.", "Mr Mehra called.",
                     rules: [r("Mehra", "Mehta")], existing: mehra)
         let dhruv = [r("Dhruv", "druv")]
-        // "Drew" (TR) → "Dhruv" (TRF): an everyday word, one sound short.
-        // Unknown term: keyless no, keyed asks Jev. Confirmed term: learn.
+        // "Drew" (TR) → "Dhruv" (TRF): an everyday word, one sound short,
+        // fixed to a non-dictionary name (isNameExtension). Unknown term:
+        // keyless learns (the rule never applies to "Drew" without Jev —
+        // it teaches the TERM), keyed asks Jev. Confirmed term: learn.
         expectLearn("Drew→Dhruv, Dhruv not confirmed", "My name is Drew.", "My name is Dhruv.",
-                    rules: [r("Dhruv", "Drew")], keyless: .reject, keyed: .askDecisionModel)
+                    rules: [r("Dhruv", "Drew")], keyless: .learnDirect, keyed: .askDecisionModel)
         expectLearn("Drew→Dhruv, Dhruv confirmed", "My name is Drew.", "My name is Dhruv.",
                     rules: [r("Dhruv", "Drew")], existing: dhruv)
+        // Possessives (real Parakeet, name-eval lk_poss): the stem is the lesson.
+        expectLearn("Drew's→Dhruv's", "Drew's laptop is here.", "Dhruv's laptop is here.",
+                    rules: [r("Dhruv", "Drew")], keyless: .learnDirect, keyed: .askDecisionModel)
+        expectLearn("Drum's→Dhruv's, Dhruv confirmed", "Drum's laptop is here.", "Dhruv's laptop is here.",
+                    rules: [r("Dhruv", "Drum")], existing: dhruv)
+        expectLearn("Drugs→Dhruv's, Dhruv confirmed", "Drugs laptop is here.", "Dhruv's laptop is here.",
+                    rules: [r("Dhruv", "Drug")], existing: dhruv)
+        expectNothing("Drum's→Dhruv's, nothing confirmed", "Drum's laptop is here.", "Dhruv's laptop is here.")
+        expectNothing("Drew→Drawn (ordinary word)", "Drew a diagram of the flow.", "Drawn a diagram of the flow.")
+        expectNothing("drugs→drums (ordinary words)", "The drugs were approved.", "The drums were approved.")
         expectLearn("druv mera→Dhruv Mehra, half known", "this is druv mera", "this is Dhruv Mehra",
                     rules: [r("Dhruv Mehra", "druv mera"), r("Mehra", "mera")], existing: dhruv)
         // "type" → "Pype" (TP vs PP): keyless no; keyed asks; confirmed: learn.
@@ -121,7 +133,7 @@ func show(_ rs: [SpellingRule]) -> String { rs.map { "\($0.heardAs)→\($0.term)
         check(ask.gate == .askDecisionModel, "Drew→Dhruv asks")
         check(RuleLearning.learns(ask, decision: 0.8), "Jev yes → learn")
         check(!RuleLearning.learns(ask, decision: 0.3), "Jev no → no")
-        check(!RuleLearning.learns(ask, decision: nil), "Jev timeout, keyless gate fails → no")
+        check(RuleLearning.learns(ask, decision: nil), "Jev timeout → name extension learns (as keyless)")
         let marc = RuleLearning.propose(.init(heard: "Mark", corrected: "Marc"), fixed: "I met Marc.",
                                         source: .keyboard, existing: [], hasKey: true, isOrdinaryWord: ord)
         check(marc.gate == .askDecisionModel && marc.fallbackLearn, "Mark→Marc (ordinary word) asks, keyless fallback")

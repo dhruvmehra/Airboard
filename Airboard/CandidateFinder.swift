@@ -18,6 +18,9 @@ nonisolated struct Candidate: Equatable {
         case exactUnlike  // a confirmed heardAs that does NOT sound like its term ("Mehta" for Mehra)
         case sameSound    // identical sound code ("Dhruva", "Pipe's", "DRUV")
         case near         // one sound off (4+ sound codes only)
+        case extended     // the term's sounds plus ONE at the end, 3+ sound
+                          // term ("Dhruvan"/"Drovat" for Dhruv: ASR glued
+                          // the next word on)
         case correct      // (composite part only) already the term: "Dhruv" in "Dhruv mera"
     }
     let range: Range<String.Index>  // span in the transcript (a possessive's stem only)
@@ -66,7 +69,8 @@ nonisolated enum CandidateFinder {
     /// remaining words already follow ("bright AI's" → "Brite AI AI's" —
     /// a fused "Brightai" is fine); a span the text already spells
     /// correctly.
-    static func find(in text: String, rules: [SpellingRule], screenTerms: [String]) -> [Candidate] {
+    static func find(in text: String, rules: [SpellingRule], screenTerms: [String],
+                     isOrdinaryWord: (String) -> Bool = VocabularyResolver.WordList.isOrdinaryWord) -> [Candidate] {
         let words = wordRanges(in: text)
         guard !words.isEmpty else { return [] }
         // A word may join a window only if it has a Latin sound code and
@@ -87,6 +91,9 @@ nonisolated enum CandidateFinder {
         var singleByCode: [String: String] = [:]
         var singleByHeard: [String: (term: String, match: Candidate.Match)] = [:]
         var singleByTerm: [String: String] = [:]
+        // Code of a one-word learned heard form → its term ("Drew" TR →
+        // Dhruv): only for splitting a fused word ("Droomer" = TR + MR).
+        var singleByHeardCode: [String: String] = [:]
         var multiByTerm: [String: String] = [:]
         for r in rules {
             let heard = normalize(r.heardAs)
@@ -99,6 +106,23 @@ nonisolated enum CandidateFinder {
             singleByTerm[normalize(r.term)] = r.term
             if !heard.contains(" "), singleByHeard[heard] == nil {
                 singleByHeard[heard] = (r.term, soundsLike(r.heardAs, r.term) ? .exact : .exactUnlike)
+                let hc = SoundCode.code(r.heardAs)
+                if hc.count >= 2, singleByHeardCode[hc] == nil { singleByHeardCode[hc] = r.term }
+            }
+        }
+        // A learned full name ("Dhruv Mehra" ← "Dhruvmara") also teaches its
+        // words as names: "Druv" alone, or "Drove Meira", then match like a
+        // learned one-word term. Only when EVERY word is name-like (3+
+        // letters, capitalised, not a dictionary word) — "Brite AI",
+        // "Claude Code" and "Visual Studio" teach nothing on their own.
+        for r in rules where r.term.contains(" ") {
+            let ws = r.term.split(separator: " ").map(String.init)
+            guard ws.allSatisfy({ isNameWord($0, isOrdinaryWord) }) else { continue }
+            for w in ws where singleByTerm[normalize(w)] == nil {
+                let tc = SoundCode.code(w)
+                singleByTerm[normalize(w)] = w
+                if singleByCode[tc] == nil { singleByCode[tc] = w }
+                if !(ruleCodes[tc]?.contains(w) ?? false) { ruleCodes[tc, default: []].append(w) }
             }
         }
         let ruleTerms = Set(rules.map { $0.term.lowercased() })
@@ -146,7 +170,7 @@ nonisolated enum CandidateFinder {
                 byStripped[SoundCode.withoutHalfVowels(c), default: []].append(c)
                 byLength[c.count, default: []].append(c)
             }
-            func hits(_ code: String) -> [String] {
+            func hits(_ code: String, oneWord: Bool) -> [String] {
                 guard !code.isEmpty else { return [] }
                 var out: [String] = []
                 if byCode[code] != nil { out.append(code) }
@@ -154,6 +178,9 @@ nonisolated enum CandidateFinder {
                     out.append(c)
                 }
                 let n = code.count
+                // The term plus one trailing sound, one word only:
+                // "Dhruvan" TRFN ⊃ TRF (never "Drove in" → "Dhruv").
+                if oneWord, n >= 4, byCode[String(code.dropLast())] != nil { out.append(String(code.dropLast())) }
                 if n >= 3 {
                     for len in (n - 1)...(n + 1) where min(len, n) >= 4 {
                         for c in byLength[len] ?? [] where !out.contains(c) && SoundCode.withinOneEdit(code, c) {
@@ -163,9 +190,20 @@ nonisolated enum CandidateFinder {
                 }
                 return out
             }
-            var i = 0
-            while i < words.count {
-                guard usable[i], !taken[i] else { i += 1; continue }
+            // rank: 3 exact rule / learned names side by side, 2 same code, 1 one sound off
+            typealias Best = (cand: Candidate, width: Int, rank: Int, fits: Bool)
+            /// The best window starting at word i (nil: none). Memoized:
+            /// a lookahead result stays valid — words are only ever taken
+            /// at or before the scan position.
+            var memo: [Int: Best?] = [:]
+            func bestAt(_ i: Int) -> Best? {
+                if let m = memo[i] { return m }
+                let b = computeBest(i)
+                memo[i] = b
+                return b
+            }
+            func computeBest(_ i: Int) -> Best? {
+                guard usable[i], !taken[i] else { return nil }
                 var maxWidth = 0
                 while maxWidth < maxWindow, i + maxWidth < words.count,
                       usable[i + maxWidth], !taken[i + maxWidth],
@@ -182,8 +220,6 @@ nonisolated enum CandidateFinder {
                     return !(next.isLetter || next.isNumber)
                 }
 
-                // rank: 3 exact rule / learned names side by side, 2 same code, 1 one sound off
-                typealias Best = (cand: Candidate, width: Int, rank: Int, fits: Bool)
                 var best: Best?
                 func offer(_ b: Best) {
                     guard let cur = best else { best = b; return }
@@ -220,9 +256,10 @@ nonisolated enum CandidateFinder {
                     // another one ("Pype" stays, even with "Pype AI" learned).
                     if learned && (singleByTerm[key] != nil || multiByTerm[key] != nil) { continue }
                     let code = SoundCode.code(span)
-                    for hit in hits(code) {
+                    for hit in hits(code, oneWord: width == 1) {
                         let same = SoundCode.sameSound(hit, code)
                         let rank = same ? 2 : 1
+                        let ext = width == 1 && !same && hit.count == code.count - 1 && code.hasPrefix(hit)
                         let ok = byCode[hit]?.filter {
                             normalize($0) != key && !alreadyCorrect($0)
                                 && fitsWidth(term: $0, window: i, width: width, range: range)
@@ -232,11 +269,21 @@ nonisolated enum CandidateFinder {
                         // "Pype AI") outranks a one-word exact inside it.
                         let whole = same && width >= 2 && wordCount(term) == width
                         offer((Candidate(range: range, span: span, term: term, source: source, exact: false,
-                                         match: same ? .sameSound : .near),
+                                         match: same ? .sameSound : ext ? .extended : .near),
                                width, whole ? 3 : rank, wordCount(term) == width))
                     }
                 }
-                guard let b = best else { i += 1; continue }
+                return best
+            }
+            var i = 0
+            while i < words.count {
+                guard let b = bestAt(i) else { i += 1; continue }
+                // A wider window must not swallow a better match that starts
+                // inside it: "to Dhruvmara" is one sound off "Dhruv Mehra",
+                // but "Dhruvmara" alone is the learned heard form.
+                if b.width > 1, ((i + 1)..<(i + b.width)).contains(where: { (bestAt($0)?.rank ?? 0) > b.rank }) {
+                    i += 1; continue
+                }
                 let isNew = !questions.contains(b.cand.pairKey)
                 if isNew && questions.count >= maxQuestions { i += 1; continue }
                 questions.insert(b.cand.pairKey)
@@ -265,6 +312,14 @@ nonisolated enum CandidateFinder {
                 if let a = singleByCode[String(code[..<k])], let b = singleByCode[String(code[k...])], a != b {
                     return (a + " " + b, [.sameSound, .sameSound])
                 }
+            }
+            // Either half may sound like a learned HEARD form instead
+            // ("Droomer" = "Drew" + "Mera" for Dhruv Mehra).
+            for k in 1..<code.count {
+                let x = String(code[..<k]), y = String(code[k...])
+                guard let a = singleByCode[x] ?? singleByHeardCode[x],
+                      let b = singleByCode[y] ?? singleByHeardCode[y], a != b else { continue }
+                return (a + " " + b, [.sameSound, .sameSound])
             }
             return nil
         }
@@ -306,6 +361,14 @@ nonisolated enum CandidateFinder {
         let apo = w[w.index(w.endIndex, offsetBy: -2)]
         guard apo == "'" || apo == "\u{2019}" else { return word }
         return word.lowerBound..<w.index(w.endIndex, offsetBy: -2)
+    }
+
+    /// A word of a learned multi-word term that stands as a name on its own.
+    static func isNameWord(_ w: String, _ isOrdinaryWord: (String) -> Bool) -> Bool {
+        let letters = w.filter { $0.isLetter }
+        guard letters.count >= 3, letters.count == w.count, let f = w.first, f.isUppercase,
+              w.dropFirst().contains(where: { $0.isLowercase }) else { return false }
+        return !isOrdinaryWord(w.lowercased())
     }
 
     /// Titles are never a name themselves ("Mr" sounds like "Mehra", MR).

@@ -22,7 +22,7 @@ import AppKit
 struct VocabOutcome {
     let text: String
     let ms: Int?          // nil when the engine wasn't called
-    let outcome: String   // off | none | nokey | ok | applied | timeout
+    let outcome: String   // off | none | nokey | local | ok | applied | timeout
 }
 
 enum VocabularyCardChoice { case primary, secondary, ignored }
@@ -70,17 +70,10 @@ final class VocabularyLearning {
     private var restoredPending = false
     private var cardRetry: DispatchWorkItem?
 
-    /// Lowercase system dictionary (/usr/share/dict/words) for the gate:
-    /// "is the corrected word an ordinary word?". Loaded once, off main.
-    nonisolated private static let ordinaryWordsLock = NSLock()
-    nonisolated(unsafe) private static var ordinaryWordsStore: Set<String>?
-    nonisolated static func ordinaryWords() -> Set<String> {
-        ordinaryWordsLock.lock(); defer { ordinaryWordsLock.unlock() }
-        if let w = ordinaryWordsStore { return w }
-        let w = RuleLearning.loadOrdinaryWords()
-        ordinaryWordsStore = w
-        return w
-    }
+    /// Lowercase system dictionary (/usr/share/dict/words) for the learning
+    /// gate — the same set the apply side uses (held once). The first call
+    /// loads it (60-300ms): call off main, or warm it in start().
+    nonisolated static func ordinaryWords() -> Set<String> { VocabularyResolver.WordList.words.lower }
 
     var isEnabled: Bool {
         UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? true
@@ -96,6 +89,9 @@ final class VocabularyLearning {
     /// runs only with the feature on AND a key set — without a key nothing
     /// can be judged, so nothing is read.
     func start() {
+        // Warm the word list off the dictation path (the first dictation
+        // with a candidate would otherwise pay the load).
+        if isEnabled { DispatchQueue.global(qos: .utility).async { _ = Self.ordinaryWords() } }
         if isEnabled && client() != nil {
             VocabularyHarvester.shared.start()
         } else {
@@ -115,8 +111,10 @@ final class VocabularyLearning {
 
     // MARK: - Dictation path
 
-    /// useEngine=false (hands-free chunks): exact confirmed rules only,
-    /// no network — live chunks must stay instant.
+    /// useEngine=false (hands-free chunks): no network — live chunks must
+    /// stay instant; confirmed rules still apply by the local policy
+    /// (VocabularyResolver: unmistakable names always, ordinary words only
+    /// on a strong signal).
     func process(_ raw: String, useEngine: Bool) async -> VocabOutcome {
         guard isEnabled else { return VocabOutcome(text: raw, ms: nil, outcome: "off") }
         // "Tell Anakshi, I N A K S H I, that…" → "Tell Inakshi that…": the
@@ -134,53 +132,18 @@ final class VocabularyLearning {
         }
         guard !candidates.isEmpty else { return VocabOutcome(text: text, ms: nil, outcome: "none") }
 
-        guard let client else {
-            let r = VocabularyResolver.resolve(text: text, candidates: candidates, answers: nil)
-            return VocabOutcome(text: r.text, ms: nil, outcome: "nokey")
-        }
+        // VocabularyPipeline (pure, shared with scripts/name-eval): an
+        // unmistakable learned name applies locally; only candidates the
+        // engine can change are asked — one request per sentence, each
+        // carrying only that sentence, all under the same 350ms deadline.
         let start = Date()
-        // One request per sentence, each carrying only that sentence (the
-        // spec's privacy promise; extra context also degrades Jev). One
-        // question per distinct (span, term) in it. Requests run
-        // concurrently under the same 350ms deadline.
-        var bySentence: [String: [Candidate]] = [:]
-        for c in candidates {
-            bySentence[CandidateFinder.sentence(containing: c.range, in: text), default: []].append(c)
-        }
-        let groups = bySentence.map { sentence, cands -> (String, [Candidate]) in
-            var seen = Set<String>()
-            return (sentence, cands.filter { seen.insert($0.pairKey).inserted })
-        }
-        let answers: [String: Double]? = await withTaskGroup(of: [String: Double]?.self) { group in
-            for (sentence, unique) in groups {
-                group.addTask {
-                    let qs = unique.enumerated().map {
-                        DecisionQuestion.applyTerm(id: "q\($0.offset)", sentence: sentence,
-                                                   span: $0.element.span, term: $0.element.term)
-                    }
-                    guard let a = await client.ask(state: ["sentence": sentence], questions: qs,
-                                                   deadline: Self.deadline) else { return nil }
-                    var byPair: [String: Double] = [:]
-                    for (i, c) in unique.enumerated() { if let p = a["q\(i)"] { byPair[c.pairKey] = p } }
-                    return byPair
-                }
-            }
-            // Any sentence that timed out → treat the whole dictation as
-            // unanswered (offline rules) rather than half-applying.
-            var merged: [String: Double] = [:]
-            for await part in group {
-                guard let part else { group.cancelAll(); return nil }
-                // Same pair in two sentences: the more cautious answer wins.
-                merged.merge(part) { min($0, $1) }
-            }
-            return merged
-        }
-        let ms = Int(Date().timeIntervalSince(start) * 1000)
-        let r = VocabularyResolver.resolve(text: text, candidates: candidates, answers: answers)
+        let a = await VocabularyPipeline.apply(text: text, candidates: candidates, client: client,
+                                               deadline: Self.deadline)
+        let ms = a.askedEngine ? Int(Date().timeIntervalSince(start) * 1000) : nil
+        let r = a.result
         pendingSuggestions = r.suggestions.map { VocabularyCard(kind: .didYouMean, heard: $0.span, term: $0.term) }
-        let outcome = answers == nil ? "timeout" : (r.applied > 0 ? "applied" : "ok")
-        print("🧠 Vocab: \(candidates.count) candidate(s), \(r.applied) applied, \(r.suggestions.count) suggested, \(outcome) in \(ms)ms")
-        return VocabOutcome(text: r.text, ms: ms, outcome: outcome)
+        print("🧠 Vocab: \(candidates.count) candidate(s), \(r.applied) applied, \(r.suggestions.count) suggested, \(a.outcome)\(ms.map { " in \($0)ms" } ?? "")")
+        return VocabOutcome(text: r.text, ms: ms, outcome: a.outcome)
     }
 
     // MARK: - After insertion
@@ -275,19 +238,17 @@ final class VocabularyLearning {
         case .learnDirect:
             enqueueLearned(p)
         case .askDecisionModel:
-            guard let client else { return }
+            guard client != nil else { return }
             Task {
-                let q = DecisionQuestion.spellingFix(id: "q0", sentence: sentence,
-                                                     heard: p.card.heardAs, corrected: p.card.term)
-                let a = await client.ask(state: q.state, questions: [q], deadline: Self.backgroundDeadline)
-                let ans = a?["q0"]
-                let ok = RuleLearning.learns(p, decision: ans, threshold: VocabularyResolver.suggestThreshold)
-                if let ans {
+                // VocabularyPipeline.learnDecision: shared with scripts/name-eval.
+                let d = await VocabularyPipeline.learnDecision(p, sentence: sentence, client: client,
+                                                               deadline: Self.backgroundDeadline)
+                if let ans = d.answer {
                     print("🧠 Learn: spelling-fix confidence \(String(format: "%.2f", ans)) (needs ≥ \(VocabularyResolver.suggestThreshold))")
                 } else {
-                    print("🧠 Learn: decision engine gave no answer — keyless gate \(ok ? "passed" : "failed")")
+                    print("🧠 Learn: decision engine gave no answer — keyless gate \(d.learn ? "passed" : "failed")")
                 }
-                guard ok else { return }
+                guard d.learn else { return }
                 await MainActor.run { self.enqueueLearned(p) }
             }
         }
