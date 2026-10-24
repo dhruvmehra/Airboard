@@ -25,6 +25,8 @@ class TranscriptionCoordinator: ObservableObject {
     @Published private(set) var isHandsFreeMode = false
 
     private var recordingStartTime: Date?
+    /// Key release of the current dictation — for the release→text-on-screen timing.
+    private var keyReleaseTime: Date?
     private var currentContext: AppContext?
 
     // Store the target app when recording starts
@@ -216,6 +218,7 @@ class TranscriptionCoordinator: ObservableObject {
         
         isRecording = false
         isTranscribing = true
+        keyReleaseTime = Date()
 
         FloatingWindowManager.shared.showFloatingIndicator(
             isRecording: false,
@@ -660,6 +663,10 @@ class TranscriptionCoordinator: ObservableObject {
     }
 
     private func handleInsertionResult(_ result: Result<Void, TextInsertionError>, inserted text: String) {
+        if let t = keyReleaseTime {
+            print("⏱️ Release → text on screen: \(Int(Date().timeIntervalSince(t) * 1000))ms")
+            keyReleaseTime = nil
+        }
         switch result {
         case .success:
             // Vocabulary learning: queue "Did you mean" cards, watch the
