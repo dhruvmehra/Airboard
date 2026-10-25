@@ -8,6 +8,8 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+## [1.0.11] - 2026-10-24
+
 - Long dictations no longer lose text. A dictation that happened to say
   "see you in the next meeting" or "hope you enjoyed…" was thrown away as
   a speech-model glitch; now only short clips are checked for that.
