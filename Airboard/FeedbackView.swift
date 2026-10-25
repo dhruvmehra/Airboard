@@ -187,8 +187,7 @@ struct FeedbackView: View {
 }
 
 /// DS primary CTA: accent fill, on-accent label, r8 radius. Dims when disabled.
-/// Local replica of CleanupSettingsView's private DSPrimaryButtonStyle (Task 3
-/// precedent) — kept file-private rather than widening access.
+/// Kept file-private rather than widening access.
 private struct DSPrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 

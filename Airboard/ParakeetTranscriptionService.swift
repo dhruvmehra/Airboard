@@ -173,8 +173,8 @@ class ParakeetTranscriptionService: ObservableObject {
             // matcher stamped names over unrelated speech ("is working" ->
             // "Inakshi") across every tunable threshold, and any text gate
             // strict enough to stop that also killed the genuine acoustic
-            // recoveries. Name correction lives in the cleanup LLM's
-            // glossary (MemoryStore.promptBlock). Revisit only with an
+            // recoveries. Name correction now lives in VocabularyLearning
+            // (text-level, decision-model gated). Revisit only with an
             // offline eval harness of recorded utterances or an upstream
             // precision fix.
             transcription = transcribedText

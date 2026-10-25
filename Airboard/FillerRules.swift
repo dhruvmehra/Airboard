@@ -3,9 +3,8 @@
 //
 //  Deterministic cleanup of spoken-language artifacts: filler words only.
 //  Runs on every transcript in every mode — no ML, no async, no failure
-//  modes, works offline. The optional LLM stage
-//  (TranscriptRefiner) handles grammar and structure; this handles the
-//  closed-vocabulary junk.
+//  modes, works offline. Closed-vocabulary junk only; learned spellings
+//  are VocabularyLearning's job.
 //
 
 import Foundation

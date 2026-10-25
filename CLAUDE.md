@@ -63,7 +63,7 @@ HotkeyManager (detects key press)
   → TranscriptionCoordinator (orchestrator singleton)
     → AudioRecorder / ChunkedAudioRecorder (captures audio)
     → ParakeetTranscriptionService (FluidAudio/Parakeet transcription)
-    → TranscriptPostProcessor (FillerRules always; optional remote LLM via TranscriptRefiner)
+    → TranscriptPostProcessor (FillerRules always; VocabularyLearning learned spellings — decision-model gated)
     → CommandDetector (checks for voice commands)
     → TextInserter (inserts via Accessibility API) or CommandExecutor
     → FloatingWindowManager (visual feedback)
@@ -95,11 +95,12 @@ HotkeyManager (detects key press)
 | Text output | `TextInserter.swift` (Accessibility API) |
 | Commands | `CommandDetector.swift`, `CommandExecutor.swift`, `CommandTypes.swift`, `EditCommands.swift` (voice deletion: delete all / last N words/sentences / scratch that — executed via TextInserter keystrokes) |
 | Assistant | `AssistantService.swift` (headless pi spawn), `AssistantPrompt.swift` (pure prompt/parse), `AssistantSettingsView.swift`, `assistant-tools.txt` (pi extension: calc + fetch_url — the assistant's only tools; ships as .txt, staged as .ts at runtime) |
-| Memory | `MemoryStore.swift` (flat list of memory lines, human-editable memory.md in App Support), `MemoryCommands.swift` (voice teach/recall intents), `MemoryBias.swift` (edit-diff spelling learning), `MemoryConfirmView.swift` (fact confirmation card), `MemorySettingsView.swift` |
+| Vocabulary store | `MemoryStore.swift` (memory.md in App Support — confirmed SpellingRule lines; legacy Memory-feature lines kept untouched), `VocabularySettingsView.swift` (popover → Vocabulary) |
+| Vocabulary learning | `VocabularyLearning.swift` (orchestrator: dictation path ≤350ms, cards, watcher/harvester control), pure scratch-tested units `SoundCode`, `SpellingRule`, `CandidateFinder`, `EditDiff`, `TermExtractor`, `VocabularyResolver`, `VocabularyCacheData`, `VocabularyCardQueue`, `CorrectionWatchPolicy` (watch timing/lifecycle + keyless gate; `scripts/watch-eval/run.sh` replays 61 timelines), `RuleLearning` (one correction → the rule(s) a Keep writes + whether the decision model is needed), `VocabularyPipeline` (the decision glue of process()/learning, shared verbatim with `scripts/name-eval` — the end-to-end learn→apply eval on real Parakeet output: `corpus.json` learn/apply rows incl. `learn_keyboard_neg` ordinary edits that must learn no rule, the held-out adversarial apply set `scripts/name-eval/heldout.json` (new sentences — do not tune to it), and the frozen `unreachable.json` for reachable-slot recall), `RedictationLearner` (spelled-out names from our own transcripts — the only transcript signal wired in; follow-up/re-dictation detection is eval-only because Parakeet mishears the name again; `scripts/redictation-eval`); `DecisionClient`/`DecisionTypes` (OpenRouter Decisions API, Jev — user's own key, shared with Assistant); `CorrectionWatcher`, `VocabularyHarvester`, `AXText`, `VocabularyCardView` (non-focus-stealing card), `OpenRouterKeyView` (the ONE place the OpenRouter key is set — temporary, until decisions/assistant run locally) |
 | Context | `AppContextDetector.swift` (detects active app type: email, code, messaging, etc.) |
 | UI | `FloatingWindowManager.swift`, `AirboardPopover.swift`, `SetupWindowController.swift`, `DesignSystem.swift` (v2 tokens — all styled views consume these), `OnboardingFlow.swift` (guided first-run flow hosted by `SetupWindowController`) |
 | Settings | `MenuBarManager.swift`, `HotkeySettingsView.swift` |
-| Post-processing | `TranscriptPostProcessor.swift` (orchestrator), `FillerRules.swift`, `TranscriptRefiner.swift` (OpenAI-compatible HTTP client), `CleanupSettingsView.swift`, `KeychainHelper.swift` |
+| Post-processing | `TranscriptPostProcessor.swift` (FillerRules → learned spellings; no cloud rewrite), `FillerRules.swift`, `KeychainHelper.swift` (per-host keys; the OpenRouter key is host `openrouter.ai`) |
 | Diagnostics | `PerformanceMonitor.swift`, `PerformanceView.swift`, `PerformanceLog.swift` (local per-dictation timing jsonl), `TelemetryService.swift` (TelemetryDeck), `FeedbackManager.swift` |
 | Updates | `UpdaterManager.swift` (Sparkle; production bundle only) |
 
@@ -124,9 +125,9 @@ No XCTest target exists. Testing is manual: build, grant permissions, and dictat
 
 - `primaryHotkey`, `commandModifierHotkey` — hotkey configuration
 - `hasCompletedSetup` — first-run setup completion flag
-- `aiCleanupEnabled` — AI cleanup toggle (default false; turning it on with no server configured opens the setup window)
-- `cleanupServerURL`, `cleanupModelName` — cleanup endpoint config (API key lives in the Keychain, service `<bundle id>.cleanup` — dev and prod have separate entries)
 - `micRuleByDevice` — per-external-device mic choice (externalDeviceUID → chosenMicUID); no rule = system default
 - `shareAnalytics` — telemetry toggle (default true). Telemetry: TelemetryDeck, prod bundle only, gated on this + `TelemetryDeckAppID` in Info.plist (UNSET = fully inert); signals carry numbers/enums only — never transcript text
+- `vocabLearningEnabled` — self-learning vocabulary toggle (default true). Confirmed spellings live in memory.md as SpellingRule lines; hidden learning state (harvested terms, verdicts, rejections) in App Support `vocabulary-cache.json`. Decisions send one sentence + one term to OpenRouter (user's key); nothing is logged but numbers
+- `vocabPendingLearnedCards` — unresolved Learned cards awaiting Keep/Undo (survive a quit); stores only each card's word pairs — the same text a Keep writes to memory.md; never logged
 
-Memory lives in `~/Library/Application Support/<bundle id>/memory.md` (NOT UserDefaults) — Claude-style: a FLAT list of plain-language `- ` lines, no schema (a spelling is just a memory that says it's a spelling; the cleanup LLM interprets). Parsed leniently — any `- ` line anywhere is a memory; hand edits can never wipe it. The share flag is a UserDefaults key (`memoryShareWithLLM`), not file content. (An acoustic CTC-biasing layer was built and removed 2026-07-25 — see ParakeetTranscriptionService for why; don't re-add without an offline eval harness.)
+Learned spellings live in `~/Library/Application Support/<bundle id>/memory.md` (NOT UserDefaults) — plain `- ` lines; only the exact SpellingRule shape is applied. AI Cleanup (cloud LLM rewrite, TranscriptRefiner) and the Memory voice commands (remember/recall/correct, MemoryCommands) were REMOVED 2026-10-07: Airboard is heading fully local, with decision models (Jev now, a local model later) as the "decision rails". Don't re-add a cloud rewrite. (An acoustic CTC-biasing layer was built and removed 2026-07-25 — see ParakeetTranscriptionService for why; don't re-add without an offline eval harness.)

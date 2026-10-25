@@ -9,11 +9,10 @@ import SwiftUI
 
 struct AssistantSettingsView: View {
     @State private var piInstalled = AssistantService.shared.isPiInstalled()
-    @State private var apiKey: String = KeychainHelper.readAPIKey(forHost: AssistantService.openRouterHost) ?? ""
+    @State private var hasKey = KeychainHelper.hasAPIKey(forHost: AssistantService.openRouterHost)
     @State private var model: String = UserDefaults.standard.string(forKey: AssistantService.modelDefaultsKey) ?? AssistantService.defaultModel
     @State private var installing = false
     @State private var installFailed = false
-    @State private var keySaved = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -44,32 +43,22 @@ struct AssistantSettingsView: View {
             .padding(10)
             .background(RoundedRectangle(cornerRadius: DS.Radius.r8).fill(DS.Fill.quaternary))
 
-            // Step 2: key
-            VStack(alignment: .leading, spacing: 6) {
-                Text("OpenRouter API key")
-                    .font(.system(size: 12, weight: .medium))
+            // Step 2: key — set in ONE place (OpenRouterKeyView)
+            HStack(spacing: 8) {
+                Image(systemName: hasKey ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(hasKey ? DS.Accent.success : DS.Label.tertiary)
+                Text(hasKey ? "Using your OpenRouter key" : "OpenRouter key not set")
+                    .font(.system(size: 12))
                     .foregroundColor(DS.Label.primary)
-                HStack(spacing: 8) {
-                    SecureField("sk-or-…", text: $apiKey)
-                        .textFieldStyle(.plain)
-                        .font(DS.Typo.mono(11))
-                        .padding(.horizontal, 8).padding(.vertical, 6)
-                        .background(RoundedRectangle(cornerRadius: DS.Radius.r8).fill(DS.Surface.control))
-                        .overlay(RoundedRectangle(cornerRadius: DS.Radius.r8).stroke(DS.Border.control, lineWidth: 1))
-                    Button(keySaved ? "Saved ✓" : "Save") {
-                        let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if trimmed.isEmpty {
-                            KeychainHelper.deleteAPIKey(forHost: AssistantService.openRouterHost)
-                        } else {
-                            KeychainHelper.saveAPIKey(trimmed, forHost: AssistantService.openRouterHost)
-                        }
-                        keySaved = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { keySaved = false }
-                    }
+                Spacer()
+                Button("OpenRouter key…") {
+                    FloatingWindowManager.shared.showOpenRouterKeyWindow()
                 }
-                Text("Get one at openrouter.ai/keys. Used only for assistant questions.")
-                    .font(.system(size: 10))
-                    .foregroundColor(DS.Label.tertiary)
+            }
+            .padding(10)
+            .background(RoundedRectangle(cornerRadius: DS.Radius.r8).fill(DS.Fill.quaternary))
+            .onReceive(NotificationCenter.default.publisher(for: .openRouterKeyChanged)) { _ in
+                hasKey = KeychainHelper.hasAPIKey(forHost: AssistantService.openRouterHost)
             }
 
             // Model override

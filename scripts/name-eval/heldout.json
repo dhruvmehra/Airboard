@@ -1,0 +1,3519 @@
+{
+ "generated_by": "scripts/name-eval/gen.sh (say -o + Parakeet TDT v3 via FluidAudio 0.15.5)",
+ "items": [
+  {
+   "id": "hn01-Rishi",
+   "sentence": "hn01",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove Mehra to the airport.",
+   "raw": "I drove Mehra to the airport.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mehra",
+     "class": "correct"
+    }
+   ]
+  },
+  {
+   "id": "hn01-Aman",
+   "sentence": "hn01",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove Mehra to the airport.",
+   "raw": "I drove Mehra to the airport.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mehra",
+     "class": "correct"
+    }
+   ]
+  },
+  {
+   "id": "hn01-Tara",
+   "sentence": "hn01",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove Mehra to the airport.",
+   "raw": "I drove Mehra to the airport.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mehra",
+     "class": "correct"
+    }
+   ]
+  },
+  {
+   "id": "hn01-Samantha",
+   "sentence": "hn01",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove Mehra to the airport.",
+   "raw": "I drove Mayra to the airport.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mayra",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hn01-Daniel",
+   "sentence": "hn01",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove Mehra to the airport.",
+   "raw": "I drove Mera to the airport.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mera",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hn02-Rishi",
+   "sentence": "hn02",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove Mehra's car yesterday.",
+   "raw": "He drove Mehra's car yesterday.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra's",
+     "term": "Mehra",
+     "heard": "Mehra's",
+     "class": "correct"
+    }
+   ]
+  },
+  {
+   "id": "hn02-Aman",
+   "sentence": "hn02",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove Mehra's car yesterday.",
+   "raw": "He drove Maharaj car yesterday.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra's",
+     "term": "Mehra",
+     "heard": "Maharaj",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hn02-Tara",
+   "sentence": "hn02",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove Mehra's car yesterday.",
+   "raw": "He drove Mehra's car yesterday.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra's",
+     "term": "Mehra",
+     "heard": "Mehra's",
+     "class": "correct"
+    }
+   ]
+  },
+  {
+   "id": "hn02-Samantha",
+   "sentence": "hn02",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove Mehra's car yesterday.",
+   "raw": "He drove Mahara's car yesterday.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra's",
+     "term": "Mehra",
+     "heard": "Mahara's",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hn02-Daniel",
+   "sentence": "hn02",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove Mehra's car yesterday.",
+   "raw": "He drove Mera's car yesterday.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Mehra's",
+     "term": "Mehra",
+     "heard": "Mera's",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hn03-Rishi",
+   "sentence": "hn03",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove the car.",
+   "raw": "He drove the car.",
+   "slots": []
+  },
+  {
+   "id": "hn03-Aman",
+   "sentence": "hn03",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove the car.",
+   "raw": "He drove the car.",
+   "slots": []
+  },
+  {
+   "id": "hn03-Tara",
+   "sentence": "hn03",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove the car.",
+   "raw": "He drove the car.",
+   "slots": []
+  },
+  {
+   "id": "hn03-Samantha",
+   "sentence": "hn03",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove the car.",
+   "raw": "He drove the car.",
+   "slots": []
+  },
+  {
+   "id": "hn03-Daniel",
+   "sentence": "hn03",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove the car.",
+   "raw": "He drove the car.",
+   "slots": []
+  },
+  {
+   "id": "hn04-Rishi",
+   "sentence": "hn04",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We drove Mera home.",
+   "raw": "We drove Mayra home.",
+   "slots": []
+  },
+  {
+   "id": "hn04-Aman",
+   "sentence": "hn04",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We drove Mera home.",
+   "raw": "We drove Mira home.",
+   "slots": []
+  },
+  {
+   "id": "hn04-Tara",
+   "sentence": "hn04",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We drove Mera home.",
+   "raw": "We drove Mira home.",
+   "slots": []
+  },
+  {
+   "id": "hn04-Samantha",
+   "sentence": "hn04",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We drove Mera home.",
+   "raw": "We drove Mara home.",
+   "slots": []
+  },
+  {
+   "id": "hn04-Daniel",
+   "sentence": "hn04",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We drove Mera home.",
+   "raw": "We drove Mera home.",
+   "slots": []
+  },
+  {
+   "id": "hn05-Rishi",
+   "sentence": "hn05",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "She drove Mehta to the station.",
+   "raw": "She drove Mehta to the station.",
+   "slots": []
+  },
+  {
+   "id": "hn05-Aman",
+   "sentence": "hn05",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "She drove Mehta to the station.",
+   "raw": "She drove Meta to the station.",
+   "slots": []
+  },
+  {
+   "id": "hn05-Tara",
+   "sentence": "hn05",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "She drove Mehta to the station.",
+   "raw": "She drove Meta to the station.",
+   "slots": []
+  },
+  {
+   "id": "hn05-Samantha",
+   "sentence": "hn05",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "She drove Mehta to the station.",
+   "raw": "She drove Maida to the station.",
+   "slots": []
+  },
+  {
+   "id": "hn05-Daniel",
+   "sentence": "hn05",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "She drove Mehta to the station.",
+   "raw": "She drove Meta to the station.",
+   "slots": []
+  },
+  {
+   "id": "hn06-Rishi",
+   "sentence": "hn06",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Look at pipe now.",
+   "raw": "Look at pipe now.",
+   "slots": []
+  },
+  {
+   "id": "hn06-Aman",
+   "sentence": "hn06",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Look at pipe now.",
+   "raw": "Look at pipe now.",
+   "slots": []
+  },
+  {
+   "id": "hn06-Tara",
+   "sentence": "hn06",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Look at pipe now.",
+   "raw": "Look at pipe now.",
+   "slots": []
+  },
+  {
+   "id": "hn06-Samantha",
+   "sentence": "hn06",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Look at pipe now.",
+   "raw": "Look at pipe now.",
+   "slots": []
+  },
+  {
+   "id": "hn06-Daniel",
+   "sentence": "hn06",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Look at pipe now.",
+   "raw": "Look at pipe now.",
+   "slots": []
+  },
+  {
+   "id": "hn07-Rishi",
+   "sentence": "hn07",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Stop at pipe and fittings.",
+   "raw": "Stop at pipe and fittings.",
+   "slots": []
+  },
+  {
+   "id": "hn07-Aman",
+   "sentence": "hn07",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Stop at pipe and fittings.",
+   "raw": "Stop at pipe and fittings.",
+   "slots": []
+  },
+  {
+   "id": "hn07-Tara",
+   "sentence": "hn07",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Stop at pipe and fittings.",
+   "raw": "Stop at pipe and fittings.",
+   "slots": []
+  },
+  {
+   "id": "hn07-Samantha",
+   "sentence": "hn07",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Stop at pipe and fittings.",
+   "raw": "Stop at pipe and fittings.",
+   "slots": []
+  },
+  {
+   "id": "hn07-Daniel",
+   "sentence": "hn07",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Stop at pipe and fittings.",
+   "raw": "Stop at pipe and fittings.",
+   "slots": []
+  },
+  {
+   "id": "hn08-Rishi",
+   "sentence": "hn08",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I work at five.",
+   "raw": "I work at five.",
+   "slots": []
+  },
+  {
+   "id": "hn08-Aman",
+   "sentence": "hn08",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I work at five.",
+   "raw": "I work at five.",
+   "slots": []
+  },
+  {
+   "id": "hn08-Tara",
+   "sentence": "hn08",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I work at five.",
+   "raw": "I work at five.",
+   "slots": []
+  },
+  {
+   "id": "hn08-Samantha",
+   "sentence": "hn08",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I work at five.",
+   "raw": "I work at five.",
+   "slots": []
+  },
+  {
+   "id": "hn08-Daniel",
+   "sentence": "hn08",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I work at five.",
+   "raw": "I work at five.",
+   "slots": []
+  },
+  {
+   "id": "hn09-Rishi",
+   "sentence": "hn09",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Join type safety talks.",
+   "raw": "Join type safety talks.",
+   "slots": []
+  },
+  {
+   "id": "hn09-Aman",
+   "sentence": "hn09",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Join type safety talks.",
+   "raw": "Join the second Akicharda.",
+   "slots": []
+  },
+  {
+   "id": "hn09-Tara",
+   "sentence": "hn09",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Join type safety talks.",
+   "raw": "Join type safety talks.",
+   "slots": []
+  },
+  {
+   "id": "hn09-Samantha",
+   "sentence": "hn09",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Join type safety talks.",
+   "raw": "Join type safety talks.",
+   "slots": []
+  },
+  {
+   "id": "hn09-Daniel",
+   "sentence": "hn09",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Join type safety talks.",
+   "raw": "Join type safety talks.",
+   "slots": []
+  },
+  {
+   "id": "hn10-Rishi",
+   "sentence": "hn10",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Pipe it into grep.",
+   "raw": "Pipe it into grip.",
+   "slots": []
+  },
+  {
+   "id": "hn10-Aman",
+   "sentence": "hn10",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Pipe it into grep.",
+   "raw": "The second Akicharda.",
+   "slots": []
+  },
+  {
+   "id": "hn10-Tara",
+   "sentence": "hn10",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Pipe it into grep.",
+   "raw": "Fipe it into grab.",
+   "slots": []
+  },
+  {
+   "id": "hn10-Samantha",
+   "sentence": "hn10",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Pipe it into grep.",
+   "raw": "Pipe it into grab.",
+   "slots": []
+  },
+  {
+   "id": "hn10-Daniel",
+   "sentence": "hn10",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Pipe it into grep.",
+   "raw": "Pipe it into Greg.",
+   "slots": []
+  },
+  {
+   "id": "hn11-Rishi",
+   "sentence": "hn11",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meet me at pipe street.",
+   "raw": "Meet me at Pipe Street.",
+   "slots": []
+  },
+  {
+   "id": "hn11-Aman",
+   "sentence": "hn11",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meet me at pipe street.",
+   "raw": "Meet me at 5th Street.",
+   "slots": []
+  },
+  {
+   "id": "hn11-Tara",
+   "sentence": "hn11",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meet me at pipe street.",
+   "raw": "Meet me at Pipe Street.",
+   "slots": []
+  },
+  {
+   "id": "hn11-Samantha",
+   "sentence": "hn11",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meet me at pipe street.",
+   "raw": "Meet me at Pipe Street.",
+   "slots": []
+  },
+  {
+   "id": "hn11-Daniel",
+   "sentence": "hn11",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meet me at pipe street.",
+   "raw": "Meet me at Pike Street.",
+   "slots": []
+  },
+  {
+   "id": "hn12-Rishi",
+   "sentence": "hn12",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The meeting starts at five.",
+   "raw": "The meeting starts at five.",
+   "slots": []
+  },
+  {
+   "id": "hn12-Aman",
+   "sentence": "hn12",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The meeting starts at five.",
+   "raw": "The meeting starts at 5.",
+   "slots": []
+  },
+  {
+   "id": "hn12-Tara",
+   "sentence": "hn12",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The meeting starts at five.",
+   "raw": "The meeting starts at 5.",
+   "slots": []
+  },
+  {
+   "id": "hn12-Samantha",
+   "sentence": "hn12",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The meeting starts at five.",
+   "raw": "The meeting starts at 5.",
+   "slots": []
+  },
+  {
+   "id": "hn12-Daniel",
+   "sentence": "hn12",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The meeting starts at five.",
+   "raw": "The meeting starts at 5.",
+   "slots": []
+  },
+  {
+   "id": "hn13-Rishi",
+   "sentence": "hn13",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We use type checking at work.",
+   "raw": "We use type checking at work.",
+   "slots": []
+  },
+  {
+   "id": "hn13-Aman",
+   "sentence": "hn13",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We use type checking at work.",
+   "raw": "We use type checking at work.",
+   "slots": []
+  },
+  {
+   "id": "hn13-Tara",
+   "sentence": "hn13",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We use type checking at work.",
+   "raw": "We use type checking at work.",
+   "slots": []
+  },
+  {
+   "id": "hn13-Samantha",
+   "sentence": "hn13",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We use type checking at work.",
+   "raw": "We use type checking at work.",
+   "slots": []
+  },
+  {
+   "id": "hn13-Daniel",
+   "sentence": "hn13",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We use type checking at work.",
+   "raw": "We use type checking at work.",
+   "slots": []
+  },
+  {
+   "id": "hn14-Rishi",
+   "sentence": "hn14",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mehta joined the call late.",
+   "raw": "Mehta joined the call late.",
+   "slots": []
+  },
+  {
+   "id": "hn14-Aman",
+   "sentence": "hn14",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mehta joined the call late.",
+   "raw": "Meta joined the call late.",
+   "slots": []
+  },
+  {
+   "id": "hn14-Tara",
+   "sentence": "hn14",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mehta joined the call late.",
+   "raw": "Meta joined the call late.",
+   "slots": []
+  },
+  {
+   "id": "hn14-Samantha",
+   "sentence": "hn14",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mehta joined the call late.",
+   "raw": "Maida joined the call late.",
+   "slots": []
+  },
+  {
+   "id": "hn14-Daniel",
+   "sentence": "hn14",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mehta joined the call late.",
+   "raw": "Meta joined the call late.",
+   "slots": []
+  },
+  {
+   "id": "hn15-Rishi",
+   "sentence": "hn15",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mira sent the slides this morning.",
+   "raw": "Mira sent the slides this morning.",
+   "slots": []
+  },
+  {
+   "id": "hn15-Aman",
+   "sentence": "hn15",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mira sent the slides this morning.",
+   "raw": "Mira sent the slides this morning.",
+   "slots": []
+  },
+  {
+   "id": "hn15-Tara",
+   "sentence": "hn15",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mira sent the slides this morning.",
+   "raw": "Mira sent the slides this morning.",
+   "slots": []
+  },
+  {
+   "id": "hn15-Samantha",
+   "sentence": "hn15",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mira sent the slides this morning.",
+   "raw": "Mira sent the slides this morning.",
+   "slots": []
+  },
+  {
+   "id": "hn15-Daniel",
+   "sentence": "hn15",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mira sent the slides this morning.",
+   "raw": "Mira sent the slides this morning.",
+   "slots": []
+  },
+  {
+   "id": "hn16-Rishi",
+   "sentence": "hn16",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The mayor opened the new bridge.",
+   "raw": "The mayor opened the new bridge, and",
+   "slots": []
+  },
+  {
+   "id": "hn16-Aman",
+   "sentence": "hn16",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The mayor opened the new bridge.",
+   "raw": "The mayor opened the new bridge.",
+   "slots": []
+  },
+  {
+   "id": "hn16-Tara",
+   "sentence": "hn16",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The mayor opened the new bridge.",
+   "raw": "The mayor opened the new bridge.",
+   "slots": []
+  },
+  {
+   "id": "hn16-Samantha",
+   "sentence": "hn16",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The mayor opened the new bridge.",
+   "raw": "The mayor opened the new bridge.",
+   "slots": []
+  },
+  {
+   "id": "hn16-Daniel",
+   "sentence": "hn16",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The mayor opened the new bridge.",
+   "raw": "The mayor opened the new bridge.",
+   "slots": []
+  },
+  {
+   "id": "hn17-Rishi",
+   "sentence": "hn17",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mary will review the pull request.",
+   "raw": "Mary will review the pull request.",
+   "slots": []
+  },
+  {
+   "id": "hn17-Aman",
+   "sentence": "hn17",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mary will review the pull request.",
+   "raw": "Mary will review the full request.",
+   "slots": []
+  },
+  {
+   "id": "hn17-Tara",
+   "sentence": "hn17",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mary will review the pull request.",
+   "raw": "Mary will review the pull request.",
+   "slots": []
+  },
+  {
+   "id": "hn17-Samantha",
+   "sentence": "hn17",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mary will review the pull request.",
+   "raw": "Mary will review the pull request.",
+   "slots": []
+  },
+  {
+   "id": "hn17-Daniel",
+   "sentence": "hn17",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mary will review the pull request.",
+   "raw": "Mary will review the pull request.",
+   "slots": []
+  },
+  {
+   "id": "hn18-Rishi",
+   "sentence": "hn18",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Thanks Mira, see you soon.",
+   "raw": "Thanks Mila, see you soon.",
+   "slots": []
+  },
+  {
+   "id": "hn18-Aman",
+   "sentence": "hn18",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Thanks Mira, see you soon.",
+   "raw": "Thanks Mira, see you soon.",
+   "slots": []
+  },
+  {
+   "id": "hn18-Tara",
+   "sentence": "hn18",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Thanks Mira, see you soon.",
+   "raw": "Thanks Mira see you soon.",
+   "slots": []
+  },
+  {
+   "id": "hn18-Samantha",
+   "sentence": "hn18",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Thanks Mira, see you soon.",
+   "raw": "Thanks Mira. See you soon.",
+   "slots": []
+  },
+  {
+   "id": "hn18-Daniel",
+   "sentence": "hn18",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Thanks Mira, see you soon.",
+   "raw": "Thanks Mira. See you soon.",
+   "slots": []
+  },
+  {
+   "id": "hn19-Rishi",
+   "sentence": "hn19",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Email Mehta about the launch.",
+   "raw": "Email Mehitar about the launch.",
+   "slots": []
+  },
+  {
+   "id": "hn19-Aman",
+   "sentence": "hn19",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Email Mehta about the launch.",
+   "raw": "Email meta about the launch.",
+   "slots": []
+  },
+  {
+   "id": "hn19-Tara",
+   "sentence": "hn19",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Email Mehta about the launch.",
+   "raw": "Email meta about the launch.",
+   "slots": []
+  },
+  {
+   "id": "hn19-Samantha",
+   "sentence": "hn19",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Email Mehta about the launch.",
+   "raw": "Email Mata about the launch.",
+   "slots": []
+  },
+  {
+   "id": "hn19-Daniel",
+   "sentence": "hn19",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Email Mehta about the launch.",
+   "raw": "Email Meta about the launch.",
+   "slots": []
+  },
+  {
+   "id": "hn20-Rishi",
+   "sentence": "hn20",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera beta school gaya hai.",
+   "raw": "May Rabeta School Gaia Hay.",
+   "slots": []
+  },
+  {
+   "id": "hn20-Aman",
+   "sentence": "hn20",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera beta school gaya hai.",
+   "raw": "Mera Beta School Gaya Hai.",
+   "slots": []
+  },
+  {
+   "id": "hn20-Tara",
+   "sentence": "hn20",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera beta school gaya hai.",
+   "raw": "Mera Bheta School Gayahir",
+   "slots": []
+  },
+  {
+   "id": "hn20-Samantha",
+   "sentence": "hn20",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera beta school gaya hai.",
+   "raw": "Marabeta School Gaya High",
+   "slots": []
+  },
+  {
+   "id": "hn20-Daniel",
+   "sentence": "hn20",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera beta school gaya hai.",
+   "raw": "Mera Bita School Gaia High.",
+   "slots": []
+  },
+  {
+   "id": "hn21-Rishi",
+   "sentence": "hn21",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meri behen Pune mein rehti hai.",
+   "raw": "Mari behandpune may rehti high.",
+   "slots": []
+  },
+  {
+   "id": "hn21-Aman",
+   "sentence": "hn21",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meri behen Pune mein rehti hai.",
+   "raw": "Mary Bahan Pune May Rati Hai.",
+   "slots": []
+  },
+  {
+   "id": "hn21-Tara",
+   "sentence": "hn21",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meri behen Pune mein rehti hai.",
+   "raw": "Mary Bahan Pune Main Rehatiha.",
+   "slots": []
+  },
+  {
+   "id": "hn21-Samantha",
+   "sentence": "hn21",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meri behen Pune mein rehti hai.",
+   "raw": "Mary Beton Pune Minry T high.",
+   "slots": []
+  },
+  {
+   "id": "hn21-Daniel",
+   "sentence": "hn21",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Meri behen Pune mein rehti hai.",
+   "raw": "Mary Van Poona mainrati high.",
+   "slots": []
+  },
+  {
+   "id": "hn22-Rishi",
+   "sentence": "hn22",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera kaam through ho gaya.",
+   "raw": "Mayra come true ho gaya.",
+   "slots": []
+  },
+  {
+   "id": "hn22-Aman",
+   "sentence": "hn22",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera kaam through ho gaya.",
+   "raw": "Mira calm through Hogaya.",
+   "slots": []
+  },
+  {
+   "id": "hn22-Tara",
+   "sentence": "hn22",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera kaam through ho gaya.",
+   "raw": "Mayra come through Hogaya.",
+   "slots": []
+  },
+  {
+   "id": "hn22-Samantha",
+   "sentence": "hn22",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera kaam through ho gaya.",
+   "raw": "Maricom through Hogaya.",
+   "slots": []
+  },
+  {
+   "id": "hn22-Daniel",
+   "sentence": "hn22",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera kaam through ho gaya.",
+   "raw": "Merakam through Hogaya.",
+   "slots": []
+  },
+  {
+   "id": "hn23-Rishi",
+   "sentence": "hn23",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew ne mujhe call kiya.",
+   "raw": "Drew Name U J Calkiya.",
+   "slots": []
+  },
+  {
+   "id": "hn23-Aman",
+   "sentence": "hn23",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew ne mujhe call kiya.",
+   "raw": "Drune Mujek Halkia.",
+   "slots": []
+  },
+  {
+   "id": "hn23-Tara",
+   "sentence": "hn23",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew ne mujhe call kiya.",
+   "raw": "Drune Muche Kalkia",
+   "slots": []
+  },
+  {
+   "id": "hn23-Samantha",
+   "sentence": "hn23",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew ne mujhe call kiya.",
+   "raw": "True Namudkal Kia.",
+   "slots": []
+  },
+  {
+   "id": "hn23-Daniel",
+   "sentence": "hn23",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew ne mujhe call kiya.",
+   "raw": "Druni Mudj Kulkia.",
+   "slots": []
+  },
+  {
+   "id": "hn24-Rishi",
+   "sentence": "hn24",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew Barrymore was in that film.",
+   "raw": "Drew Barimo was in that film.",
+   "slots": []
+  },
+  {
+   "id": "hn24-Aman",
+   "sentence": "hn24",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew Barrymore was in that film.",
+   "raw": "Drew Barrymore was in that film.",
+   "slots": []
+  },
+  {
+   "id": "hn24-Tara",
+   "sentence": "hn24",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew Barrymore was in that film.",
+   "raw": "Drew Barrymore was in that film.",
+   "slots": []
+  },
+  {
+   "id": "hn24-Samantha",
+   "sentence": "hn24",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew Barrymore was in that film.",
+   "raw": "Drew Barrymore was in that film.",
+   "slots": []
+  },
+  {
+   "id": "hn24-Daniel",
+   "sentence": "hn24",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Drew Barrymore was in that film.",
+   "raw": "Drew Barrymore was in that film.",
+   "slots": []
+  },
+  {
+   "id": "hn25-Rishi",
+   "sentence": "hn25",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We went through the whole plan.",
+   "raw": "We went through the whole plan.",
+   "slots": []
+  },
+  {
+   "id": "hn25-Aman",
+   "sentence": "hn25",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We went through the whole plan.",
+   "raw": "We went through the whole flag.",
+   "slots": []
+  },
+  {
+   "id": "hn25-Tara",
+   "sentence": "hn25",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We went through the whole plan.",
+   "raw": "We went through the whole plan.",
+   "slots": []
+  },
+  {
+   "id": "hn25-Samantha",
+   "sentence": "hn25",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We went through the whole plan.",
+   "raw": "We went through the whole plan.",
+   "slots": []
+  },
+  {
+   "id": "hn25-Daniel",
+   "sentence": "hn25",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "We went through the whole plan.",
+   "raw": "We went through the whole plan.",
+   "slots": []
+  },
+  {
+   "id": "hn26-Rishi",
+   "sentence": "hn26",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove all night to get here.",
+   "raw": "He drove all night to get here.",
+   "slots": []
+  },
+  {
+   "id": "hn26-Aman",
+   "sentence": "hn26",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove all night to get here.",
+   "raw": "He drove all night to get here.",
+   "slots": []
+  },
+  {
+   "id": "hn26-Tara",
+   "sentence": "hn26",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove all night to get here.",
+   "raw": "He drove all night to get here.",
+   "slots": []
+  },
+  {
+   "id": "hn26-Samantha",
+   "sentence": "hn26",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove all night to get here.",
+   "raw": "He drove all night to get here.",
+   "slots": []
+  },
+  {
+   "id": "hn26-Daniel",
+   "sentence": "hn26",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "He drove all night to get here.",
+   "raw": "He drove all night to get here.",
+   "slots": []
+  },
+  {
+   "id": "hn27-Rishi",
+   "sentence": "hn27",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Call the plumber about the pipe.",
+   "raw": "Call the plummer about the pipe.",
+   "slots": []
+  },
+  {
+   "id": "hn27-Aman",
+   "sentence": "hn27",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Call the plumber about the pipe.",
+   "raw": "Call the plumber about the fight.",
+   "slots": []
+  },
+  {
+   "id": "hn27-Tara",
+   "sentence": "hn27",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Call the plumber about the pipe.",
+   "raw": "Call the plumber about the pipe.",
+   "slots": []
+  },
+  {
+   "id": "hn27-Samantha",
+   "sentence": "hn27",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Call the plumber about the pipe.",
+   "raw": "Called a plumber about the pipe.",
+   "slots": []
+  },
+  {
+   "id": "hn27-Daniel",
+   "sentence": "hn27",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Call the plumber about the pipe.",
+   "raw": "Call the plumber about the pipe.",
+   "slots": []
+  },
+  {
+   "id": "hn28-Rishi",
+   "sentence": "hn28",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Type your answer below.",
+   "raw": "Type your answer below.",
+   "slots": []
+  },
+  {
+   "id": "hn28-Aman",
+   "sentence": "hn28",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Type your answer below.",
+   "raw": "Type your answer below.",
+   "slots": []
+  },
+  {
+   "id": "hn28-Tara",
+   "sentence": "hn28",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Type your answer below.",
+   "raw": "Type your answer below.",
+   "slots": []
+  },
+  {
+   "id": "hn28-Samantha",
+   "sentence": "hn28",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Type your answer below.",
+   "raw": "Type your answer below.",
+   "slots": []
+  },
+  {
+   "id": "hn28-Daniel",
+   "sentence": "hn28",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Type your answer below.",
+   "raw": "Type your answer below.",
+   "slots": []
+  },
+  {
+   "id": "hn29-Rishi",
+   "sentence": "hn29",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Five people joined the call.",
+   "raw": "Five people joined the call.",
+   "slots": []
+  },
+  {
+   "id": "hn29-Aman",
+   "sentence": "hn29",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Five people joined the call.",
+   "raw": "Five people joined the call.",
+   "slots": []
+  },
+  {
+   "id": "hn29-Tara",
+   "sentence": "hn29",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Five people joined the call.",
+   "raw": "Five people joined the call.",
+   "slots": []
+  },
+  {
+   "id": "hn29-Samantha",
+   "sentence": "hn29",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Five people joined the call.",
+   "raw": "Five people joined the call.",
+   "slots": []
+  },
+  {
+   "id": "hn29-Daniel",
+   "sentence": "hn29",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Five people joined the call.",
+   "raw": "Five people joined the call.",
+   "slots": []
+  },
+  {
+   "id": "hn30-Rishi",
+   "sentence": "hn30",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The pipes froze in winter.",
+   "raw": "The pipes froze in winter.",
+   "slots": []
+  },
+  {
+   "id": "hn30-Aman",
+   "sentence": "hn30",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The pipes froze in winter.",
+   "raw": "The pipes froze in winter.",
+   "slots": []
+  },
+  {
+   "id": "hn30-Tara",
+   "sentence": "hn30",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The pipes froze in winter.",
+   "raw": "The pipes froze in winter.",
+   "slots": []
+  },
+  {
+   "id": "hn30-Samantha",
+   "sentence": "hn30",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The pipes froze in winter.",
+   "raw": "The pipes froze in winter.",
+   "slots": []
+  },
+  {
+   "id": "hn30-Daniel",
+   "sentence": "hn30",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "The pipes froze in winter.",
+   "raw": "The pipes froze in winter.",
+   "slots": []
+  },
+  {
+   "id": "hn31-Rishi",
+   "sentence": "hn31",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera phone kho gaya.",
+   "raw": "Mira phone cogaia.",
+   "slots": []
+  },
+  {
+   "id": "hn31-Aman",
+   "sentence": "hn31",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera phone kho gaya.",
+   "raw": "Maraphone Kogaya.",
+   "slots": []
+  },
+  {
+   "id": "hn31-Tara",
+   "sentence": "hn31",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera phone kho gaya.",
+   "raw": "Maraphone Kogaya",
+   "slots": []
+  },
+  {
+   "id": "hn31-Samantha",
+   "sentence": "hn31",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera phone kho gaya.",
+   "raw": "Marathon Kogaya.",
+   "slots": []
+  },
+  {
+   "id": "hn31-Daniel",
+   "sentence": "hn31",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "Mera phone kho gaya.",
+   "raw": "Miraphone Kogaya.",
+   "slots": []
+  },
+  {
+   "id": "hn32-Rishi",
+   "sentence": "hn32",
+   "voice": "Rishi",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove past Mehta's shop.",
+   "raw": "I drove past Mehta's shop.",
+   "slots": []
+  },
+  {
+   "id": "hn32-Aman",
+   "sentence": "hn32",
+   "voice": "Aman",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove past Mehta's shop.",
+   "raw": "I drove past Meta S shop.",
+   "slots": []
+  },
+  {
+   "id": "hn32-Tara",
+   "sentence": "hn32",
+   "voice": "Tara",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove past Mehta's shop.",
+   "raw": "I drove past Mehta S shop.",
+   "slots": []
+  },
+  {
+   "id": "hn32-Samantha",
+   "sentence": "hn32",
+   "voice": "Samantha",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove past Mehta's shop.",
+   "raw": "I drove past Meta's shop.",
+   "slots": []
+  },
+  {
+   "id": "hn32-Daniel",
+   "sentence": "hn32",
+   "voice": "Daniel",
+   "role": "heldout_neg",
+   "label": "neg",
+   "source": "parakeet",
+   "truth": "I drove past Mehta's shop.",
+   "raw": "I drove past Meta's shop.",
+   "slots": []
+  },
+  {
+   "id": "hp01-Rishi",
+   "sentence": "hp01",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype closed a new customer today.",
+   "raw": "Pipe closed a new customer today.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp01-Aman",
+   "sentence": "hp01",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype closed a new customer today.",
+   "raw": "5 closed a new customer today.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "5",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp01-Tara",
+   "sentence": "hp01",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype closed a new customer today.",
+   "raw": "Fight closed a new customer today.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Fight",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp01-Samantha",
+   "sentence": "hp01",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype closed a new customer today.",
+   "raw": "Pipe closed a new customer today.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp01-Daniel",
+   "sentence": "hp01",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype closed a new customer today.",
+   "raw": "Pipe closed a new customer today.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp02-Rishi",
+   "sentence": "hp02",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ping Dhruv when the build is green.",
+   "raw": "when the build is green.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "",
+     "class": "dropped"
+    }
+   ]
+  },
+  {
+   "id": "hp02-Aman",
+   "sentence": "hp02",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ping Dhruv when the build is green.",
+   "raw": "Thing drove when the build is green.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "drove",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp02-Tara",
+   "sentence": "hp02",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ping Dhruv when the build is green.",
+   "raw": "Thing droof wind the build is green.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "droof",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp02-Samantha",
+   "sentence": "hp02",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ping Dhruv when the build is green.",
+   "raw": "Pink drove when the build is green.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "drove",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp02-Daniel",
+   "sentence": "hp02",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ping Dhruv when the build is green.",
+   "raw": "Ping drove when the build is green.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "drove",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp03-Rishi",
+   "sentence": "hp03",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv Mehra is the founder of Pype.",
+   "raw": "Dhruvmehar is the founder of Pipe.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Dhruvmehar",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Dhruvmehar",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 6,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp03-Aman",
+   "sentence": "hp03",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv Mehra is the founder of Pype.",
+   "raw": "Drevmehera is the founder of Pipe.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drevmehera",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Drevmehera",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 6,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp03-Tara",
+   "sentence": "hp03",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv Mehra is the founder of Pype.",
+   "raw": "Drevmehra is the founder of Vibe.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drevmehra",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Drevmehra",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 6,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Vibe",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp03-Samantha",
+   "sentence": "hp03",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv Mehra is the founder of Pype.",
+   "raw": "Dreve Meira is the founder of Pipe.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Dreve",
+     "class": "nondict"
+    },
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Meira",
+     "class": "nondict"
+    },
+    {
+     "i": 6,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp03-Daniel",
+   "sentence": "hp03",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv Mehra is the founder of Pype.",
+   "raw": "Drove Mera is the founder of Pipe.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drove",
+     "class": "dict"
+    },
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mera",
+     "class": "nondict"
+    },
+    {
+     "i": 6,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp04-Rishi",
+   "sentence": "hp04",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Please share Pype's pitch deck with investors.",
+   "raw": "Please share pipe's pitch deck with investors.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Pype's",
+     "term": "Pype",
+     "heard": "pipe's",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp04-Aman",
+   "sentence": "hp04",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Please share Pype's pitch deck with investors.",
+   "raw": "Fleas share five spit deck with investors.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Pype's",
+     "term": "Pype",
+     "heard": "five",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp04-Tara",
+   "sentence": "hp04",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Please share Pype's pitch deck with investors.",
+   "raw": "Please share pipe speech deck with investors.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Pype's",
+     "term": "Pype",
+     "heard": "pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp04-Samantha",
+   "sentence": "hp04",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Please share Pype's pitch deck with investors.",
+   "raw": "Please share Pipe's pitch deck with investors.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Pype's",
+     "term": "Pype",
+     "heard": "Pipe's",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp04-Daniel",
+   "sentence": "hp04",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Please share Pype's pitch deck with investors.",
+   "raw": "Please share pipes pitch deck with investors.",
+   "slots": [
+    {
+     "i": 2,
+     "word": "Pype's",
+     "term": "Pype",
+     "heard": "pipes",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp05-Rishi",
+   "sentence": "hp05",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv's flight lands at noon.",
+   "raw": "Druod's flight lands at noon.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Druod's",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp05-Aman",
+   "sentence": "hp05",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv's flight lands at noon.",
+   "raw": "Drove's flight lands at noon.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Drove's",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp05-Tara",
+   "sentence": "hp05",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv's flight lands at noon.",
+   "raw": "Drew's flight lands at noon.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Drew's",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp05-Samantha",
+   "sentence": "hp05",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv's flight lands at noon.",
+   "raw": "Drop's flight lands at noon.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Drop's",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp05-Daniel",
+   "sentence": "hp05",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Dhruv's flight lands at noon.",
+   "raw": "Drove's flight lands at noon.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Drove's",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp06-Rishi",
+   "sentence": "hp06",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ask Mehra for the signed copy.",
+   "raw": "Ask Mehra for the signed copy.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mehra",
+     "class": "correct"
+    }
+   ]
+  },
+  {
+   "id": "hp06-Aman",
+   "sentence": "hp06",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ask Mehra for the signed copy.",
+   "raw": "Ask Mare for the signed copy.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mare",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp06-Tara",
+   "sentence": "hp06",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ask Mehra for the signed copy.",
+   "raw": "Ask Mera for the signed copy.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mera",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp06-Samantha",
+   "sentence": "hp06",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ask Mehra for the signed copy.",
+   "raw": "Ask Mayra for the signed copy.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mayra",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp06-Daniel",
+   "sentence": "hp06",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Ask Mehra for the signed copy.",
+   "raw": "Ask Mera for the signed copy.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mera",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp07-Rishi",
+   "sentence": "hp07",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Can Dhruv join the standup?",
+   "raw": "Can Proof join the stand-up?",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Proof",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp07-Aman",
+   "sentence": "hp07",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Can Dhruv join the standup?",
+   "raw": "Can Drove join the stand-up?",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drove",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp07-Tara",
+   "sentence": "hp07",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Can Dhruv join the standup?",
+   "raw": "Can Drew join the stand-up?",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drew",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp07-Samantha",
+   "sentence": "hp07",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Can Dhruv join the standup?",
+   "raw": "Can Drove join the stand-up?",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drove",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp07-Daniel",
+   "sentence": "hp07",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Can Dhruv join the standup?",
+   "raw": "Can Drew join the stand-up?",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drew",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp08-Rishi",
+   "sentence": "hp08",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "The Pype website needs a new logo.",
+   "raw": "The pipe website needs a new logo.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp08-Aman",
+   "sentence": "hp08",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "The Pype website needs a new logo.",
+   "raw": "The pipe website needs a new logo.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp08-Tara",
+   "sentence": "hp08",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "The Pype website needs a new logo.",
+   "raw": "The pipe website needs a new logo.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp08-Samantha",
+   "sentence": "hp08",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "The Pype website needs a new logo.",
+   "raw": "The pipe website needs a new logo.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp08-Daniel",
+   "sentence": "hp08",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "The Pype website needs a new logo.",
+   "raw": "The pipe website needs a new logo.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp09-Rishi",
+   "sentence": "hp09",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "I had lunch with Dhruv Mehra on Monday.",
+   "raw": "I had lunch with Dhruvmehar on Monday.",
+   "slots": [
+    {
+     "i": 4,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Dhruvmehar",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 5,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Dhruvmehar",
+     "merged": true,
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp09-Aman",
+   "sentence": "hp09",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "I had lunch with Dhruv Mehra on Monday.",
+   "raw": "I had lunch with Dhruvmara on Monday.",
+   "slots": [
+    {
+     "i": 4,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Dhruvmara",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 5,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Dhruvmara",
+     "merged": true,
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp09-Tara",
+   "sentence": "hp09",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "I had lunch with Dhruv Mehra on Monday.",
+   "raw": "I had lunch with Drove Mera on Monday.",
+   "slots": [
+    {
+     "i": 4,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drove",
+     "class": "dict"
+    },
+    {
+     "i": 5,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mera",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp09-Samantha",
+   "sentence": "hp09",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "I had lunch with Dhruv Mehra on Monday.",
+   "raw": "I had lunch with Drove Mayer on Monday.",
+   "slots": [
+    {
+     "i": 4,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drove",
+     "class": "dict"
+    },
+    {
+     "i": 5,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mayer",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp09-Daniel",
+   "sentence": "hp09",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "I had lunch with Dhruv Mehra on Monday.",
+   "raw": "I had lunch with Drove Merrow on Monday.",
+   "slots": [
+    {
+     "i": 4,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drove",
+     "class": "dict"
+    },
+    {
+     "i": 5,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Merrow",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp10-Rishi",
+   "sentence": "hp10",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype raised a seed round last year.",
+   "raw": "Pipe raised a seed round last year.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp10-Aman",
+   "sentence": "hp10",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype raised a seed round last year.",
+   "raw": "Five raised a seed round last year.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Five",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp10-Tara",
+   "sentence": "hp10",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype raised a seed round last year.",
+   "raw": "Five rays they seed round last year.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Five",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp10-Samantha",
+   "sentence": "hp10",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype raised a seed round last year.",
+   "raw": "Pipe raised a seed round last year.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp10-Daniel",
+   "sentence": "hp10",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Pype raised a seed round last year.",
+   "raw": "I'd raised a seed round last year.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "I'd",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp11-Rishi",
+   "sentence": "hp11",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Send Dhruv the meeting notes.",
+   "raw": "Send through the meeting notes.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "through",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp11-Aman",
+   "sentence": "hp11",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Send Dhruv the meeting notes.",
+   "raw": "Send through the meeting notes.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "through",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp11-Tara",
+   "sentence": "hp11",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Send Dhruv the meeting notes.",
+   "raw": "Center of the meeting notes.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "of",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp11-Samantha",
+   "sentence": "hp11",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Send Dhruv the meeting notes.",
+   "raw": "Send drew the meeting notes.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "drew",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp11-Daniel",
+   "sentence": "hp11",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Send Dhruv the meeting notes.",
+   "raw": "Send draw the meeting notes.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "draw",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp12-Rishi",
+   "sentence": "hp12",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Kal Dhruv Mehra Mumbai ja raha hai.",
+   "raw": "Kaldhruve May Rambay Jarahaha.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Kaldhruve",
+     "class": "nondict"
+    },
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "May",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp12-Aman",
+   "sentence": "hp12",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Kal Dhruv Mehra Mumbai ja raha hai.",
+   "raw": "Kaldruvmehra Mumbai Jarahahe.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Kaldruvmehra",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Kaldruvmehra",
+     "merged": true,
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp12-Tara",
+   "sentence": "hp12",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Kal Dhruv Mehra Mumbai ja raha hai.",
+   "raw": "Call Drevmehra Mumbai Jarahahi.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drevmehra",
+     "merged": true,
+     "class": "nondict"
+    },
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Drevmehra",
+     "merged": true,
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp12-Samantha",
+   "sentence": "hp12",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Kal Dhruv Mehra Mumbai ja raha hai.",
+   "raw": "Kaldruv Mayra Mumbai Jarahahai.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Kaldruv",
+     "class": "nondict"
+    },
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mayra",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp12-Daniel",
+   "sentence": "hp12",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Kal Dhruv Mehra Mumbai ja raha hai.",
+   "raw": "Kal drove Marimba Ja Rahahai.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "drove",
+     "class": "dict"
+    },
+    {
+     "i": 2,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Marimba",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp13-Rishi",
+   "sentence": "hp13",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Hello Dhruv, welcome back.",
+   "raw": "Hello Dhruv, welcome back.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Dhruv",
+     "class": "correct"
+    }
+   ]
+  },
+  {
+   "id": "hp13-Aman",
+   "sentence": "hp13",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Hello Dhruv, welcome back.",
+   "raw": "Hello Droof, welcome back.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Droof",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp13-Tara",
+   "sentence": "hp13",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Hello Dhruv, welcome back.",
+   "raw": "Hello Droof welcome back.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Droof",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp13-Samantha",
+   "sentence": "hp13",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Hello Dhruv, welcome back.",
+   "raw": "Hello Drude, welcome back.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "Drude",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp13-Daniel",
+   "sentence": "hp13",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Hello Dhruv, welcome back.",
+   "raw": "Hello drove, welcome back.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv",
+     "term": "Dhruv",
+     "heard": "drove",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp14-Rishi",
+   "sentence": "hp14",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Mehra ji, aapka parcel aa gaya.",
+   "raw": "Mehraji, Apka Parsal Agaya.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mehraji",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp14-Aman",
+   "sentence": "hp14",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Mehra ji, aapka parcel aa gaya.",
+   "raw": "Merji, Apka Farsal Agaya.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Merji",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp14-Tara",
+   "sentence": "hp14",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Mehra ji, aapka parcel aa gaya.",
+   "raw": "Merigi Apka Farsalagaya.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Merigi",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp14-Samantha",
+   "sentence": "hp14",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Mehra ji, aapka parcel aa gaya.",
+   "raw": "Mayraji, Apka Parselae Gaya.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Mayraji",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp14-Daniel",
+   "sentence": "hp14",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Mehra ji, aapka parcel aa gaya.",
+   "raw": "Merigi, Apka Pasalega.",
+   "slots": [
+    {
+     "i": 0,
+     "word": "Mehra",
+     "term": "Mehra",
+     "heard": "Merigi",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp15-Rishi",
+   "sentence": "hp15",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Our team at Pype loves this app.",
+   "raw": "Our team at Pipe loves this app.",
+   "slots": [
+    {
+     "i": 3,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp15-Aman",
+   "sentence": "hp15",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Our team at Pype loves this app.",
+   "raw": "Our team at Pipe loves this app.",
+   "slots": [
+    {
+     "i": 3,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp15-Tara",
+   "sentence": "hp15",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Our team at Pype loves this app.",
+   "raw": "Our TMUTPipe loves this app.",
+   "slots": [
+    {
+     "i": 3,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "TMUTPipe",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp15-Samantha",
+   "sentence": "hp15",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Our team at Pype loves this app.",
+   "raw": "Our team at Pipe loves this app.",
+   "slots": [
+    {
+     "i": 3,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp15-Daniel",
+   "sentence": "hp15",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Our team at Pype loves this app.",
+   "raw": "Our team at Pipe loves this app.",
+   "slots": [
+    {
+     "i": 3,
+     "word": "Pype",
+     "term": "Pype",
+     "heard": "Pipe",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp16-Rishi",
+   "sentence": "hp16",
+   "voice": "Rishi",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Let Dhruv's team know about the release.",
+   "raw": "Let Drove's team know about the release.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Drove's",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp16-Aman",
+   "sentence": "hp16",
+   "voice": "Aman",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Let Dhruv's team know about the release.",
+   "raw": "Let Drew's team know about the release.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Drew's",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp16-Tara",
+   "sentence": "hp16",
+   "voice": "Tara",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Let Dhruv's team know about the release.",
+   "raw": "Let Truth team know about the release.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Truth",
+     "class": "dict"
+    }
+   ]
+  },
+  {
+   "id": "hp16-Samantha",
+   "sentence": "hp16",
+   "voice": "Samantha",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Let Dhruv's team know about the release.",
+   "raw": "Let Drov's team know about the release.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Drov's",
+     "class": "nondict"
+    }
+   ]
+  },
+  {
+   "id": "hp16-Daniel",
+   "sentence": "hp16",
+   "voice": "Daniel",
+   "role": "heldout_pos",
+   "label": "pos",
+   "source": "parakeet",
+   "truth": "Let Dhruv's team know about the release.",
+   "raw": "Let Dru's team know about the release.",
+   "slots": [
+    {
+     "i": 1,
+     "word": "Dhruv's",
+     "term": "Dhruv",
+     "heard": "Dru's",
+     "class": "nondict"
+    }
+   ]
+  }
+ ]
+}

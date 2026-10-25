@@ -102,11 +102,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // gated — see TelemetryService; dev builds are inert).
         TelemetryService.shared.appLaunched()
 
-        // Cleanup API keys moved from one global Keychain item to per-server
-        // items; re-home an existing key under the configured server's host.
-        KeychainHelper.migrateLegacyKeyIfNeeded(
-            currentServerURL: TranscriptRefiner.shared.serverURL)
-
         // Show in Dock (always visible)
         NSApp.setActivationPolicy(.regular)
         
@@ -123,6 +118,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 MenuBarManager.shared.rebuildMenu()
                 // Nudge the user toward dictation after long typing stretches
                 TypingActivityMonitor.shared.start()
+                // Self-learning vocabulary: screen-term harvester (needs
+                // Accessibility, granted by now).
+                VocabularyLearning.shared.start()
             }
         }
         

@@ -1,0 +1,55 @@
+# Held-out apply set (heldout.json). Same format as sentences.txt. Written
+# 2026-10-12 BEFORE reading the resolver code, from scratch, so it is not
+# tuned to it; none of these lines appear in sentences.txt or
+# scripts/apply-tests/parakeet.tsv. Fixers must NOT edit this file.
+# heldout_neg rows may carry {Name} slots (a real surname next to a trap
+# word); the row is a negative for every OTHER word: any change outside a
+# slot is a false positive.
+heldout_neg|hn01|||I drove {Mehra} to the airport.
+heldout_neg|hn02|||He drove {Mehra's} car yesterday.
+heldout_neg|hn03|||He drove the car.
+heldout_neg|hn04|||We drove Mera home.
+heldout_neg|hn05|||She drove Mehta to the station.
+heldout_neg|hn06|||Look at pipe now.
+heldout_neg|hn07|||Stop at pipe and fittings.
+heldout_neg|hn08|||I work at five.
+heldout_neg|hn09|||Join type safety talks.
+heldout_neg|hn10|||Pipe it into grep.
+heldout_neg|hn11|||Meet me at pipe street.
+heldout_neg|hn12|||The meeting starts at five.
+heldout_neg|hn13|||We use type checking at work.
+heldout_neg|hn14|||Mehta joined the call late.
+heldout_neg|hn15|||Mira sent the slides this morning.
+heldout_neg|hn16|||The mayor opened the new bridge.
+heldout_neg|hn17|||Mary will review the pull request.
+heldout_neg|hn18|||Thanks Mira, see you soon.
+heldout_neg|hn19|||Email Mehta about the launch.
+heldout_neg|hn20|||Mera beta school gaya hai.
+heldout_neg|hn21|||Meri behen Pune mein rehti hai.
+heldout_neg|hn22|||Mera kaam through ho gaya.
+heldout_neg|hn23|||Drew ne mujhe call kiya.
+heldout_neg|hn24|||Drew Barrymore was in that film.
+heldout_neg|hn25|||We went through the whole plan.
+heldout_neg|hn26|||He drove all night to get here.
+heldout_neg|hn27|||Call the plumber about the pipe.
+heldout_neg|hn28|||Type your answer below.
+heldout_neg|hn29|||Five people joined the call.
+heldout_neg|hn30|||The pipes froze in winter.
+heldout_neg|hn31|||Mera phone kho gaya.
+heldout_neg|hn32|||I drove past Mehta's shop.
+heldout_pos|hp01|||{Pype} closed a new customer today.
+heldout_pos|hp02|||Ping {Dhruv} when the build is green.
+heldout_pos|hp03|||{Dhruv} {Mehra} is the founder of {Pype}.
+heldout_pos|hp04|||Please share {Pype's} pitch deck with investors.
+heldout_pos|hp05|||{Dhruv's} flight lands at noon.
+heldout_pos|hp06|||Ask {Mehra} for the signed copy.
+heldout_pos|hp07|||Can {Dhruv} join the standup?
+heldout_pos|hp08|||The {Pype} website needs a new logo.
+heldout_pos|hp09|||I had lunch with {Dhruv} {Mehra} on Monday.
+heldout_pos|hp10|||{Pype} raised a seed round last year.
+heldout_pos|hp11|||Send {Dhruv} the meeting notes.
+heldout_pos|hp12|||Kal {Dhruv} {Mehra} Mumbai ja raha hai.
+heldout_pos|hp13|||Hello {Dhruv}, welcome back.
+heldout_pos|hp14|||{Mehra} ji, aapka parcel aa gaya.
+heldout_pos|hp15|||Our team at {Pype} loves this app.
+heldout_pos|hp16|||Let {Dhruv's} team know about the release.

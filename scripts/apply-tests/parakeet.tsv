@@ -1,0 +1,493 @@
+# id	voice	truth	parakeet  (say -v <voice> -o … → Parakeet TDT v3, FluidAudio 0.15.5, 2026-10-12)
+# p04 was rendered from "Dhruva said yes." (a variant of the name; the founder wants Dhruv). p12-p14 are Hinglish/name mixes scored as positives.
+n01	Aman	I need more time.	I need more time.
+n01	Daniel	I need more time.	I need more time.
+n01	Rishi	I need more time.	I need more time.
+n01	Samantha	I need more time.	I need more time.
+n01	Tara	I need more time.	I need more time.
+n02	Aman	Tell me more about it.	Tell me more about it.
+n02	Daniel	Tell me more about it.	Tell me more about it.
+n02	Rishi	Tell me more about it.	Tell me more about it.
+n02	Samantha	Tell me more about it.	Tell me more about it.
+n02	Tara	Tell me more about it.	Tell me more about it.
+n03	Aman	Click here for more information.	Click here for more information.
+n03	Daniel	Click here for more information.	Click here for more information.
+n03	Rishi	Click here for more information.	Click here for more information.
+n03	Samantha	Click here for more information.	Click here for more information.
+n03	Tara	Click here for more information.	Click here for more information.
+n04	Aman	The mayor spoke today.	The mayor spoke today.
+n04	Daniel	The mayor spoke today.	The mayor spoke today.
+n04	Rishi	The mayor spoke today.	The mayor spoke today.
+n04	Samantha	The mayor spoke today.	The mayor spoke today.
+n04	Tara	The mayor spoke today.	The mayor spoke today.
+n05	Aman	Look in the mirror.	Look in the mirror.
+n05	Daniel	Look in the mirror.	Look in the mirror.
+n05	Rishi	Look in the mirror.	
+n05	Samantha	Look in the mirror.	Look in the mirror.
+n05	Tara	Look in the mirror.	Look in the mirror.
+n06	Aman	Look at pipe sizes before buying.	Look at pipe sizes before buying.
+n06	Daniel	Look at pipe sizes before buying.	Look at pipe sizes before buying.
+n06	Rishi	Look at pipe sizes before buying.	Look at pipe sizes before buying.
+n06	Samantha	Look at pipe sizes before buying.	Look at pipe sizes before buying.
+n06	Tara	Look at pipe sizes before buying.	Look at pipe sizes before buying.
+n07	Aman	It was built from pipe and wood.	It was built from pipe and wood.
+n07	Daniel	It was built from pipe and wood.	It was built from pipe and wood.
+n07	Rishi	It was built from pipe and wood.	It was built from pipe and wood.
+n07	Samantha	It was built from pipe and wood.	It was built from pipe and wood.
+n07	Tara	It was built from pipe and wood.	It was built from pipe and wood.
+n08	Aman	Drive safely tonight.	Drive safely tonight.
+n08	Daniel	Drive safely tonight.	Drive safely tonight.
+n08	Rishi	Drive safely tonight.	Drive safely tonight.
+n08	Samantha	Drive safely tonight.	Drive safely tonight.
+n08	Tara	Drive safely tonight.	Drive safely tonight.
+p12	Aman	Mehra drove to work.	Mary drove to work.
+p12	Daniel	Mehra drove to work.	Mera drove to work.
+p12	Rishi	Mehra drove to work.	Mehra drove to work.
+p12	Samantha	Mehra drove to work.	Mayra drove to work.
+p12	Tara	Mehra drove to work.	Mera drove to work.
+p13	Aman	Dhruv mera dost hai.	Drove mera dost here.
+p13	Daniel	Dhruv mera dost hai.	Drove Mera Dust High.
+p13	Rishi	Dhruv mera dost hai.	Drove me right.
+p13	Samantha	Dhruv mera dost hai.	Drove Mara dust high.
+p13	Tara	Dhruv mera dost hai.	Drvmera dost h.
+p14	Aman	Dhruv mera bhai hai.	Drove me rab hai hai.
+p14	Daniel	Dhruv mera bhai hai.	Drove Mera by high.
+p14	Rishi	Dhruv mera bhai hai.	Drove me rob high high.
+p14	Samantha	Dhruv mera bhai hai.	Drove Mara Baihigh.
+p14	Tara	Dhruv mera bhai hai.	Drove me rub high hill.
+n12	Aman	Meri behen ghar pe hai.	Miri Bhangharpehe.
+n12	Daniel	Meri behen ghar pe hai.	Mary Van Garpey High.
+n12	Rishi	Meri behen ghar pe hai.	Mary behind our pay high.
+n12	Samantha	Meri behen ghar pe hai.	Mary Bevan Garpei High.
+n12	Tara	Meri behen ghar pe hai.	Mary Bahanghar Paiha.
+n13	Aman	Tera naam kya hai?	Tira nam kyahe.
+n13	Daniel	Tera naam kya hai?	Terranamkayah high.
+n13	Rishi	Tera naam kya hai?	Tira namgyah.
+n13	Samantha	Tera naam kya hai?	Terranongkaya hai?
+n13	Tara	Tera naam kya hai?	Tera nam kyahe.
+n14	Aman	Pipe it into a file.	Fipe it into a file.
+n14	Daniel	Pipe it into a file.	Pipe it into a file.
+n14	Rishi	Pipe it into a file.	Pipe it into a file.
+n14	Samantha	Pipe it into a file.	Pipe it into a file.
+n14	Tara	Pipe it into a file.	Vipe it into a file.
+n15	Aman	Ask Mister Mehta about the invoice.	Ask Mr. Meta about the invoice.
+n15	Daniel	Ask Mister Mehta about the invoice.	Ask Mr. Meta about the invoice.
+n15	Rishi	Ask Mister Mehta about the invoice.	Ask Mr. Mehitar about the invoice.
+n15	Samantha	Ask Mister Mehta about the invoice.	Ask Mr. Maida about the invoice.
+n15	Tara	Ask Mister Mehta about the invoice.	Ask Mr. Mehta about the invoice.
+n16	Aman	The water pipe burst.	The water pipe burst.
+n16	Daniel	The water pipe burst.	The water pipe burst.
+n16	Rishi	The water pipe burst.	The water pipe bust.
+n16	Samantha	The water pipe burst.	The water pipe burst.
+n16	Tara	The water pipe burst.	The water pipe burst.
+n17	Aman	Walk through the door.	Walk through the door.
+n17	Daniel	Walk through the door.	Walk through the door.
+n17	Rishi	Walk through the door.	Walk through the door.
+n17	Samantha	Walk through the door.	Walk through the door.
+n17	Tara	Walk through the door.	Walk through the door.
+n18	Aman	He drew a map.	He drew a mat.
+n18	Daniel	He drew a map.	He drew a map.
+n18	Rishi	He drew a map.	He drew a map.
+n18	Samantha	He drew a map.	He drew a map.
+n18	Tara	He drew a map.	He drew a map.
+n19	Aman	Yeh mera laptop hai.	Ye Miralap Taphe.
+n19	Daniel	Yeh mera laptop hai.	Yeah, Mira Laptop High.
+n19	Rishi	Yeh mera laptop hai.	Ye made our lap a top high.
+n19	Samantha	Yeh mera laptop hai.	Yemera laptop high.
+n19	Tara	Yeh mera laptop hai.	Ye may rather put up here.
+n20	Aman	Mera naam Rahul hai.	Mera Nam Rahul Hai.
+n20	Daniel	Mera naam Rahul hai.	Marinam Rahul High
+n20	Rishi	Mera naam Rahul hai.	Meera Nam Rahul Hai.
+n20	Samantha	Mera naam Rahul hai.	Maranam Rahul High
+n20	Tara	Mera naam Rahul hai.	Mera Nam Rahul Hir.
+n21	Aman	I drove more slowly.	I drove more slowly.
+n21	Daniel	I drove more slowly.	I drove more slowly.
+n21	Rishi	I drove more slowly.	I drove more slowly.
+n21	Samantha	I drove more slowly.	I drove more slowly.
+n21	Tara	I drove more slowly.	I drove more slowly.
+n22	Aman	We drew more attention than expected.	We drew more attention than expected.
+n22	Daniel	We drew more attention than expected.	We drew more attention than expected.
+n22	Rishi	We drew more attention than expected.	We drew more attention than expected.
+n22	Samantha	We drew more attention than expected.	We drew more attention than expected.
+n22	Tara	We drew more attention than expected.	We drew more attention than expected.
+n23	Aman	Type the password again.	Type the password again.
+n23	Daniel	Type the password again.	Type the password again.
+n23	Rishi	Type the password again.	Type the password again.
+n23	Samantha	Type the password again.	Type the password again.
+n23	Tara	Type the password again.	Type the password again.
+n24	Aman	Mere paas time nahi hai.	Mere pastime nahinhe.
+n24	Daniel	Mere paas time nahi hai.	Mere past time nahi high.
+n24	Rishi	Mere paas time nahi hai.	Mere pastime naheen hai.
+n24	Samantha	Mere paas time nahi hai.	Mir pause time nahi high.
+n24	Tara	Mere paas time nahi hai.	Made boss dyim naheen him.
+n25	Aman	Mira is my cousin.	Mira is my cousin.
+n25	Daniel	Mira is my cousin.	Mira is my cousin.
+n25	Rishi	Mira is my cousin.	Mirar is my cousin.
+n25	Samantha	Mira is my cousin.	Mira is my cousin.
+n25	Tara	Mira is my cousin.	Mira is my cousin.
+p01	Aman	I work at Pype.	I work at five.
+p01	Daniel	I work at Pype.	I work at pipe.
+p01	Rishi	I work at Pype.	I work at pipe.
+p01	Samantha	I work at Pype.	I work at type.
+p01	Tara	I work at Pype.	I work at pipe.
+p02	Aman	This is Dhruv Mehra.	This is Droomer.
+p02	Daniel	This is Dhruv Mehra.	This is Drove Mera.
+p02	Rishi	This is Dhruv Mehra.	This is Dhruvmehra.
+p02	Samantha	This is Dhruv Mehra.	This is Drove Meira.
+p02	Tara	This is Dhruv Mehra.	This is Trouv Mira.
+p03	Aman	Pype's roadmap is ready.	Fipes roadmap is ready.
+p03	Daniel	Pype's roadmap is ready.	Pipes Roadmap is ready.
+p03	Rishi	Pype's roadmap is ready.	Pipes Roadmap is ready.
+p03	Samantha	Pype's roadmap is ready.	Pipes Roadmap is ready.
+p03	Tara	Pype's roadmap is ready.	Fights roadmap is ready.
+p04	Aman	Dhruv said yes.	Dhruva said yes.
+p04	Daniel	Dhruv said yes.	Drova said yes.
+p04	Rishi	Dhruv said yes.	Dhruva said yes.
+p04	Samantha	Dhruv said yes.	Drova said yes.
+p04	Tara	Dhruv said yes.	Dhruva said yes.
+p05	Aman	Dhruv said yes.	Drew said yes.
+p05	Daniel	Dhruv said yes.	Drove said yes.
+p05	Rishi	Dhruv said yes.	Drove said yes.
+p05	Samantha	Dhruv said yes.	Strove said yes.
+p05	Tara	Dhruv said yes.	Drew said yes.
+p06	Aman	Join Pype today.	Join Pipe today.
+p06	Daniel	Join Pype today.	Join pipe today.
+p06	Rishi	Join Pype today.	Join pipe today.
+p06	Samantha	Join Pype today.	Join pipe today.
+p06	Tara	Join Pype today.	Join fight today.
+p07	Aman	Dhruv Mehra's laptop is here.	Drove Maharaj laptop is here.
+p07	Daniel	Dhruv Mehra's laptop is here.	Drove Mera's laptop is here.
+p07	Rishi	Dhruv Mehra's laptop is here.	Dhruvmehra's laptop is here.
+p07	Samantha	Dhruv Mehra's laptop is here.	Drev Mahara's laptop is here.
+p07	Tara	Dhruv Mehra's laptop is here.	Drew Mehra's laptop is here.
+p08	Aman	Ask Mister Mehra about it.	Ask Mr. Mehra about it.
+p08	Daniel	Ask Mister Mehra about it.	Ask Mr. Merrow about it.
+p08	Rishi	Ask Mister Mehra about it.	Ask Mr. Mehrar about it.
+p08	Samantha	Ask Mister Mehra about it.	Ask Mr. Mayor about it.
+p08	Tara	Ask Mister Mehra about it.	Ask Mr. Mehra about it.
+p09	Aman	I work at Pype now.	I work at Python.
+p09	Daniel	I work at Pype now.	I work at pipe now.
+p09	Rishi	I work at Pype now.	I work at pipe now.
+p09	Samantha	I work at Pype now.	I work at pipe now.
+p09	Tara	I work at Pype now.	I woke up pipe now.
+p10	Aman	Mehra will join the call.	Mare will join the call.
+p10	Daniel	Mehra will join the call.	Mera will join the call.
+p10	Rishi	Mehra will join the call.	Meha will join the call.
+p10	Samantha	Mehra will join the call.	Mayra will join the call.
+p10	Tara	Mehra will join the call.	Mera will join the call.
+p11	Aman	Talk to Dhruv about Pype.	Talk to Drove about fight.
+p11	Daniel	Talk to Dhruv about Pype.	Talk to Drove about pipe.
+p11	Rishi	Talk to Dhruv about Pype.	Talk to Drew about Pipe.
+p11	Samantha	Talk to Dhruv about Pype.	Talk to Drove about pipe.
+p11	Tara	Talk to Dhruv about Pype.	Top the drove about pipe.
+# dn*/dp* (R2 adversarial dev set, scripts/apply-tests/devset.txt; render.sh): say -v <voice> -o → Parakeet TDT v3 (probe, FluidAudio 0.15.5), 2026-10-12. dn = no name may be inserted beyond the truth.
+dn01	Rishi	I drove Mehra to the airport.	I drove Mehra to the airport.
+dn01	Aman	I drove Mehra to the airport.	I drove Mehra to the airport.
+dn01	Tara	I drove Mehra to the airport.	I drove Mehra to the airport.
+dn01	Samantha	I drove Mehra to the airport.	I drove Mayra to the airport.
+dn01	Daniel	I drove Mehra to the airport.	I drove Mera to the airport.
+dn02	Rishi	He drove Mehra's car.	He drove Mehra's car.
+dn02	Aman	He drove Mehra's car.	He drove Mahraj car.
+dn02	Tara	He drove Mehra's car.	He drove Mehra's car.
+dn02	Samantha	He drove Mehra's car.	He drove Mahara's car.
+dn02	Daniel	He drove Mehra's car.	He drove Mera's car.
+dn03	Rishi	Look at pipe now.	Look at pipe now.
+dn03	Aman	Look at pipe now.	Look at pipe now.
+dn03	Tara	Look at pipe now.	Look at pipe now.
+dn03	Samantha	Look at pipe now.	Look at pipe now.
+dn03	Daniel	Look at pipe now.	Look at pipe now.
+dn04	Rishi	Stop at pipe and fittings.	Stop at pipe and fittings.
+dn04	Aman	Stop at pipe and fittings.	Stop at pipe and fittings.
+dn04	Tara	Stop at pipe and fittings.	Stop at pipe and fittings.
+dn04	Samantha	Stop at pipe and fittings.	Stop at pipe and fittings.
+dn04	Daniel	Stop at pipe and fittings.	Stop at pipe and fittings.
+dn05	Rishi	He drove the car.	He drove the car.
+dn05	Aman	He drove the car.	He drove the car.
+dn05	Tara	He drove the car.	He drove the car.
+dn05	Samantha	He drove the car.	He drove the car.
+dn05	Daniel	He drove the car.	He drove the car.
+dn06	Rishi	She drove Mehra home after dinner.	She drove Mehra home after dinner.
+dn06	Aman	She drove Mehra home after dinner.	She drove Mera home after dinner.
+dn06	Tara	She drove Mehra home after dinner.	She drove Mera home after dinner.
+dn06	Samantha	She drove Mehra home after dinner.	She drove Mayor home after dinner.
+dn06	Daniel	She drove Mehra home after dinner.	She drove Mera home after dinner.
+dn07	Rishi	They drove Mehra back to the office.	They drove Mehra back to the office.
+dn07	Aman	They drove Mehra back to the office.	They drove Mara back to the office.
+dn07	Tara	They drove Mehra back to the office.	They drove Mara back to the office.
+dn07	Samantha	They drove Mehra back to the office.	They drove Mayra back to the office.
+dn07	Daniel	They drove Mehra back to the office.	They drove Mera back to the office.
+dn08	Rishi	My brother drove Mehra to school.	My brother drove Mehra to school.
+dn08	Aman	My brother drove Mehra to school.	My brother drove Mare to school.
+dn08	Tara	My brother drove Mehra to school.	My brother the second Aki.
+dn08	Samantha	My brother drove Mehra to school.	My brother drove Mayra to school.
+dn08	Daniel	My brother drove Mehra to school.	My brother drove Mera to school.
+dn09	Rishi	Mary drove Mehra home.	Mary drove Mehra home.
+dn09	Aman	Mary drove Mehra home.	Mary drove Mara home.
+dn09	Tara	Mary drove Mehra home.	Mary drove Mara home.
+dn09	Samantha	Mary drove Mehra home.	Mary drove Mayor home.
+dn09	Daniel	Mary drove Mehra home.	Mary drove Mera home.
+dn10	Rishi	Who drove Mehra's car yesterday?	Who drove Mehra's car yesterday?
+dn10	Aman	Who drove Mehra's car yesterday?	Who drove Maharaj car yesterday?
+dn10	Tara	Who drove Mehra's car yesterday?	Who drove Mehra's car yesterday?
+dn10	Samantha	Who drove Mehra's car yesterday?	Who drove Mahara's car yesterday?
+dn10	Daniel	Who drove Mehra's car yesterday?	Who drove Mera's car yesterday?
+dn11	Rishi	You drove Mehra crazy last week.	You drove me ra crazy last week.
+dn11	Aman	You drove Mehra crazy last week.	You drove Mehra crazy last week.
+dn11	Tara	You drove Mehra crazy last week.	You drove Mehra crazy last week.
+dn11	Samantha	You drove Mehra crazy last week.	You drove Mayra crazy last week.
+dn11	Daniel	You drove Mehra crazy last week.	You drove Mera crazy last week.
+dn12	Rishi	He drove the truck over the bridge.	He drove the truck over the bridge, and
+dn12	Aman	He drove the truck over the bridge.	He drove the truck over the bridge.
+dn12	Tara	He drove the truck over the bridge.	He drove the truck over the bridge.
+dn12	Samantha	He drove the truck over the bridge.	He drove the truck over the bridge.
+dn12	Daniel	He drove the truck over the bridge.	He drove the truck over the bridge.
+dn13	Rishi	Look at the pipe now.	Look at the pipe now.
+dn13	Aman	Look at the pipe now.	Look at the pipe now.
+dn13	Tara	Look at the pipe now.	Look at the pipe now.
+dn13	Samantha	Look at the pipe now.	Look at the pipe now.
+dn13	Daniel	Look at the pipe now.	Look at the pipe now.
+dn14	Rishi	We sell copper pipe and fittings.	We sell copper pipe and fittings.
+dn14	Aman	We sell copper pipe and fittings.	We sell copper pipe and fittings.
+dn14	Tara	We sell copper pipe and fittings.	We sell copper pipe and fittings.
+dn14	Samantha	We sell copper pipe and fittings.	We sell copper pipe and fittings.
+dn14	Daniel	We sell copper pipe and fittings.	We sell copper pipe and fittings.
+dn15	Rishi	Buy pipe and tape at the store.	Buy pipe and tape at the store.
+dn15	Aman	Buy pipe and tape at the store.	Buy five and tape at the store.
+dn15	Tara	Buy pipe and tape at the store.	Buy pipe and tape at the store.
+dn15	Samantha	Buy pipe and tape at the store.	Buy pipe and tape at the store.
+dn15	Daniel	Buy pipe and tape at the store.	Buy pipe and tape at the store.
+dn16	Rishi	Check the pipe at the joint now.	Check the pipe at the joint now.
+dn16	Aman	Check the pipe at the joint now.	Check the five at the joint now.
+dn16	Tara	Check the pipe at the joint now.	Check the pipe at the joint now.
+dn16	Samantha	Check the pipe at the joint now.	Check the pipe at the joint now.
+dn16	Daniel	Check the pipe at the joint now.	Check the pipe at the joint now.
+dn17	Rishi	I'm good at pipe and drum music.	I'm good at pipe and drum music.
+dn17	Aman	I'm good at pipe and drum music.	I'm good at pipe and drum music.
+dn17	Tara	I'm good at pipe and drum music.	I'm good at pipe and drum music.
+dn17	Samantha	I'm good at pipe and drum music.	I'm good at pipe and drum music.
+dn17	Daniel	I'm good at pipe and drum music.	I'm good at pipe and drum music.
+dn18	Rishi	Stare at pipe now and then.	Stare at pipe now and then.
+dn18	Aman	Stare at pipe now and then.	Stare at pipe now and then.
+dn18	Tara	Stare at pipe now and then.	Stare at pipe now and then.
+dn18	Samantha	Stare at pipe now and then.	Stare at pipe now and then.
+dn18	Daniel	Stare at pipe now and then.	Stare at pipe now and then.
+dn19	Rishi	The plumber cut pipe and wire.	The plumakat pipe and vi up.
+dn19	Aman	The plumber cut pipe and wire.	The plumber cut pipe and wire.
+dn19	Tara	The plumber cut pipe and wire.	The plumber cut pipe and wire.
+dn19	Samantha	The plumber cut pipe and wire.	The plumber cut pipe and wire.
+dn19	Daniel	The plumber cut pipe and wire.	The plumber cut pipe and wa.
+dn20	Rishi	Order pipe today.	Order pipe today.
+dn20	Aman	Order pipe today.	Order pipe today.
+dn20	Tara	Order pipe today.	Autopipe today.
+dn20	Samantha	Order pipe today.	Order pipe today.
+dn20	Daniel	Order pipe today.	Order pipe today.
+dn21	Rishi	We need more pipe and more wire.	We need more pipe and more via.
+dn21	Aman	We need more pipe and more wire.	We need more pipe and more wire.
+dn21	Tara	We need more pipe and more wire.	We need more pipe and more wire.
+dn21	Samantha	We need more pipe and more wire.	We need more pipe and more wire.
+dn21	Daniel	We need more pipe and more wire.	We need more pipe and more wire.
+dn22	Rishi	Drive to the pipe yard.	Drive to the pipe yard.
+dn22	Aman	Drive to the pipe yard.	Drive to the pipe yard.
+dn22	Tara	Drive to the pipe yard.	Drive to the pipe yard.
+dn22	Samantha	Drive to the pipe yard.	Drive to the pipe yard.
+dn22	Daniel	Drive to the pipe yard.	Drive to the pipe yard.
+dn23	Rishi	I drove to the pipe factory.	I drove to the pipe factory.
+dn23	Aman	I drove to the pipe factory.	I drove to the pipe factory.
+dn23	Tara	I drove to the pipe factory.	I drove to the pipe factory.
+dn23	Samantha	I drove to the pipe factory.	I drove to the pipe factory.
+dn23	Daniel	I drove to the pipe factory.	I drove to the pipe factory.
+dn24	Rishi	He drove more than me.	He drove more than me.
+dn24	Aman	He drove more than me.	He drove more than me.
+dn24	Tara	He drove more than me.	He drove more than me.
+dn24	Samantha	He drove more than me.	He drove more than me.
+dn24	Daniel	He drove more than me.	He drove more than me.
+dn25	Rishi	She drove Mira to the mall.	She drove Mira to the mall.
+dn25	Aman	She drove Mira to the mall.	She drove Mira to the mall.
+dn25	Tara	She drove Mira to the mall.	She drove Mira to the mall.
+dn25	Samantha	She drove Mira to the mall.	She drove Mira to the mall.
+dn25	Daniel	She drove Mira to the mall.	She drove nearer to the mall.
+dn26	Rishi	We drove Meera to the hospital.	We drove Mira to the hospital.
+dn26	Aman	We drove Meera to the hospital.	We drove Mira to the hospital.
+dn26	Tara	We drove Meera to the hospital.	We drove Mira to the hospital.
+dn26	Samantha	We drove Meera to the hospital.	We drove Mira to the hospital.
+dn26	Daniel	We drove Meera to the hospital.	We drove Mira to the hospital.
+dn27	Rishi	They drove Mara home.	They drove Mara home.
+dn27	Aman	They drove Mara home.	They drove Mara home.
+dn27	Tara	They drove Mara home.	They drove Mara home.
+dn27	Samantha	They drove Mara home.	They drove Mara home.
+dn27	Daniel	They drove Mara home.	They drove Mara home.
+dn28	Rishi	Pipe down, everyone.	Spite down, everyone.
+dn28	Aman	Pipe down, everyone.	Fight down, everyone.
+dn28	Tara	Pipe down, everyone.	Fight down, everyone.
+dn28	Samantha	Pipe down, everyone.	Pipe down, everyone.
+dn28	Daniel	Pipe down, everyone.	Pipe down, everyone.
+dn29	Rishi	Please pipe down.	Please pipe down.
+dn29	Aman	Please pipe down.	Flee spipe down.
+dn29	Tara	Please pipe down.	Please fight down.
+dn29	Samantha	Please pipe down.	Please pipe down.
+dn29	Daniel	Please pipe down.	Please pipe down.
+dn30	Rishi	The organ pipe sounded loud.	The organ pipe sounded loud.
+dn30	Aman	The organ pipe sounded loud.	The organ pipe sounded loud.
+dn30	Tara	The organ pipe sounded loud.	The organ fight sounded loud.
+dn30	Samantha	The organ pipe sounded loud.	The organ pipe sounded loud.
+dn30	Daniel	The organ pipe sounded loud.	The organ pipe sounded loud.
+dn31	Rishi	Dad drove Mehra home.	Dad drove me ra home.
+dn31	Aman	Dad drove Mehra home.	Dad drove Mera home.
+dn31	Tara	Dad drove Mehra home.	Dad drove Mara home.
+dn31	Samantha	Dad drove Mehra home.	Dad drove Mayor home.
+dn31	Daniel	Dad drove Mehra home.	Dad drove Mera home.
+dn32	Rishi	Then he drove Mehra and me to the beach.	Then he drove Mehrar and me to the beach.
+dn32	Aman	Then he drove Mehra and me to the beach.	Then he drove Maranmi to the beach.
+dn32	Tara	Then he drove Mehra and me to the beach.	Then he drove Marin Me to the beach.
+dn32	Samantha	Then he drove Mehra and me to the beach.	Then he drove Meira and me to the beach.
+dn32	Daniel	Then he drove Mehra and me to the beach.	Then he drove Mero and me to the beach.
+dn33	Rishi	Who drove?	Who drove?
+dn33	Aman	Who drove?	Who drove?
+dn33	Tara	Who drove?	Who drove?
+dn33	Samantha	Who drove?	Who drove?
+dn33	Daniel	Who drove?	Who drove?
+dn34	Rishi	Meet me at pipe nine.	Meet me at pipe nine.
+dn34	Aman	Meet me at pipe nine.	Meet me at 5.9.
+dn34	Tara	Meet me at pipe nine.	Meet me at pipe nine.
+dn34	Samantha	Meet me at pipe nine.	Meet me at pipe nine.
+dn34	Daniel	Meet me at pipe nine.	Meet me at pipe nine.
+dn35	Rishi	It was at pipe level.	It was at pipe level.
+dn35	Aman	It was at pipe level.	It was at pipe level.
+dn35	Tara	It was at pipe level.	It was at pipe level.
+dn35	Samantha	It was at pipe level.	It was at pipe level.
+dn35	Daniel	It was at pipe level.	It was at pipe level.
+dn36	Rishi	We arrived at pipe junction three.	We arrived at Pipe Junction 3.
+dn36	Aman	We arrived at pipe junction three.	We arrived at 5 junction 3.
+dn36	Tara	We arrived at pipe junction three.	We arrived at pipe junction 3.
+dn36	Samantha	We arrived at pipe junction three.	We arrived at pipe junction 3.
+dn36	Daniel	We arrived at pipe junction three.	We arrived at pipe junction 3.
+dn37	Rishi	Dhruv bhai kahan ho?	Droved by Kahan Ho?
+dn37	Aman	Dhruv bhai kahan ho?	Drew Bhaika Halho.
+dn37	Tara	Dhruv bhai kahan ho?	Drew Pai Kahan Ho.
+dn37	Samantha	Dhruv bhai kahan ho?	Drove by Kahanho?
+dn37	Daniel	Dhruv bhai kahan ho?	Drove by con ho.
+dn38	Rishi	Dhruv mera dost hai.	Drove me right.
+dn38	Aman	Dhruv mera dost hai.	Drove mera dost here.
+dn38	Tara	Dhruv mera dost hai.	Drvmera dost h.
+dn38	Samantha	Dhruv mera dost hai.	Drove Mara dust high.
+dn38	Daniel	Dhruv mera dost hai.	Drove Mera Dust High.
+dn39	Rishi	Dhruv aur mera bhai aa rahe hain.	Dhruv or Mi Rabhai Arahihan.
+dn39	Aman	Dhruv aur mera bhai aa rahe hain.	The second A Kicharda or Mareabhai Arahe Hang.
+dn39	Tara	Dhruv aur mera bhai aa rahe hain.	Drove or madabhai are he hanging.
+dn39	Samantha	Dhruv aur mera bhai aa rahe hain.	Truvor Mara by Arahine.
+dn39	Daniel	Dhruv aur mera bhai aa rahe hain.	Drove or Mara by A.A. Rahi Hain.
+dn40	Rishi	Dhruv ji, namaste.	Друг Ди, на мосты.
+dn40	Aman	Dhruv ji, namaste.	Drovji, namaste.
+dn40	Tara	Dhruv ji, namaste.	Друвджи, намасты.
+dn40	Samantha	Dhruv ji, namaste.	Drove T, Namaste.
+dn40	Daniel	Dhruv ji, namaste.	Drove G. Namaste.
+dn41	Rishi	Dhruv sir will join us.	Dhruvsa will join us.
+dn41	Aman	Dhruv sir will join us.	Drusa will join us.
+dn41	Tara	Dhruv sir will join us.	Drusa will join us.
+dn41	Samantha	Dhruv sir will join us.	Drove sir will join us.
+dn41	Daniel	Dhruv sir will join us.	Drovsa will join us.
+dn42	Rishi	The mayor drove Mehra home.	The mayor drove Mehra home.
+dn42	Aman	The mayor drove Mehra home.	The mayor drove Mera home.
+dn42	Tara	The mayor drove Mehra home.	The mayor drove Mara home.
+dn42	Samantha	The mayor drove Mehra home.	The mayor drove Mayor home.
+dn42	Daniel	The mayor drove Mehra home.	The mayor drove Mera home.
+dn43	Rishi	Somebody drove Mehra's scooter into a wall.	Somebody drove Mehra's scooter into a wall.
+dn43	Aman	Somebody drove Mehra's scooter into a wall.	Somebody drove Mehar scooter into a wall.
+dn43	Tara	Somebody drove Mehra's scooter into a wall.	Somebody drove Mehraj Scooter into a wall.
+dn43	Samantha	Somebody drove Mehra's scooter into a wall.	Somebody drove Mahara scooter into a wall.
+dn43	Daniel	Somebody drove Mehra's scooter into a wall.	Somebody drove Mera's scooter into a wall.
+dn44	Rishi	He drove Mehra and Rahul to work.	He drove Mehhar and Rahul to work.
+dn44	Aman	He drove Mehra and Rahul to work.	He drove Mera and Rahul to work.
+dn44	Tara	He drove Mehra and Rahul to work.	He drove Mera and Rahul to work.
+dn44	Samantha	He drove Mehra and Rahul to work.	He drove Mayra and Rahul to work.
+dn44	Daniel	He drove Mehra and Rahul to work.	He drove Mero and Rahole to work.
+dn45	Rishi	Look at pipe one, then pipe two.	Look at pipe one, then pipe two.
+dn45	Aman	Look at pipe one, then pipe two.	Look at five 1 then 5 2.
+dn45	Tara	Look at pipe one, then pipe two.	Look at pipe 1 then pipe 2.
+dn45	Samantha	Look at pipe one, then pipe two.	Look at pipe one, then pipe two.
+dn45	Daniel	Look at pipe one, then pipe two.	Look at pipe one, then pipe two.
+dn46	Rishi	Glance at pipe and valve prices.	Glance at pipe and valve prices.
+dn46	Aman	Glance at pipe and valve prices.	Glance at pipe and valve prices.
+dn46	Tara	Glance at pipe and valve prices.	Glance at pipe and valve crisis.
+dn46	Samantha	Glance at pipe and valve prices.	Glance at pipe and valve prices.
+dn46	Daniel	Glance at pipe and valve prices.	Glance at pipe and valve prices.
+dn47	Rishi	We stopped at pipe and steel suppliers.	We stopped at pipe and steel suppliers.
+dn47	Aman	We stopped at pipe and steel suppliers.	We stopped at pipe and steel suppliers.
+dn47	Tara	We stopped at pipe and steel suppliers.	We stopped at pipe and steel suppliers.
+dn47	Samantha	We stopped at pipe and steel suppliers.	We stopped at pipe and steel suppliers.
+dn47	Daniel	We stopped at pipe and steel suppliers.	We stopped at pipe and steel supplies.
+dn48	Rishi	He lives at pipe street now.	He lives at Pipe Street now.
+dn48	Aman	He lives at pipe street now.	He lives at Pike Street now.
+dn48	Tara	He lives at pipe street now.	He lives at Pipe Street now.
+dn48	Samantha	He lives at pipe street now.	He lives at Pipe Street now.
+dn48	Daniel	He lives at pipe street now.	He lives at Pipe Street now.
+dn49	Rishi	Aim at pipe height.	Aim at by tight.
+dn49	Aman	Aim at pipe height.	Aim at pipe height.
+dn49	Tara	Aim at pipe height.	Aim at pipe height.
+dn49	Samantha	Aim at pipe height.	Aim it tight tight.
+dn49	Daniel	Aim at pipe height.	Aim at pipe height.
+dn50	Rishi	Mera naam Dhruv hai.	Meeranamdrov hai.
+dn50	Aman	Mera naam Dhruv hai.	Mira Nam Druhe.
+dn50	Tara	Mera naam Dhruv hai.	Mera Nam Druhhe.
+dn50	Samantha	Mera naam Dhruv hai.	Marinam Drew Thai.
+dn50	Daniel	Mera naam Dhruv hai.	Marinam drove high.
+dn51	Rishi	Main Dhruv bol raha hoon.	Mind rose bowl rahahoon.
+dn51	Aman	Main Dhruv bol raha hoon.	Main Ruf Bowl Raha Hunger
+dn51	Tara	Main Dhruv bol raha hoon.	Main Drew Bol Rahahoo.
+dn51	Samantha	Main Dhruv bol raha hoon.	Main Drove Val Rahun.
+dn51	Daniel	Main Dhruv bol raha hoon.	Main Drove Ball Rahun.
+dn52	Rishi	I drove Mehra home.	I drove Mayra home.
+dn52	Aman	I drove Mehra home.	I drove Mera home.
+dn52	Tara	I drove Mehra home.	I drove Mira home.
+dn52	Samantha	I drove Mehra home.	I drove Mara home.
+dn52	Daniel	I drove Mehra home.	I drove Mera home.
+dn53	Rishi	Uncle drove Mehra to the doctor.	Uncle drove Mehra to the doctor.
+dn53	Aman	Uncle drove Mehra to the doctor.	Uncle drove Mehratod Doctor.
+dn53	Tara	Uncle drove Mehra to the doctor.	Uncle drove mehratud doctor.
+dn53	Samantha	Uncle drove Mehra to the doctor.	Uncle drove Mayra to the doctor.
+dn53	Daniel	Uncle drove Mehra to the doctor.	Uncle drove Mera to the doctor.
+dn54	Rishi	Rahul drove Mehra to the party.	Rahul drove Mehra to the party.
+dn54	Aman	Rahul drove Mehra to the party.	Rahul drove Mehratod Farti.
+dn54	Tara	Rahul drove Mehra to the party.	Rahul drove Mehratod Farti.
+dn54	Samantha	Rahul drove Mehra to the party.	Rahul drove Mayra to the party.
+dn54	Daniel	Rahul drove Mehra to the party.	Rahol drove Mera to the party.
+dn55	Rishi	He drove Mehra's sister home.	He drove Mara's sister home.
+dn55	Aman	He drove Mehra's sister home.	He drove Mara's sister home.
+dn55	Tara	He drove Mehra's sister home.	He drove Mera's sister home.
+dn55	Samantha	He drove Mehra's sister home.	He drove Mara's sister home.
+dn55	Daniel	He drove Mehra's sister home.	He drove Mira's sister home.
+dn56	Rishi	Dhruv laptop le aao.	Drove lap a top layout.
+dn56	Aman	Dhruv laptop le aao.	Dreve laptop layout.
+dn56	Tara	Dhruv laptop le aao.	Drove laptop layout.
+dn56	Samantha	Dhruv laptop le aao.	Trove laptop Lee AAO.
+dn56	Daniel	Dhruv laptop le aao.	Drove laptop layo.
+dn57	Rishi	Dhruvji aap kahan ho?	Drove J Abkahan Ho?
+dn57	Aman	Dhruvji aap kahan ho?	Drogji Apkahalho.
+dn57	Tara	Dhruvji aap kahan ho?	Drujabkahan ho.
+dn57	Samantha	Dhruvji aap kahan ho?	Drop GAAP kahon ho?
+dn57	Daniel	Dhruvji aap kahan ho?	Drop GAAP Con Ho
+dn58	Rishi	Dhruv sunao kya haal hai.	Drove Sune Okayahal hai.
+dn58	Aman	Dhruv sunao kya haal hai.	Drew Sunaukia Halhe.
+dn58	Tara	Dhruv sunao kya haal hai.	Drusunau Kyahal Hih.
+dn58	Samantha	Dhruv sunao kya haal hai.	Truvesune Okayahal High
+dn58	Daniel	Dhruv sunao kya haal hai.	Drove Suneoka Hal High.
+dn59	Rishi	Dhruv yaar chalo.	Drovy Archello.
+dn59	Aman	Dhruv yaar chalo.	Drůviar Calu!
+dn59	Tara	Dhruv yaar chalo.	Drůviarcello
+dn59	Samantha	Dhruv yaar chalo.	Drev Yarchalo.
+dn59	Daniel	Dhruv yaar chalo.	Drove Yarch Hallow.
+dn60	Rishi	Dhruv bhaiya ko bolo.	Drove Yako Bolo.
+dn60	Aman	Dhruv bhaiya ko bolo.	Drove Bhayakobolo.
+dn60	Tara	Dhruv bhaiya ko bolo.	Drúbhayakobolo
+dn60	Samantha	Dhruv bhaiya ko bolo.	Drove by Yakobolo.
+dn60	Daniel	Dhruv bhaiya ko bolo.	Drove Bayar Kobolo.
+dn61	Rishi	Dhruv emailed the deck.	Drove emailed the deck.
+dn61	Aman	Dhruv emailed the deck.	Droovy mailed the deck.
+dn61	Tara	Dhruv emailed the deck.	Drovi mailed the deck.
+dn61	Samantha	Dhruv emailed the deck.	Drew V mailed the deck.
+dn61	Daniel	Dhruv emailed the deck.	Drove emailed the deck.
+dn62	Rishi	Thanks Dhruv, okay bye.	Thanks Dhruv, okay bye.
+dn62	Aman	Thanks Dhruv, okay bye.	Thanks Droof, okay bye.
+dn62	Tara	Thanks Dhruv, okay bye.	Thanks truth, okay bye.
+dn62	Samantha	Thanks Dhruv, okay bye.	Thanks Drew, okay bye.
+dn62	Daniel	Thanks Dhruv, okay bye.	Thanks Drov, okay bye.

@@ -18,6 +18,8 @@ struct DictationRecord: Codable {
     var llmOutcome: String    // ok | timeout | error | guarded | skipped | off
     var words: Int
     var preview: String       // first 40 chars of the final text
+    var vocabMs: Int? = nil       // decision-engine time; nil = not called
+    var vocabOutcome: String? = nil  // off | none | nokey | ok | applied | timeout
 }
 
 final class PerformanceLog {

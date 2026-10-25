@@ -14,7 +14,7 @@ struct AirboardPopover: View {
     let onDownloadModel: () -> Void
     let onRemoveModel: () -> Void
     let onOpenHotkeySettings: () -> Void
-    let onOpenCleanupSettings: () -> Void
+    let onOpenKeySettings: () -> Void
     let onOpenMemorySettings: () -> Void
     let onOpenAssistantSettings: () -> Void
     let onOpenPerformance: () -> Void
@@ -22,12 +22,12 @@ struct AirboardPopover: View {
     let onCheckForUpdates: () -> Void
     let onDismiss: () -> Void
 
-    @AppStorage("aiCleanupEnabled") private var aiCleanupEnabled = false
     @ObservedObject private var micManager = MicDeviceManager.shared
     @State private var isHoveringDownload = false
     @State private var isHoveringHotkey = false
     @State private var isHoveringMemory = false
     @State private var isHoveringAssistant = false
+    @State private var isHoveringKey = false
     @State private var isHoveringPerformance = false
     @State private var isHoveringReport = false
     @State private var isHoveringUpdate = false
@@ -71,56 +71,6 @@ struct AirboardPopover: View {
             
             // Actions Section
             VStack(spacing: 8) {
-                // AI cleanup toggle + settings
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(DS.Tint.purple)
-                            .frame(width: DS.Badge.size, height: DS.Badge.size)
-
-                        Image(systemName: "wand.and.stars")
-                            .font(.system(size: DS.Badge.glyph, weight: .medium))
-                            .foregroundStyle(DS.Accent.command)
-                    }
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("AI Cleanup")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(DS.Label.primary)
-
-                        Text("Grammar")
-                            .font(.system(size: 11))
-                            .foregroundColor(DS.Label.secondary)
-                    }
-
-                    Spacer()
-
-                    Toggle("", isOn: $aiCleanupEnabled)
-                        .toggleStyle(GreenSwitchToggleStyle())
-                        .labelsHidden()
-                        .onChange(of: aiCleanupEnabled) { _, enabled in
-                            // The toggle is honest: it can only be ON when
-                            // cleanup can actually work (server + model, and
-                            // an API key for that server unless it's local).
-                            // Otherwise it snaps back off and takes the user
-                            // to setup — which auto-enables on a valid save.
-                            if enabled && !TranscriptRefiner.shared.isFullyConfigured {
-                                aiCleanupEnabled = false
-                                onOpenCleanupSettings()
-                            }
-                        }
-
-                    Button(action: onOpenCleanupSettings) {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 12))
-                            .foregroundColor(DS.Label.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Cleanup server settings")
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-
                 // Microphone picker
                 HStack(spacing: 12) {
                     ZStack {
@@ -207,7 +157,7 @@ struct AirboardPopover: View {
                 .buttonStyle(.plain)
                 .onHover { isHoveringHotkey = $0 }
 
-                // Memory Button
+                // Vocabulary Button (learned spellings)
                 Button(action: onOpenMemorySettings) {
                     HStack(spacing: 12) {
                         ZStack {
@@ -221,11 +171,11 @@ struct AirboardPopover: View {
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Memory")
+                            Text("Vocabulary")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundColor(DS.Label.primary)
 
-                            Text("Spellings & facts Airboard remembers")
+                            Text("Words Airboard has learned about you")
                                 .font(.system(size: 11))
                                 .foregroundColor(DS.Label.secondary)
                                 .lineLimit(1)
@@ -286,6 +236,49 @@ struct AirboardPopover: View {
                 }
                 .buttonStyle(.plain)
                 .onHover { isHoveringAssistant = $0 }
+
+                // OpenRouter key — the ONE place it's set (temporary, until
+                // decisions and the assistant run locally)
+                Button(action: onOpenKeySettings) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(DS.Tint.purple)
+                                .frame(width: DS.Badge.size, height: DS.Badge.size)
+
+                            Image(systemName: "key")
+                                .font(.system(size: DS.Badge.glyph, weight: .medium))
+                                .foregroundStyle(DS.Accent.command)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("OpenRouter key")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(DS.Label.primary)
+
+                            Text(KeychainHelper.hasAPIKey(forHost: AssistantService.openRouterHost)
+                                 ? "Set — powers vocabulary & assistant"
+                                 : "Not set — needed for vocabulary & assistant")
+                                .font(.system(size: 11))
+                                .foregroundColor(DS.Label.secondary)
+                                .lineLimit(1)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(DS.Label.tertiary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: DS.Radius.r10)
+                            .fill(isHoveringKey ? DS.Fill.hover : Color.clear)
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { isHoveringKey = $0 }
 
                 // Performance Button
                 Button(action: onOpenPerformance) {
@@ -711,7 +704,7 @@ struct VisualEffectBlur: NSViewRepresentable {
                 onDownloadModel: {},
                 onRemoveModel: {},
                 onOpenHotkeySettings: {},
-                onOpenCleanupSettings: {},
+                onOpenKeySettings: {},
                 onOpenMemorySettings: {},
                 onOpenAssistantSettings: {},
                 onOpenPerformance: {},

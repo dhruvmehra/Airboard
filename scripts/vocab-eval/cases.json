@@ -1,0 +1,47 @@
+{
+  "note": "Synthetic decision cases for vocabulary learning. Public or invented names only — never a real user's vocabulary.",
+  "apply": [
+    {"sentence": "Ask bright AI to send the invoice", "span": "bright AI", "term": "Brite AI", "yes": true},
+    {"sentence": "bright AI just closed a new customer", "span": "bright AI", "term": "Brite AI", "yes": true},
+    {"sentence": "That was a bright idea from the team", "span": "bright", "term": "Brite", "yes": false},
+    {"sentence": "The sun is very bright today", "span": "bright", "term": "Brite", "yes": false},
+    {"sentence": "I use the paraket model for transcription", "span": "paraket", "term": "Parakeet", "yes": true},
+    {"sentence": "The parakeet in the cage was singing all morning", "span": "parakeet", "term": "Parakeet", "yes": false},
+    {"sentence": "Update the cloud MD file with the new rules", "span": "cloud MD", "term": "CLAUDE.md", "yes": true},
+    {"sentence": "Store the backups in the cloud", "span": "cloud", "term": "Claude", "yes": false},
+    {"sentence": "Open cloud code and run the tests", "span": "cloud code", "term": "Claude Code", "yes": true},
+    {"sentence": "Our cloud costs went up this month", "span": "cloud", "term": "Claude", "yes": false},
+    {"sentence": "Can you ask cloud to summarize this email", "span": "cloud", "term": "Claude", "yes": true},
+    {"sentence": "Tell a lisha I'll be late for dinner", "span": "a lisha", "term": "Alisha", "yes": true},
+    {"sentence": "Ask kate to review the pull request", "span": "kate", "term": "Cait", "yes": true},
+    {"sentence": "We deploy everything on for sell", "span": "for sell", "term": "Vercel", "yes": true},
+    {"sentence": "The house is for sell next month", "span": "for sell", "term": "Vercel", "yes": false},
+    {"sentence": "Move the auth tables to super base", "span": "super base", "term": "Supabase", "yes": true},
+    {"sentence": "The army built a super base in the desert", "span": "super base", "term": "Supabase", "yes": false},
+    {"sentence": "Spin up a new pod on cube or nettie's", "span": "cube or nettie's", "term": "Kubernetes", "yes": true},
+    {"sentence": "Put the ice cube in the glass", "span": "cube", "term": "Kubernetes", "yes": false},
+    {"sentence": "Send the deck to zen tricks AI by Friday", "span": "zen tricks AI", "term": "Zentrix AI", "yes": true},
+    {"sentence": "He showed me some zen tricks for meditation", "span": "zen tricks", "term": "Zentrix", "yes": false},
+    {"sentence": "Write the migration in type script", "span": "type script", "term": "TypeScript", "yes": true}
+  ],
+  "spellingFix": [
+    {"sentence": "bright AI is hiring engineers", "heard": "bright", "corrected": "Brite", "yes": true},
+    {"sentence": "let's meet on Tuesday at noon", "heard": "Tuesday", "corrected": "Wednesday", "yes": false},
+    {"sentence": "I use the paraket model", "heard": "paraket", "corrected": "Parakeet", "yes": true},
+    {"sentence": "open cloud code in the terminal", "heard": "cloud", "corrected": "Claude", "yes": true},
+    {"sentence": "this plan is cheap", "heard": "cheap", "corrected": "expensive", "yes": false},
+    {"sentence": "send it to Cait", "heard": "Cait", "corrected": "Rahul", "yes": false},
+    {"sentence": "the meeting is at five", "heard": "meeting", "corrected": "call", "yes": false},
+    {"sentence": "talk to a lisha tonight", "heard": "a lisha", "corrected": "Alisha", "yes": true},
+    {"sentence": "We use super base for the database", "heard": "super base", "corrected": "Supabase", "yes": true},
+    {"sentence": "deploy it on for sell", "heard": "for sell", "corrected": "Vercel", "yes": true},
+    {"sentence": "the price is ten dollars", "heard": "ten", "corrected": "twenty", "yes": false},
+    {"sentence": "book a table at the cafe", "heard": "cafe", "corrected": "restaurant", "yes": false}
+  ],
+  "isTerm": [
+    {"word": "Kubernetes", "yes": true}, {"word": "Supabase", "yes": true}, {"word": "TypeScript", "yes": true},
+    {"word": "Vercel", "yes": true}, {"word": "Zentrix", "yes": true},
+    {"word": "Edit", "yes": false}, {"word": "Window", "yes": false}, {"word": "Today", "yes": false},
+    {"word": "Settings", "yes": false}, {"word": "Monday", "yes": false}
+  ]
+}

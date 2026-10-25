@@ -14,7 +14,7 @@ class FloatingWindowManager: NSObject {
     private var floatingWindow: NSWindow?
     private var popoverWindow: NSWindow?
     private var hotkeyWindow: NSWindow?
-    private var cleanupSettingsWindow: NSWindow?
+    private var keyWindow: NSWindow?
     private var performanceWindow: NSWindow?
     private var memoryWindow: NSWindow?
     private var assistantSettingsWindow: NSWindow?
@@ -274,8 +274,8 @@ class FloatingWindowManager: NSObject {
             onOpenHotkeySettings: { [weak self] in
                 self?.handleOpenHotkeySettings()
             },
-            onOpenCleanupSettings: { [weak self] in
-                self?.handleOpenCleanupSettings()
+            onOpenKeySettings: { [weak self] in
+                self?.handleOpenKeySettings()
             },
             onOpenMemorySettings: { [weak self] in
                 self?.handleOpenMemorySettings()
@@ -402,9 +402,9 @@ class FloatingWindowManager: NSObject {
         showHotkeySettingsWindow()
     }
 
-    private func handleOpenCleanupSettings() {
+    private func handleOpenKeySettings() {
         hidePopover()
-        showCleanupSettingsWindow()
+        showOpenRouterKeyWindow()
     }
 
     private func handleOpenMemorySettings() {
@@ -456,40 +456,33 @@ class FloatingWindowManager: NSObject {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    // MARK: - Cleanup Settings Window
+    // MARK: - OpenRouter Key Window (the ONE place the key is set)
 
-    private func showCleanupSettingsWindow() {
-        if let existing = cleanupSettingsWindow {
+    func showOpenRouterKeyWindow() {
+        if let existing = keyWindow {
             existing.close()
-            cleanupSettingsWindow = nil
+            keyWindow = nil
         }
 
-        let view = CleanupSettingsView()
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 440, height: 320),
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 220),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.title = "AI Cleanup Settings"
-        // Standard opaque chrome. The previous transparent-titlebar +
-        // clear-background styling made parts of the window click-through:
-        // macOS Sonoma's click-wallpaper-to-show-desktop then hid every
-        // window when users clicked near the close button.
-        let hosting = NSHostingView(rootView: view)
+        window.title = "OpenRouter Key"
+        let hosting = NSHostingView(rootView: OpenRouterKeyView())
         window.contentView = hosting
-        // Size the window to the content's natural height (fields + notes
-        // vary) instead of the fixed 320pt guess.
         window.setContentSize(hosting.fittingSize)
         window.center()
         window.isReleasedWhenClosed = false
 
-        cleanupSettingsWindow = window
+        keyWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    // MARK: - Memory Window
+    // MARK: - Vocabulary Window
 
     private func showMemorySettingsWindow() {
         if let existing = memoryWindow {
@@ -503,8 +496,8 @@ class FloatingWindowManager: NSObject {
             backing: .buffered,
             defer: false
         )
-        window.title = "Memory"
-        let hosting = NSHostingView(rootView: MemorySettingsView())
+        window.title = "Vocabulary"
+        let hosting = NSHostingView(rootView: VocabularySettingsView())
         window.contentView = hosting
         window.setContentSize(hosting.fittingSize)
         window.center()
@@ -614,7 +607,7 @@ class FloatingWindowManager: NSObject {
     /// mouse pointer. NSScreen.main follows keyboard focus and lands on
     /// the wrong display for HUDs (field bug: confirm card appeared on
     /// another monitor while dictating into Ghostty).
-    private var activeScreen: NSScreen? {
+    var activeScreen: NSScreen? {
         let mouse = NSEvent.mouseLocation
         return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
     }
@@ -674,62 +667,6 @@ class FloatingWindowManager: NSObject {
         }
     }
 
-    // MARK: - Memory confirm card
-
-    private var memoryConfirmWindow: NSPanel?
-
-    func showMemoryConfirm(
-        cleaned: String, heard: String,
-        onSave: @escaping (String) -> Void,
-        onCancel: @escaping () -> Void
-    ) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            // Latest wins: an unanswered card is replaced (its fact drops).
-            self.memoryConfirmWindow?.close()
-            self.memoryConfirmWindow = nil
-            guard let screen = activeScreen else { return }
-
-            let dismiss: () -> Void = { [weak self] in
-                self?.memoryConfirmWindow?.close()
-                self?.memoryConfirmWindow = nil
-            }
-            let view = MemoryConfirmView(
-                text: cleaned,
-                onSave: { saved in dismiss(); onSave(saved) },
-                onCancel: { dismiss(); onCancel() })
-
-            let hosting = NSHostingView(rootView: view)
-            let size = hosting.fittingSize
-            let frame = NSRect(
-                x: screen.visibleFrame.midX - size.width / 2,
-                y: screen.visibleFrame.maxY - size.height - 60,
-                width: size.width, height: size.height)
-
-            // Spotlight-style presentation: a NON-ACTIVATING panel that can
-            // become key on its own. Activating the app instead (previous
-            // approach) made macOS pull toward Airboard's Space — the card
-            // materialized on the desktop while the user sat in a
-            // full-screen terminal (field bug, twice). This panel joins the
-            // user's CURRENT Space, takes typing, and never switches focus
-            // away from where they are.
-            let panel = KeyableConfirmPanel(contentRect: frame,
-                                            styleMask: [.borderless, .nonactivatingPanel],
-                                            backing: .buffered, defer: false)
-            panel.isOpaque = false
-            panel.backgroundColor = .clear
-            panel.hasShadow = true
-            panel.level = .floating
-            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            panel.hidesOnDeactivate = false   // NSPanel default is true — the silent killer
-            panel.isMovableByWindowBackground = true
-            panel.isReleasedWhenClosed = false
-            panel.contentView = hosting
-            self.memoryConfirmWindow = panel
-            panel.makeKeyAndOrderFront(nil)
-        }
-    }
-
     func cleanup() {
         NotificationCenter.default.removeObserver(self)
         DispatchQueue.main.async { [weak self] in
@@ -737,8 +674,8 @@ class FloatingWindowManager: NSObject {
             self?.popoverWindow = nil
             self?.hotkeyWindow?.close()
             self?.hotkeyWindow = nil
-            self?.cleanupSettingsWindow?.close()
-            self?.cleanupSettingsWindow = nil
+            self?.keyWindow?.close()
+            self?.keyWindow = nil
             self?.performanceWindow?.close()
             self?.performanceWindow = nil
             self?.memoryWindow?.close()
@@ -747,8 +684,6 @@ class FloatingWindowManager: NSObject {
             self?.assistantSettingsWindow = nil
             self?.toastWindow?.close()
             self?.toastWindow = nil
-            self?.memoryConfirmWindow?.close()
-            self?.memoryConfirmWindow = nil
             self?.downloadModalWindow?.close()
             self?.downloadModalWindow = nil
             self?.floatingWindow?.orderOut(nil)

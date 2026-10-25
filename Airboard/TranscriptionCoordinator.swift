@@ -25,6 +25,8 @@ class TranscriptionCoordinator: ObservableObject {
     @Published private(set) var isHandsFreeMode = false
 
     private var recordingStartTime: Date?
+    /// Key release of the current dictation — for the release→text-on-screen timing.
+    private var keyReleaseTime: Date?
     private var currentContext: AppContext?
 
     // Store the target app when recording starts
@@ -33,6 +35,10 @@ class TranscriptionCoordinator: ObservableObject {
 
     @Published private(set) var lastTranscribedText: String?
     @Published private(set) var lastContext: AppContext?
+    /// The most recent dictation as it was inserted (a hands-free session:
+    /// everything so far) — for "Paste Last Dictation" when the text landed
+    /// nowhere. Memory only: never written to disk, gone on quit.
+    private(set) var lastDictationText: String?
 
     // Model readiness mirrors for onboarding's Try It step (the service
     // itself is private to the coordinator).
@@ -51,7 +57,10 @@ class TranscriptionCoordinator: ObservableObject {
 
     // Chunked recording state
     private var accumulatedText: String = ""
-    private var processingChunks: Set<Int> = []
+    // Chunks are transcribed one at a time, in order: the transcription
+    // service holds one result at a time, so concurrent chunks could read
+    // each other's text, and a slow chunk must never land after a later one.
+    private var chunkChain: Task<Void, Never>?
 
     private let hallucinations = [
         "thank you", "thanks for watching", "bye", "goodbye", "you", ".",
@@ -154,6 +163,7 @@ class TranscriptionCoordinator: ObservableObject {
         // New session — invalidate any deferred cleanup/indicator work still
         // in flight from a previous session.
         sessionGeneration += 1
+        VocabularyLearning.shared.recordingStarted()
 
         // Set the mode
         currentMode = mode
@@ -215,6 +225,7 @@ class TranscriptionCoordinator: ObservableObject {
         
         isRecording = false
         isTranscribing = true
+        keyReleaseTime = Date()
 
         FloatingWindowManager.shared.showFloatingIndicator(
             isRecording: false,
@@ -259,6 +270,7 @@ class TranscriptionCoordinator: ObservableObject {
         // block from the ask's own dictation could fire against a
         // generation hands-free never claimed.
         sessionGeneration += 1
+        VocabularyLearning.shared.recordingStarted()
 
         // Capture target app and context
         targetApp = NSWorkspace.shared.frontmostApplication
@@ -273,7 +285,7 @@ class TranscriptionCoordinator: ObservableObject {
         isHandsFreeMode = true
         recordingStartTime = Date()
         accumulatedText = ""
-        processingChunks.removeAll()
+        chunkChain = nil
 
         // Track performance
         PerformanceMonitor.shared.startRecording()
@@ -320,68 +332,59 @@ class TranscriptionCoordinator: ObservableObject {
     // MARK: - Chunk Processing
 
     private func handleChunkCompletion(url: URL, chunkNumber: Int) {
+        print("📥 Queued chunk \(chunkNumber)")
+        let previous = chunkChain
+        chunkChain = Task { [weak self] in
+            await previous?.value
+            await self?.processChunk(url: url, chunkNumber: chunkNumber)
+        }
+    }
+
+    private func processChunk(url: URL, chunkNumber: Int) async {
         print("📥 Processing chunk \(chunkNumber)...")
+        await transcriptionService.transcribe(audioURL: url)
 
-        processingChunks.insert(chunkNumber)
+        if let error = transcriptionService.error {
+            print("❌ Chunk \(chunkNumber) transcription error: \(error)")
+            return
+        }
 
-        // Transcribe chunk in background
-        Task {
-            await transcriptionService.transcribe(audioURL: url)
+        let text = transcriptionService.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            if let error = transcriptionService.error {
-                print("❌ Chunk \(chunkNumber) transcription error: \(error)")
-                processingChunks.remove(chunkNumber)
-                return
+        guard !isLikelyHallucination(text.lowercased()), !text.isEmpty else {
+            print("⚠️ Chunk \(chunkNumber) is hallucination, skipping")
+            return
+        }
+
+        let chunkOutcome = await TranscriptPostProcessor.process(text, context: currentContext, mode: .handsFreeChunk)
+        let cleanedText = chunkOutcome.text
+        recordDictationMetrics(mode: "handsfree", outcome: chunkOutcome)
+        print("✅ Chunk \(chunkNumber) FINAL TEXT: '\(cleanedText)'")
+
+        // Accumulate text
+        await MainActor.run {
+            if !accumulatedText.isEmpty {
+                accumulatedText += " "
             }
+            accumulatedText += cleanedText
+            lastDictationText = accumulatedText
 
-            let text = transcriptionService.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
-
-            guard !isLikelyHallucination(text.lowercased()), !text.isEmpty else {
-                print("⚠️ Chunk \(chunkNumber) is hallucination, skipping")
-                processingChunks.remove(chunkNumber)
-                return
+            // Insert text immediately for real-time feedback
+            if isHandsFreeMode {
+                insertTextIntoTargetApp(cleanedText)
             }
-
-            let chunkOutcome = await TranscriptPostProcessor.process(text, context: currentContext, mode: .handsFreeChunk)
-            let cleanedText = chunkOutcome.text
-            recordDictationMetrics(mode: "handsfree", outcome: chunkOutcome)
-            print("✅ Chunk \(chunkNumber) FINAL TEXT: '\(cleanedText)'")
-
-            // Accumulate text
-            await MainActor.run {
-                if !accumulatedText.isEmpty {
-                    accumulatedText += " "
-                }
-                accumulatedText += cleanedText
-
-                // Insert text immediately for real-time feedback
-                if isHandsFreeMode {
-                    insertTextIntoTargetApp(cleanedText)
-                }
-            }
-
-            processingChunks.remove(chunkNumber)
         }
     }
 
     private func handleRecordingCompletion() {
         print("🏁 Hands-free recording completed")
 
-        // Wait for ALL pending chunks to finish processing
+        // Wait for EVERY queued chunk (the last one was queued before this
+        // ran). No time cap: giving up early dropped the chunks still in
+        // flight — their text never reached the app.
+        let pending = chunkChain
         Task {
-            var waitTime = 0.0
-            let checkInterval = 0.5 // Check every 500ms
-            let maxWaitTime = 30.0 // Maximum 30 seconds
-
-            while !processingChunks.isEmpty && waitTime < maxWaitTime {
-                print("⏳ Waiting for \(processingChunks.count) chunks to finish...")
-                try? await Task.sleep(nanoseconds: UInt64(checkInterval * 1_000_000_000))
-                waitTime += checkInterval
-            }
-
-            if !processingChunks.isEmpty {
-                print("⚠️ Timeout: \(processingChunks.count) chunks still processing after \(Int(maxWaitTime))s")
-            }
+            await pending?.value
 
             await MainActor.run {
                 if let startTime = self.recordingStartTime {
@@ -404,7 +407,7 @@ class TranscriptionCoordinator: ObservableObject {
     private func resetHandsFreeState() {
         isHandsFreeMode = false
         accumulatedText = ""
-        processingChunks.removeAll()
+        chunkChain = nil
         resetState()
     }
 
@@ -492,7 +495,9 @@ class TranscriptionCoordinator: ObservableObject {
             llmMs: outcome.llmMs,
             llmOutcome: outcome.llmOutcome,
             words: outcome.text.split(separator: " ").count,
-            preview: String(outcome.text.prefix(40)))
+            preview: String(outcome.text.prefix(40)),
+            vocabMs: outcome.vocabMs,
+            vocabOutcome: outcome.vocabOutcome)
         PerformanceLog.shared.append(record)
         TelemetryService.shared.dictationCompleted(record: record)
     }
@@ -524,35 +529,6 @@ class TranscriptionCoordinator: ObservableObject {
     private func handleCommandMode(text: String) async {
         print("⚡ Processing as COMMAND: \(text)")
 
-        // Memory commands (teach / correct / recall) take precedence over
-        // the regular command table. Non-memory text falls straight through.
-        var llm: ((String, String) async throws -> String)?
-        if TranscriptRefiner.shared.isFullyConfigured {
-            // 6s deadline per call (same discipline as the cleanup path):
-            // command mode can chain two calls (classify → recall), and a
-            // hung server must not freeze the pill for the transport's
-            // full 10s each.
-            llm = { system, user in
-                try await withThrowingTaskGroup(of: String.self) { group in
-                    group.addTask {
-                        try await TranscriptRefiner.shared.complete(system: system, user: user)
-                    }
-                    group.addTask {
-                        try await Task.sleep(nanoseconds: 6_000_000_000)
-                        throw TranscriptRefiner.RefineError.timeout
-                    }
-                    guard let first = try await group.next() else {
-                        throw TranscriptRefiner.RefineError.timeout
-                    }
-                    group.cancelAll()
-                    return first
-                }
-            }
-        }
-        let memoryOutcome = await MemoryCommands.handle(
-            text: text, store: MemoryStore.shared, llm: llm)
-        if await dispatchMemoryOutcome(memoryOutcome) { return }
-
         // Voice editing: "delete all", "delete last N words/sentences",
         // "scratch that" — exact patterns, keystroke-executed, instant.
         if let editIntent = EditCommands.detect(text) {
@@ -580,14 +556,6 @@ class TranscriptionCoordinator: ObservableObject {
             }
             return
         }
-
-        // Nothing matched exactly — one LLM pass interprets the utterance
-        // before giving up. Any phrasing of "save this" ("don't forget…",
-        // "note that…", "keep in mind…") becomes a memory intent; the
-        // confirmation card remains the guard against misreads.
-        let interpreted = await MemoryCommands.classify(
-            text: text, store: MemoryStore.shared, llm: llm)
-        if await dispatchMemoryOutcome(interpreted) { return }
 
         // Nothing claimed the utterance — hand it to the assistant.
         print("🤖 Assistant ask: \(text)")
@@ -621,7 +589,7 @@ class TranscriptionCoordinator: ObservableObject {
             case .needsPi:
                 FloatingWindowManager.shared.showToast("Assistant isn't set up yet — open Assistant settings", duration: 5.0)
             case .needsKey:
-                FloatingWindowManager.shared.showToast("Add your OpenRouter key in Assistant settings", duration: 5.0)
+                FloatingWindowManager.shared.showToast("Add your OpenRouter key — Airboard menu → OpenRouter key", duration: 5.0)
             case .timeout:
                 FloatingWindowManager.shared.showToast("Assistant timed out", duration: 4.0)
             case .failure:
@@ -631,66 +599,22 @@ class TranscriptionCoordinator: ObservableObject {
         recordAssistantMetrics(question: text, outcome: outcome, durationMs: durationMs)
     }
 
-    /// Act on a memory outcome. Returns false for .notMemoryCommand so the
-    /// caller can keep interpreting the utterance.
-    private func dispatchMemoryOutcome(_ outcome: MemoryCommandOutcome) async -> Bool {
-        switch outcome {
-        case .notMemoryCommand:
-            return false
-        case .confirmFact(let cleaned, let heard):
-            print("🧠 Memory: confirming fact '\(cleaned)' (heard: '\(heard)')")
-            await MainActor.run {
-                FloatingWindowManager.shared.showMemoryConfirm(
-                    cleaned: cleaned, heard: heard,
-                    onSave: { savedText in
-                        let store = MemoryStore.shared
-                        store.addMemory(savedText)
-                        // Edits teach: single-word corrections become
-                        // spelling memories ("reparty" -> "Ashish").
-                        for pair in MemoryBias.editDiffPairs(heard: heard, saved: savedText) {
-                            store.addMemory(MemoryBias.spellingMemory(term: pair.term, heardAs: pair.heardAs))
-                        }
-                        print("🧠 Memory: stored '\(savedText)'")
-                        FloatingWindowManager.shared.showToast("Remembered: \(savedText)")
-                    },
-                    onCancel: {
-                        print("🧠 Memory: confirmation cancelled")
-                    })
-            }
-            return true
-        case .learned(let term):
-            print("🧠 Memory: learned spelling '\(term)'")
-            await MainActor.run {
-                FloatingWindowManager.shared.showCommandExecuted()
-                FloatingWindowManager.shared.showToast("Learned spelling: \(term)")
-                self.showNotification(title: "Learned spelling", body: term)
-            }
-            return true
-        case .recall(let recalledText):
-            print("🧠 Memory: recall inserting '\(recalledText)'")
-            await MainActor.run {
-                self.insertTextIntoTargetApp(recalledText)
-            }
-            return true
-        case .recallFailed(let query):
-            print("🧠 Memory: recall failed for '\(query)'")
-            await MainActor.run {
-                FloatingWindowManager.shared.showToast("Nothing remembered about \(query)")
-                self.showNotification(title: "Airboard Memory",
-                                      body: "Nothing remembered about \(query)")
-            }
-            return true
-        }
-    }
-
     // MARK: - Dictation Mode Handler
     
     private func handleDictationMode(text: String) async {
         print("🎤 Processing as DICTATION: \(text)")
         
         await MainActor.run {
+            lastDictationText = text
             insertTextIntoTargetApp(text)
         }
+    }
+
+    /// Re-insert the last dictation into whatever app is frontmost now.
+    func pasteLastDictation() {
+        guard let text = lastDictationText, !isRecording, !isTranscribing else { return }
+        handleInsertionResult(TextInserter.insertText(text, context: AppContextDetector.getCurrentAppContext()),
+                              inserted: text)
     }
     
     // MARK: - Insert Text
@@ -698,13 +622,13 @@ class TranscriptionCoordinator: ObservableObject {
     private func insertTextIntoTargetApp(_ text: String) {
         guard let targetPID = targetAppPID else {
             print("⚠️ No target app captured, inserting into frontmost app")
-            handleInsertionResult(TextInserter.insertText(text, context: currentContext))
+            handleInsertionResult(TextInserter.insertText(text, context: currentContext), inserted: text)
             return
         }
 
         guard let targetApp = targetApp, !targetApp.isTerminated else {
             print("⚠️ Target app is no longer running, inserting into frontmost app")
-            handleInsertionResult(TextInserter.insertText(text, context: currentContext))
+            handleInsertionResult(TextInserter.insertText(text, context: currentContext), inserted: text)
             return
         }
 
@@ -737,19 +661,28 @@ class TranscriptionCoordinator: ObservableObject {
         }
 
         let result = TextInserter.insertText(text, context: currentContext)
-        handleInsertionResult(result)
+        handleInsertionResult(result, inserted: text)
 
         if case .success = result {
             print("✅ Text inserted into: \(targetApp.localizedName ?? "Unknown")")
         }
     }
 
-    private func handleInsertionResult(_ result: Result<Void, TextInsertionError>) {
+    private func handleInsertionResult(_ result: Result<Void, TextInsertionError>, inserted text: String) {
+        if let t = keyReleaseTime {
+            print("⏱️ Release → text on screen: \(Int(Date().timeIntervalSince(t) * 1000))ms")
+            keyReleaseTime = nil
+        }
         switch result {
         case .success:
-            break // Success is handled by caller
+            // Vocabulary learning: queue "Did you mean" cards, watch the
+            // field for a quick fix the user makes to what we typed.
+            if let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier {
+                VocabularyLearning.shared.didInsert(text, pid: pid)
+            }
         case .failure(let error):
             print("❌ Text insertion failed: \(error)")
+            VocabularyLearning.shared.insertionFailed()
 
             switch error {
             case .accessibilityPermissionDenied:
@@ -817,8 +750,10 @@ class TranscriptionCoordinator: ObservableObject {
             return true
         }
 
-        // Check for common hallucination phrases (YouTube outros, etc.)
-        for phrase in hallucinationPhrases {
+        // Check for common hallucination phrases (YouTube outros, etc.) —
+        // only in a short transcript. Real speech says "see you in the next
+        // meeting" too; matching anywhere threw away whole long dictations.
+        for phrase in hallucinationPhrases where text.split(separator: " ").count <= 12 {
             if lowercased.contains(phrase) {
                 print("🚫 Detected hallucination phrase: '\(phrase)'")
                 return true

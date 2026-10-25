@@ -8,6 +8,60 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+- Long dictations no longer lose text. A dictation that happened to say
+  "see you in the next meeting" or "hope you enjoyed…" was thrown away as
+  a speech-model glitch; now only short clips are checked for that.
+  Hands-free sessions transcribe their 25–40s pieces one at a time and in
+  order, and every piece is typed even if the last ones take a while — 15
+  minutes of talking comes out whole.
+- **Paste Last Dictation** (menu bar icon): if a dictation landed where
+  there was no text field, paste it again wherever your cursor is now.
+  Kept in memory only, never saved to disk.
+- Dictation now appears all at once, like a paste, instead of being typed
+  out letter by letter.
+- Names you correct once are now used on every later dictation: one fix
+  (typed, or spelled out loud) also catches the name's other mishearings
+  ("Druv", "Dhruva", "Dhruvmehra"), possessives ("Pipe's" → "Pype's"),
+  and first and last name together ("druv mera" → "Dhruv Mehra").
+  Possessive fixes ("Drew's" → "Dhruv's") are learned too, and so are
+  fixes where the mishearing sounds nothing like the name ("Python" →
+  "Pype"), just a capital letter ("pype" → "Pype"), or a spelling said
+  after an odd mishearing ("…Mana. That's spelled M-E-H-R-A"). Ordinary
+  edits (a typo, a plural, a reworded Hindi phrase) are not learned.
+- Unusual names now work without an OpenRouter key. A mishearing that is
+  an ordinary word ("pipe", "through", "mera") is only changed where the
+  sentence says a name belongs ("I work at ___", "Email ___ about…",
+  "Mr. ___"); "the water pipe burst", "Look at pipe now", "I drove Mehra
+  to the airport" and "mera naam…" stay as they are.
+- Fixing a misheard name now teaches Airboard for a full minute after you
+  dictate — even if you keep dictating, switch apps briefly, or fix two
+  names. Works without an OpenRouter key too (then only clear name fixes,
+  like "bright" → "Brite", become a card).
+- Vocabulary learning now works in Electron apps (Slack, Notion, Linear,
+  Discord, Obsidian…): Airboard asks them to expose their text to
+  Accessibility when you start dictating into them. VS Code-family editors
+  are left alone.
+- One place for your OpenRouter key: popover → **OpenRouter key**. The
+  Assistant and Vocabulary screens just show whether it's set.
+- Removed AI Cleanup (cloud grammar rewrite) and the Memory voice
+  commands ("remember…", "write my…"). Airboard is going fully local;
+  grammar comes back later, rebuilt on-device. The Memory screen is now
+  **Vocabulary**: the words Airboard has learned about you. Older memory
+  notes stay untouched in memory.md.
+- Airboard now learns your names and terms. Fix a misheard word right
+  after dictating (or let it notice names on your screen) and a small card
+  asks to remember it — ignore it and it's kept. From then on the word is
+  written correctly, but only where it fits ("Ask bright AI" → Brite AI;
+  "a bright idea" stays). Uses your own OpenRouter key; each check sends
+  one sentence and one word. Toggle in popover → Vocabulary.
+- Learning now catches more of your fixes: two names fixed in one
+  dictation, a fix followed by more typing, and names with symbols
+  (AT&T, C++, snake_case) — while still ignoring rewrites and grammar edits.
+- Spell a name out loud and Airboard gets it right: "Tell Inakshi, I N A K
+  S H I, that…" types "Tell Inakshi that…", and a card offers to remember
+  the spelling. Works in any app, including terminals. Saying "that's
+  spelled B R I T E" right after a dictation teaches the same way.
+
 ## [1.0.10] - 2026-10-06
 
 - Ask the Assistant: hold hotkey + ⌘ and ask anything — time zones,
