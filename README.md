@@ -4,7 +4,7 @@ A lightweight macOS voice transcription app. Press a hotkey, speak, and your wor
 
 ## Features
 
-- **🎯 Hotkey activated**: Hold your hotkey (default: Right Option) to record, release to transcribe
+- **🎯 Hotkey activated**: Hold your hotkey (default: Left Option) to record, release to transcribe
 - **🔒 Fully local & private**: Transcription runs on-device via [FluidAudio](https://github.com/FluidInference/FluidAudio) / NVIDIA Parakeet (Apple Neural Engine / CoreML). No cloud, no API key.
 - **🗣️ Voice commands**: Open apps/websites, web search, system controls, timers (hold hotkey + ⌘)
 - **🙌 Hands-free mode**: Double-tap the hotkey for continuous dictation
@@ -52,7 +52,7 @@ The download happens in the background and needs an internet connection **once**
 
 ## Usage
 
-1. Hold your hotkey (default **Right Option ⌥**)
+1. Hold your hotkey (default **Left Option ⌥**)
 2. Speak
 3. Release — the text inserts where your cursor is
 
