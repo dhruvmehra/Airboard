@@ -25,8 +25,12 @@ RELEASE_DIR="release"
 # Signing & Notarization
 DEVELOPER_ID="Developer ID Application: Dhruv Mehra (67X7WDGF5G)"
 TEAM_ID="67X7WDGF5G"
-# Store password in keychain: xcrun notarytool store-credentials "airboard-notarize" --apple-id "dhruvdking@gmail.com" --team-id "67X7WDGF5G"
-KEYCHAIN_PROFILE="airboard-notarize"
+# App Store Connect API key (Team key, Developer access) — no Apple ID password,
+# so password resets and account locks never block a release. Store once:
+#   xcrun notarytool store-credentials "airboard-notary-key" --key AuthKey_<KEYID>.p8 --key-id <KEYID> --issuer <ISSUER-ID>
+# (The old "airboard-notarize" profile used an app-specific password; it was
+# revoked 2026-10 and that keychain entry can't be overwritten with a key.)
+KEYCHAIN_PROFILE="airboard-notary-key"
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
