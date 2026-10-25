@@ -49,6 +49,14 @@ class MenuBarManager: NSObject {
             menu.addItem(NSMenuItem.separator())
         }
         
+        // Paste Last Dictation — the recovery path when a dictation landed
+        // where there was no text field (enabled only once there is one).
+        let pasteItem = NSMenuItem(title: "Paste Last Dictation", action: #selector(pasteLastDictation), keyEquivalent: "")
+        pasteItem.target = self
+        menu.addItem(pasteItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // Check Permissions
         let checkItem = NSMenuItem(title: "Check Permissions...", action: #selector(checkPermissions), keyEquivalent: "")
         checkItem.target = self
@@ -64,6 +72,13 @@ class MenuBarManager: NSObject {
         statusItem?.menu = menu
     }
     
+    @objc private func pasteLastDictation() {
+        // Let the menu close and focus settle back on the user's app first.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            TranscriptionCoordinator.shared.pasteLastDictation()
+        }
+    }
+
     @objc private func setupPermissions() {
         SetupWindowController.shared.showPermissionSetup()
     }
@@ -92,5 +107,13 @@ class MenuBarManager: NSObject {
     
     @objc private func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+}
+
+extension MenuBarManager: NSMenuItemValidation {
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        guard menuItem.action == #selector(pasteLastDictation) else { return true }
+        let coord = TranscriptionCoordinator.shared
+        return coord.lastDictationText != nil && !coord.isRecording && !coord.isTranscribing
     }
 }

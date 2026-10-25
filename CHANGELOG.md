@@ -8,6 +8,17 @@ promotes that section to the released version automatically.
 
 ## [Unreleased]
 
+- Long dictations no longer lose text. A dictation that happened to say
+  "see you in the next meeting" or "hope you enjoyed…" was thrown away as
+  a speech-model glitch; now only short clips are checked for that.
+  Hands-free sessions transcribe their 25–40s pieces one at a time and in
+  order, and every piece is typed even if the last ones take a while — 15
+  minutes of talking comes out whole.
+- **Paste Last Dictation** (menu bar icon): if a dictation landed where
+  there was no text field, paste it again wherever your cursor is now.
+  Kept in memory only, never saved to disk.
+- Dictation now appears all at once, like a paste, instead of being typed
+  out letter by letter.
 - Names you correct once are now used on every later dictation: one fix
   (typed, or spelled out loud) also catches the name's other mishearings
   ("Druv", "Dhruva", "Dhruvmehra"), possessives ("Pipe's" → "Pype's"),

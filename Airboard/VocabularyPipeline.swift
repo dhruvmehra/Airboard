@@ -76,6 +76,9 @@ nonisolated enum VocabularyPipeline {
 
     /// Candidates → final text. No client (no key, hands-free chunk) or
     /// nothing worth asking: local policy only, no network.
+    /// Most sentences one dictation asks the decision engine about.
+    static let maxAskedSentences = 6
+
     static func apply(text: String, candidates: [Candidate], client: DecisionClient?,
                       deadline: TimeInterval,
                       isOrdinaryWord: (String) -> Bool = VocabularyResolver.WordList.isOrdinaryWord,
@@ -92,6 +95,10 @@ nonisolated enum VocabularyPipeline {
         let groups = questionGroups(text: text, candidates: candidates,
                                     isOrdinaryWord: isOrdinaryWord, isKnownName: isKnownName)
         guard !groups.isEmpty else { return local("local") }
+        // A long dictation (minutes of speech) can hold dozens of name
+        // sentences: one request each would flood the key and, since any
+        // single miss falls back anyway, rarely beat the deadline. Local only.
+        guard groups.count <= maxAskedSentences else { return local("local") }
         let answers = await ask(client, groups: groups, deadline: deadline)
         let r = VocabularyResolver.resolve(text: text, candidates: candidates, answers: answers,
                                            isOrdinaryWord: isOrdinaryWord, isKnownName: isKnownName)

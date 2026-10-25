@@ -35,6 +35,10 @@ class TranscriptionCoordinator: ObservableObject {
 
     @Published private(set) var lastTranscribedText: String?
     @Published private(set) var lastContext: AppContext?
+    /// The most recent dictation as it was inserted (a hands-free session:
+    /// everything so far) — for "Paste Last Dictation" when the text landed
+    /// nowhere. Memory only: never written to disk, gone on quit.
+    private(set) var lastDictationText: String?
 
     // Model readiness mirrors for onboarding's Try It step (the service
     // itself is private to the coordinator).
@@ -53,7 +57,10 @@ class TranscriptionCoordinator: ObservableObject {
 
     // Chunked recording state
     private var accumulatedText: String = ""
-    private var processingChunks: Set<Int> = []
+    // Chunks are transcribed one at a time, in order: the transcription
+    // service holds one result at a time, so concurrent chunks could read
+    // each other's text, and a slow chunk must never land after a later one.
+    private var chunkChain: Task<Void, Never>?
 
     private let hallucinations = [
         "thank you", "thanks for watching", "bye", "goodbye", "you", ".",
@@ -278,7 +285,7 @@ class TranscriptionCoordinator: ObservableObject {
         isHandsFreeMode = true
         recordingStartTime = Date()
         accumulatedText = ""
-        processingChunks.removeAll()
+        chunkChain = nil
 
         // Track performance
         PerformanceMonitor.shared.startRecording()
@@ -325,68 +332,59 @@ class TranscriptionCoordinator: ObservableObject {
     // MARK: - Chunk Processing
 
     private func handleChunkCompletion(url: URL, chunkNumber: Int) {
+        print("📥 Queued chunk \(chunkNumber)")
+        let previous = chunkChain
+        chunkChain = Task { [weak self] in
+            await previous?.value
+            await self?.processChunk(url: url, chunkNumber: chunkNumber)
+        }
+    }
+
+    private func processChunk(url: URL, chunkNumber: Int) async {
         print("📥 Processing chunk \(chunkNumber)...")
+        await transcriptionService.transcribe(audioURL: url)
 
-        processingChunks.insert(chunkNumber)
+        if let error = transcriptionService.error {
+            print("❌ Chunk \(chunkNumber) transcription error: \(error)")
+            return
+        }
 
-        // Transcribe chunk in background
-        Task {
-            await transcriptionService.transcribe(audioURL: url)
+        let text = transcriptionService.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            if let error = transcriptionService.error {
-                print("❌ Chunk \(chunkNumber) transcription error: \(error)")
-                processingChunks.remove(chunkNumber)
-                return
+        guard !isLikelyHallucination(text.lowercased()), !text.isEmpty else {
+            print("⚠️ Chunk \(chunkNumber) is hallucination, skipping")
+            return
+        }
+
+        let chunkOutcome = await TranscriptPostProcessor.process(text, context: currentContext, mode: .handsFreeChunk)
+        let cleanedText = chunkOutcome.text
+        recordDictationMetrics(mode: "handsfree", outcome: chunkOutcome)
+        print("✅ Chunk \(chunkNumber) FINAL TEXT: '\(cleanedText)'")
+
+        // Accumulate text
+        await MainActor.run {
+            if !accumulatedText.isEmpty {
+                accumulatedText += " "
             }
+            accumulatedText += cleanedText
+            lastDictationText = accumulatedText
 
-            let text = transcriptionService.transcription.trimmingCharacters(in: .whitespacesAndNewlines)
-
-            guard !isLikelyHallucination(text.lowercased()), !text.isEmpty else {
-                print("⚠️ Chunk \(chunkNumber) is hallucination, skipping")
-                processingChunks.remove(chunkNumber)
-                return
+            // Insert text immediately for real-time feedback
+            if isHandsFreeMode {
+                insertTextIntoTargetApp(cleanedText)
             }
-
-            let chunkOutcome = await TranscriptPostProcessor.process(text, context: currentContext, mode: .handsFreeChunk)
-            let cleanedText = chunkOutcome.text
-            recordDictationMetrics(mode: "handsfree", outcome: chunkOutcome)
-            print("✅ Chunk \(chunkNumber) FINAL TEXT: '\(cleanedText)'")
-
-            // Accumulate text
-            await MainActor.run {
-                if !accumulatedText.isEmpty {
-                    accumulatedText += " "
-                }
-                accumulatedText += cleanedText
-
-                // Insert text immediately for real-time feedback
-                if isHandsFreeMode {
-                    insertTextIntoTargetApp(cleanedText)
-                }
-            }
-
-            processingChunks.remove(chunkNumber)
         }
     }
 
     private func handleRecordingCompletion() {
         print("🏁 Hands-free recording completed")
 
-        // Wait for ALL pending chunks to finish processing
+        // Wait for EVERY queued chunk (the last one was queued before this
+        // ran). No time cap: giving up early dropped the chunks still in
+        // flight — their text never reached the app.
+        let pending = chunkChain
         Task {
-            var waitTime = 0.0
-            let checkInterval = 0.5 // Check every 500ms
-            let maxWaitTime = 30.0 // Maximum 30 seconds
-
-            while !processingChunks.isEmpty && waitTime < maxWaitTime {
-                print("⏳ Waiting for \(processingChunks.count) chunks to finish...")
-                try? await Task.sleep(nanoseconds: UInt64(checkInterval * 1_000_000_000))
-                waitTime += checkInterval
-            }
-
-            if !processingChunks.isEmpty {
-                print("⚠️ Timeout: \(processingChunks.count) chunks still processing after \(Int(maxWaitTime))s")
-            }
+            await pending?.value
 
             await MainActor.run {
                 if let startTime = self.recordingStartTime {
@@ -409,7 +407,7 @@ class TranscriptionCoordinator: ObservableObject {
     private func resetHandsFreeState() {
         isHandsFreeMode = false
         accumulatedText = ""
-        processingChunks.removeAll()
+        chunkChain = nil
         resetState()
     }
 
@@ -607,8 +605,16 @@ class TranscriptionCoordinator: ObservableObject {
         print("🎤 Processing as DICTATION: \(text)")
         
         await MainActor.run {
+            lastDictationText = text
             insertTextIntoTargetApp(text)
         }
+    }
+
+    /// Re-insert the last dictation into whatever app is frontmost now.
+    func pasteLastDictation() {
+        guard let text = lastDictationText, !isRecording, !isTranscribing else { return }
+        handleInsertionResult(TextInserter.insertText(text, context: AppContextDetector.getCurrentAppContext()),
+                              inserted: text)
     }
     
     // MARK: - Insert Text
@@ -744,8 +750,10 @@ class TranscriptionCoordinator: ObservableObject {
             return true
         }
 
-        // Check for common hallucination phrases (YouTube outros, etc.)
-        for phrase in hallucinationPhrases {
+        // Check for common hallucination phrases (YouTube outros, etc.) —
+        // only in a short transcript. Real speech says "see you in the next
+        // meeting" too; matching anywhere threw away whole long dictations.
+        for phrase in hallucinationPhrases where text.split(separator: " ").count <= 12 {
             if lowercased.contains(phrase) {
                 print("🚫 Detected hallucination phrase: '\(phrase)'")
                 return true
